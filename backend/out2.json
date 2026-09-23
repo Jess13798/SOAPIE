@@ -1,0 +1,107 @@
+[
+  {
+    "COLUMN_NAME": "IdSignoVital",
+    "DATA_TYPE": "int",
+    "NUMERIC_PRECISION": 10,
+    "NUMERIC_SCALE": 0,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "IdNotaEnfermeria",
+    "DATA_TYPE": "int",
+    "NUMERIC_PRECISION": 10,
+    "NUMERIC_SCALE": 0,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "IdPaciente",
+    "DATA_TYPE": "int",
+    "NUMERIC_PRECISION": 10,
+    "NUMERIC_SCALE": 0,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "IdCuentaatencion",
+    "DATA_TYPE": "int",
+    "NUMERIC_PRECISION": 10,
+    "NUMERIC_SCALE": 0,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "Fecha_Hora",
+    "DATA_TYPE": "datetime",
+    "NUMERIC_PRECISION": null,
+    "NUMERIC_SCALE": null,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "Peso",
+    "DATA_TYPE": "decimal",
+    "NUMERIC_PRECISION": 5,
+    "NUMERIC_SCALE": 2,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "Talla",
+    "DATA_TYPE": "decimal",
+    "NUMERIC_PRECISION": 5,
+    "NUMERIC_SCALE": 2,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "P_Cefalico",
+    "DATA_TYPE": "decimal",
+    "NUMERIC_PRECISION": 5,
+    "NUMERIC_SCALE": 2,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "P_Abdominal",
+    "DATA_TYPE": "decimal",
+    "NUMERIC_PRECISION": 5,
+    "NUMERIC_SCALE": 2,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "Hemoglucotest",
+    "DATA_TYPE": "decimal",
+    "NUMERIC_PRECISION": 5,
+    "NUMERIC_SCALE": 2,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "Presion_Arterial",
+    "DATA_TYPE": "varchar",
+    "NUMERIC_PRECISION": null,
+    "NUMERIC_SCALE": null,
+    "CHARACTER_MAXIMUM_LENGTH": 10
+  },
+  {
+    "COLUMN_NAME": "Frec_Cardiaca",
+    "DATA_TYPE": "int",
+    "NUMERIC_PRECISION": 10,
+    "NUMERIC_SCALE": 0,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "Frec_Respiratoria",
+    "DATA_TYPE": "int",
+    "NUMERIC_PRECISION": 10,
+    "NUMERIC_SCALE": 0,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "Temperatura",
+    "DATA_TYPE": "decimal",
+    "NUMERIC_PRECISION": 4,
+    "NUMERIC_SCALE": 2,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  },
+  {
+    "COLUMN_NAME": "Saturacion",
+    "DATA_TYPE": "int",
+    "NUMERIC_PRECISION": 10,
+    "NUMERIC_SCALE": 0,
+    "CHARACTER_MAXIMUM_LENGTH": null
+  }
+]
