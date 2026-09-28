@@ -1,0 +1,17 @@
+# Archivos de entorno y credenciales
+.env
+backend/.env
+
+# Dependencias pesadas
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Archivos de construcción/compilados
+frontend/dist/
+
+# Archivos comprimidos o temporales
+*.rar
+*.zip
+backend/out.json
+backend/out2.json
