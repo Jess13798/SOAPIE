@@ -414,7 +414,7 @@ async function cargarPacientes(servicioId: string = '') {
     selectedPatient.value = null
     isLoadingPacientes.value = false
     return
-  }
+  } 
 
   try {
     isLoadingPacientes.value = true
@@ -551,14 +551,22 @@ const successModalCheckOnlyButton = computed(() => {
 })
 
 function handleViewNote(nota: NotaEnfermeria) {
-  const patient = pacientes.value.find(p => String(p.id) === String(nota.pacienteId))
+  const patient = pacientes.value.find(p => 
+    String(p.id) === String(nota.pacienteId) || 
+    (p.numCuenta && String(p.numCuenta) === String(nota.pacienteId)) ||
+    (p.numCuenta && String(p.numCuenta) === String((nota as any).idCuenta))
+  )
   if (patient) {
     patientForNewNote.value = patient
     selectedNoteForModal.value = nota
     isNewNoteModalOpen.value = true
+  } else if (selectedPatient.value) {
+    // Si no lo encuentra en la lista global, usa el paciente actualmente seleccionado
+    patientForNewNote.value = selectedPatient.value
+    selectedNoteForModal.value = nota
+    isNewNoteModalOpen.value = true
   }
 }
-
 function handleNewNoteFromList(patient: Patient) {
   selectedNoteForModal.value = null
   patientForNewNote.value = patient
@@ -566,20 +574,19 @@ function handleNewNoteFromList(patient: Patient) {
 }
 
 function handleEditDraft(nota: NotaEnfermeria) {
-  // Si la nota tiene pacienteId invÃƒÂ¡lido, no se puede editar
-  const pid = nota.pacienteId
-  if (!pid || pid === 'undefined' || pid === 'null' || pid === '') {
-    console.error('No se puede editar: la nota no tiene pacienteId vÃƒÂ¡lido', pid)
-    return
-  }
-  
-  const patient = pacientes.value.find(p => String(p.id) === String(nota.pacienteId))
+  const patient = pacientes.value.find(p => 
+    String(p.id) === String(nota.pacienteId) || 
+    (p.numCuenta && String(p.numCuenta) === String(nota.pacienteId)) ||
+    (p.numCuenta && String(p.numCuenta) === String((nota as any).idCuenta))
+  )
   if (patient) {
     patientForNewNote.value = patient
     selectedNoteForModal.value = nota
     isNewNoteModalOpen.value = true
-  } else {
-    console.error('No se encontrÃƒÂ³ el paciente para la nota:', nota.pacienteId)
+  } else if (selectedPatient.value) {
+    patientForNewNote.value = selectedPatient.value
+    selectedNoteForModal.value = nota
+    isNewNoteModalOpen.value = true
   }
 }
 

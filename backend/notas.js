@@ -146,7 +146,7 @@ async function guardarNota(nota) {
 
 // Funcion para obtener todas las notas
 async function obtenerNotas() {
-    try {
+    try { 
         console.log('Intentando obtener notas de la base de datos...')
         const pool = await sql.connect(dbConfig);
         const result = await pool.query(`
@@ -181,7 +181,9 @@ async function obtenerNotas() {
                 fechaInicio = dateIni.toISOString().split('T')[0];
                 horaInicio = dateIni.toISOString().substring(11, 16);
             }
-
+        // OBTENER IDENTIFICADORES LIMPIOS
+        const rawPacienteId = row.IdPaciente ?? row.IDPACIENTE ?? null;
+        const rawCuentaId = row.IdCuenta ?? row.IDCUENTA ?? null;
             return {
                 id: String(row.IdNotaEnfermeria),
                 pacienteId: String(row.IdPaciente || row.IDPACIENTE),
