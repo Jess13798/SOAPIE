@@ -85,18 +85,18 @@ const obtenerPacientes = async (servicioId = null) => {
 };
 
 // Nueva función para obtener lista de servicios
-const obtenerServicios = async () => {
+/*const obtenerServicios = async () => {
 	try {
 		console.log("--- Ejecutando Query de Servicios ---");
 		let pool = await sql.connect(dbConfig);
 
 		let result = await pool.request().query(`
-            SELECT DISTINCT s.IdServicio, s.Nombre 
-            FROM Camas c
-            LEFT JOIN Servicios s ON s.IdServicio = c.IdServicioPropietario
-            WHERE s.IdServicio IS NOT NULL AND s.Nombre IS NOT NULL and s.idtiposervicio =3
-            ORDER BY s.Nombre
-        `);
+			SELECT DISTINCT s.IdServicio, s.Nombre 
+			FROM Camas c
+			LEFT JOIN Servicios s ON s.IdServicio = c.IdServicioPropietario
+			WHERE s.IdServicio IS NOT NULL AND s.Nombre IS NOT NULL and s.idtiposervicio =3
+			ORDER BY s.Nombre
+		`);
 
 		console.log("Servicios obtenidos:", result.recordset.length);
 		return result.recordset;
@@ -104,6 +104,37 @@ const obtenerServicios = async () => {
 		console.error("Error en consulta servicios:", err);
 		throw err;
 	}
+};*/
+
+const obtenerServicios = async () => {
+	try {
+		console.log("--- Ejecutando Query de Servicios ---");
+		let pool = await sql.connect(dbConfig);
+
+		let result = await pool.request().query(`
+            SELECT 
+                MAX(s.IdServicio) AS IdServicio, 
+                CASE 
+                    WHEN s.Nombre LIKE '%GINECOLOGIA Y OBSTETRIC%' THEN 'HOSPITALIZACION GINECOLOGIA Y OBSTETRICIA'
+                    ELSE s.Nombre 
+                END AS Nombre
+            FROM Camas c
+            INNER JOIN Servicios s ON s.IdServicio = c.IdServicioPropietario
+            WHERE s.IdTipoServicio = 3 AND s.Nombre IS NOT NULL
+            GROUP BY 
+                CASE 
+                    WHEN s.Nombre LIKE '%GINECOLOGIA Y OBSTETRIC%' THEN 'HOSPITALIZACION GINECOLOGIA Y OBSTETRICIA'
+                    ELSE s.Nombre 
+                END
+            ORDER BY Nombre
+        `);
+
+		return result.recordset;
+	} catch (err) {
+		console.error("Error en consulta servicios:", err);
+		throw err;
+	}
 };
+
 
 module.exports = { obtenerPacientes, obtenerServicios };
