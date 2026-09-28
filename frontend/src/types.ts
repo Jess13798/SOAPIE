@@ -59,7 +59,7 @@ export interface NotaEnfermeria {
   pacienteId: string
   fecha: string
   hora: string
-  turno: 'manana' | 'tarde' | 'noche'
+  turno: 'dia' | 'noche' | 'manana' | 'tarde' // <-- Cambiar esta línea
   tipo: 'valoracion' | 'evolucion' | 'medicacion' | 'procedimiento' | 'incidencia'
   signosVitales?: SignosVitales
   subjetivo: string
