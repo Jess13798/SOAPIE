@@ -15,7 +15,46 @@
       </div>
     </Transition>
 
+    <!-- Selector de 2 Turnos (12 Horas) y Autoría -->
+    <div class="flex items-center justify-between bg-slate-100 px-4 py-2 border-b border-slate-200">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-black uppercase text-slate-600">Turno:</span>
+        <div class="inline-flex rounded-md shadow-sm" role="group">
+          <button
+            type="button"
+            @click="selectedTurno = 'dia'"
+            :disabled="isReadOnly"
+            :class="[
+              'px-4 py-1 text-xs font-bold rounded-l-lg border transition-colors',
+              selectedTurno === 'dia'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+            ]"
+          >
+            ☀️ Día (07:00 - 19:00)
+          </button>
+          <button
+            type="button"
+            @click="selectedTurno = 'noche'"
+            :disabled="isReadOnly"
+            :class="[
+              'px-4 py-1 text-xs font-bold rounded-r-lg border transition-colors',
+              selectedTurno === 'noche'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+            ]"
+          >
+            🌙 Noche (19:00 - 07:00)
+          </button>
+        </div>
+      </div>
 
+      <div class="text-xs font-bold text-slate-500">
+        Enfermero/a: <span class="text-slate-800 font-extrabold uppercase">{{ nombreEnfermeraActual }}</span>
+      </div>
+    </div>
+
+    <!-- Fila de Signos Vitales -->
     <section class="triaje-row grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-10 gap-1 px-0 py-0.5 bg-blue-50/10 bg-blue-color-print">
       <div v-for="(label, key) in etiquetasVitals" :key="key" class="input-vitals bg-white border border-slate-200 rounded-md overflow-hidden hover:border-blue-300 transition-colors shadow-sm text-center flex flex-col">
         <div class="bg-blue-600 py-0.5 px-1 border-b border-blue-700">
@@ -47,8 +86,8 @@
             <input 
               type="text" 
               :inputmode="['frecuenciaCardiaca', 'frecuenciaRespiratoria', 'spo2'].includes(key) ? 'numeric' : 'decimal'"
-              v-model="form[key]" 
-              @input="form[key] = String(form[key] || '').replace(['frecuenciaCardiaca', 'frecuenciaRespiratoria', 'spo2'].includes(key) ? /[^0-9]/g : /[^0-9.]/g, '')"
+              v-model="(form as any)[key]" 
+              @input="(form as any)[key] = String((form as any)[key] || '').replace(['frecuenciaCardiaca', 'frecuenciaRespiratoria', 'spo2'].includes(key) ? /[^0-9]/g : /[^0-9.]/g, '')"
               :placeholder="placeholderVitals[key]"
               :disabled="isReadOnly"
               class="w-full border-none p-0 text-[13px] font-extrabold text-slate-800 focus:ring-0 bg-transparent text-center disabled:opacity-100 disabled:text-slate-800 min-w-0"
@@ -59,7 +98,7 @@
       </div>
     </section>
 
-    <!-- Tabs Navigation -->
+    <!-- Pestañas Clínicas SOAPIE -->
     <div class="bg-blue-600 shadow-md">
       <div class="flex items-center gap-7 px-5">
         <button 
@@ -78,14 +117,12 @@
       </div>
     </div>
 
-    <!-- Tab Content Container -->
+    <!-- Área de Texto SOAPIE -->
     <div class="pt-1 bg-slate-50/50">
       <div class="border-x border-b border-slate-200 overflow-hidden shadow-sm h-[320px] bg-white flex">
-        <!-- Sidebar con Letra Activa -->
         <div class="w-16 bg-blue-50/50 flex items-center justify-center border-r border-slate-100">
           <span class="text-4xl font-black text-blue-700 uppercase">{{ activeTab }}</span>
         </div>
-        <!-- Area de Texto -->
         <div class="flex-1">
           <textarea 
             v-model="(form as any)[activeTab]"
@@ -97,6 +134,7 @@
       </div>
     </div>
 
+    <!-- Pie del Formulario / Botones de Acción -->
     <footer class="modal-footer py-2 px-4 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-3 rounded-b-xl">
       <template v-if="!isReadOnly">
         <button 
@@ -201,10 +239,19 @@ const dia = computed({
     else form.presionArterial = `${sisVal}/${val}`
   }
 })
+const selectedTurno = ref<'dia' | 'noche'>(
+  (props.initialNota?.turno as 'dia' | 'noche') || 'dia'
+)
 
+const nombreEnfermeraActual = computed(() => {
+  return props.enfermeraProp || sessionStorage.getItem('empleadoLogueado') || sessionStorage.getItem('usuarioLogueado') || 'Enfermero/a en turno'
+})
 // Update form if initialNota changes (useful if the modal stays open but note changes)
 watch(() => props.initialNota, (newNote) => {
   if (newNote) {
+      if (newNote.turno) {
+  selectedTurno.value = (newNote.turno === 'noche' ? 'noche' : 'dia') as 'dia' | 'noche'
+  }
     form.peso = newNote.signosVitales?.peso || ""
     form.talla = newNote.signosVitales?.talla || ""
     form.pCefalico = newNote.signosVitales?.pCefalico || ""
@@ -227,6 +274,7 @@ watch(() => props.initialNota, (newNote) => {
     form.laboratorio = newNote.laboratorio || ""
     form.imagen = newNote.imagen || ""
   }
+  
 }, { deep: true })
 
 // --- UI Configuration ---
@@ -317,7 +365,7 @@ function handleSubmit(shouldSign = false) {
     pacienteId: pacienteIdValue,
     fecha: props.initialNota?.fecha || now.toISOString().split('T')[0],
     hora: props.initialNota?.hora || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-    turno: props.initialNota?.turno || 'manana',
+    turno: selectedTurno.value,
     tipo: props.initialNota?.tipo || 'valoracion',
     signosVitales: {
       temperatura: form.temp,
@@ -342,7 +390,7 @@ function handleSubmit(shouldSign = false) {
     farmacia: form.farmacia,
     laboratorio: form.laboratorio,
     imagen: form.imagen,
-    enfermera: props.initialNota?.enfermera || props.enfermeraProp || 'LIC. MARIA FERNANDA RUIZ CASAS',
+    enfermera: props.initialNota?.enfermera || nombreEnfermeraActual.value,
     isFirmada: shouldSign || props.initialNota?.isFirmada
   }
 

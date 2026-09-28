@@ -13,6 +13,7 @@ function parseJsonSafe(value, fallback = {}) {
 async function guardarNota(nota) {
     try {
         const idEmp = nota.idEmpleado || nota.IDEMPLEADO;
+        const turnoNota = nota.turno || 'dia';
         console.log('Intentando guardar nota:', nota.id, 'pacienteId:', nota.pacienteId, 'idEmpleado:', idEmp)
         const pool = await sql.connect(dbConfig);
 
@@ -36,6 +37,7 @@ async function guardarNota(nota) {
         const soapie = JSON.stringify(soapiePayload);
 
         // Verificar si la nota es un string UUID (nueva) o numero (existente)
+        
         let idNota = nota.id;
         const isNew = isNaN(Number(idNota)) || String(idNota).length > 20;
 
@@ -57,6 +59,7 @@ async function guardarNota(nota) {
 
             await pool.query`
                 UPDATE NotaEnfermeria SET
+                    turno = ${turnoNota},
                     Subjetivo = ${nota.subjetivo ?? ''},
                     Objetivo = ${nota.objetivo ?? ''},
                     Analisis = ${nota.analisis ?? ''},
@@ -96,12 +99,12 @@ async function guardarNota(nota) {
 
                 const resultInsert = await pool.query`
                     INSERT INTO NotaEnfermeria (
-                        IdCuenta, IdPaciente, IdEmpleado, Fecha_Hora_Inicio, Fecha_Hora_Fin,
+                        IdCuenta, IdPaciente, IdEmpleado, Turno, Fecha_Hora_Inicio, Fecha_Hora_Fin,
                         Subjetivo, Objetivo, Analisis, Plan_, Intervencion, Evaluacion
                     )
                     OUTPUT INSERTED.IdNotaEnfermeria
                     VALUES (
-                        ${e2n(nota.idCuenta)}, ${e2n(nota.pacienteId)}, ${e2n(nota.idEmpleado)}, ${fechaHoraParsed}, ${fechaFin},
+                        ${e2n(nota.idCuenta)}, ${e2n(nota.pacienteId)}, ${e2n(nota.idEmpleado)}, ${turnoNota}, ${fechaHoraParsed}, ${fechaFin},
                         ${nota.subjetivo ?? ''}, ${nota.objetivo ?? ''}, ${nota.analisis ?? ''}, 
                         ${nota.plan ?? ''}, ${nota.intervencion ?? ''}, ${nota.evaluacion ?? ''}
                     )
@@ -184,6 +187,7 @@ async function obtenerNotas() {
                 pacienteId: String(row.IdPaciente || row.IDPACIENTE),
                 idCuenta: String(row.IdCuenta || row.IDCUENTA),
                 idEmpleado: String(row.IdEmpleado || row.IDEMPLEADO),
+                turno: row.Turno || 'dia',
                 enfermera: row.Enfermera || '',
                 fecha: fechaInicio,
                 hora: horaInicio,
@@ -250,11 +254,14 @@ async function obtenerHistorialVitals(idNota, limit = 10, offset = 0) {
     }
 }
 
-async function eliminarNota(id) {
+async function eliminarNota(id) { // Funcion para eliminar una nota, la tendria usuarioAdmin o enfermeras en general?
     try {
         const pool = await sql.connect(dbConfig);
-        await pool.query`DELETE FROM NotasEnfermeria WHERE id = ${id}`;
-        console.log('Nota eliminada:', id);
+        // 1. Elimina signos vitales asociados para evitar error de clave foránea
+        await pool.query`DELETE FROM NotaEnfermeriaSignosVitales WHERE IdNotaEnfermeria = ${id}`;
+        // 2. Elimina la nota con el nombre real de tabla y columna
+        await pool.query`DELETE FROM NotaEnfermeria WHERE IdNotaEnfermeria = ${id}`;
+        console.log('Nota eliminada correctamente:', id);
         return { success: true };
     } catch (err) {
         console.error('Error al eliminar nota:', err.message);
