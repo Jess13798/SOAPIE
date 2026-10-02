@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <Teleport to="body">
     <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center">
       <!-- Backdrop -->
@@ -111,6 +111,7 @@
 import { ref, watch, computed } from 'vue'
 import { Bed, X } from 'lucide-vue-next'
 import type { Patient } from '@/types'
+import { catalogosService, pacientesService } from '@/services/api'
 
 const props = defineProps<{
   isOpen: boolean
@@ -140,7 +141,6 @@ const editandoMedico = ref(false)
 
 async function fetchMedicos() {
   const especialidadId = props.idEspecialidad ?? props.servicioSeleccionado
-  // reutiliza el mismo query que en transferencias: /api/medicos?especialidadId=...
   if (!especialidadId) {
     medicos.value = []
     medicosError.value = 'Seleccione un servicio primero'
@@ -149,13 +149,11 @@ async function fetchMedicos() {
   try {
     loadingMedicos.value = true
     medicosError.value = ''
-    const resp = await fetch(`http://localhost:3000/api/medicos?especialidadId=${encodeURIComponent(String(especialidadId))}`)
-    const data = await resp.json()
-    if (!resp.ok) throw new Error(data?.mensaje || 'Error al cargar médicos')
+    const data = await catalogosService.getMedicosPorEspecialidad(String(especialidadId))
     medicos.value = Array.isArray(data) ? data : []
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error cargando medicos', err)
-    medicosError.value = 'No se pudieron cargar los médicos'
+    medicosError.value = err?.message || 'No se pudieron cargar los médicos'
     medicos.value = []
   } finally {
     loadingMedicos.value = false
@@ -180,18 +178,7 @@ const filteredMedicos = computed(() => {
 async function fetchPacientes() {
   loading.value = true
   try {
-    // Construir URL con parÃ¡metro de servicio
-    let url = 'http://localhost:3000/api/pacientes'
-    if (props.servicioSeleccionado && props.servicioSeleccionado !== 'todos') {
-      url += `?servicioId=${props.servicioSeleccionado}`
-    }
-    console.log('Cargando pacientes desde:', url)
-    
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    const data = await response.json()
+    const data = await pacientesService.getPacientes(props.servicioSeleccionado)
     console.log('Pacientes recibidos:', data.length)
     
     // Convertir los datos al formato Patient - solo camas sin paciente

@@ -149,6 +149,7 @@ import BedModal from '@/components/BedModal.vue'
 import NotesHistoryPanel from '@/components/NotesHistoryPanel.vue'
 import TotalBedsModal from '@/components/TotalBedsModal.vue'
 import TransferModal from '@/components/TransferModal.vue'
+import { pacientesService, camasService, notasService } from '@/services/api'
 
 interface PacienteSinCama {
   IdCuentaAtencion: string | number | null
@@ -232,7 +233,7 @@ async function handleSelectPaciente(paciente: Patient) {
   }
 
   try {
-    let response: Response
+    let data: { success: boolean; mensaje?: string }
 
     if (pacienteSinCamaSeleccionado.value) {
       const idPaciente = Number(pacienteSinCamaSeleccionado.value.IdPaciente)
@@ -240,49 +241,40 @@ async function handleSelectPaciente(paciente: Patient) {
       const idMedico = (paciente as any).idMedicoOrdena ? Number((paciente as any).idMedicoOrdena) : null
 
       if (!Number.isFinite(idPaciente) || !Number.isFinite(idCuentaAtencion)) {
-        console.error('IDs invÃ¡lidos para asignar cama', { idCama, idPaciente, idCuentaAtencion })
+        console.error('IDs inválidos para asignar cama', { idCama, idPaciente, idCuentaAtencion })
         return
       }
 
-      response = await fetch('http://localhost:3000/api/asignar-cama', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          IdPaciente: idPaciente,
-          IdCuentaAtencion: idCuentaAtencion,
-          IdCama: idCama,
-          IdMedicoOrdena: idMedico
-        })
+      data = await camasService.asignarCama({
+        IdPaciente: idPaciente,
+        IdCuentaAtencion: idCuentaAtencion,
+        IdCama: idCama,
+        IdMedicoOrdena: idMedico
       })
     } else if (selectedPatientForBed.value) {
       const idPaciente = Number(selectedPatientForBed.value.id)
       const idCuentaAtencion = Number(selectedPatientForBed.value.numCuenta)
       if (!Number.isFinite(idPaciente)) {
-        console.error('IdPaciente invÃ¡lido para mover cama', { idPaciente })
+        console.error('IdPaciente inválido para mover cama', { idPaciente })
         return
       }
       if (!Number.isFinite(idCuentaAtencion)) {
-        console.error('IdCuentaAtencion invÃ¡lido para mover cama', { idCuentaAtencion })
+        console.error('IdCuentaAtencion inválido para mover cama', { idCuentaAtencion })
         return
       }
 
-      response = await fetch('http://localhost:3000/api/mover-cama', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          IdPaciente: idPaciente,
-          IdCama: idCama,
-          IdCuentaAtencion: idCuentaAtencion
-        })
+      data = await camasService.moverCama({
+        IdPaciente: idPaciente,
+        IdCama: idCama,
+        IdCuentaAtencion: idCuentaAtencion
       })
     } else {
       isBedModalOpen.value = false
       return
     }
 
-    const data = await response.json()
-    if (!response.ok || !data?.success) {
-      throw new Error(data?.mensaje || `Error HTTP ${response.status}`)
+    if (!data?.success) {
+      throw new Error(data?.mensaje || 'Error en la operación de cama')
     }
 
     await cargarPacientes(servicioSeleccionado.value)
@@ -321,23 +313,18 @@ function handleConfirmTransfer(payload: TransferPayload) {
     return
   }
 
-  fetch('http://localhost:3000/api/transferencia-estancia', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      idAtencion: idCuentaAtencion,
-      idMedicoOrdena,
-      idServicio,
-      idDiagnostico,
-      fechaOcupacion,
-      horaOcupacion,
-      idProducto,
-      idEmpleado: idEmpleado || sessionStorage.getItem('idEmpleado'),
-      fechaModificacion: fechaModificacion || fechaOcupacion,
-      idPaciente: pacienteIdEfectivo
-    })
+  camasService.registrarTransferencia({
+    idAtencion: idCuentaAtencion,
+    idMedicoOrdena,
+    idServicio,
+    idDiagnostico,
+    fechaOcupacion,
+    horaOcupacion,
+    idProducto,
+    idEmpleado: idEmpleado || sessionStorage.getItem('idEmpleado'),
+    fechaModificacion: fechaModificacion || fechaOcupacion,
+    idPaciente: pacienteIdEfectivo
   })
-    .then(res => res.json())
     .then(data => {
       if (!data?.success) throw new Error(data?.mensaje || 'Error al registrar transferencia')
       console.log('Transferencia registrada')
@@ -420,21 +407,10 @@ async function cargarPacientes(servicioId: string = '') {
     isLoadingPacientes.value = true
     errorPacientes.value = null
     
-    // Construir URL con parÃƒÂ¡metro de servicio
-    let url = 'http://localhost:3000/api/pacientes'
-    if (servicioId && servicioId !== 'todos') {
-      url += `?servicioId=${servicioId}`
-    }
-    console.log('Cargando pacientes desde:', url)
+    console.log('Cargando pacientes para servicio:', servicioId)
+    const data: PacienteBD[] = await pacientesService.getPacientes(servicioId)
     
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error('Error al cargar pacientes')
-    }
-    
-    const data: PacienteBD[] = await response.json()
-    
-    // Debug: mostrar servicios ÃƒÂºnicos recibidos
+    // Debug: mostrar servicios únicos recibidos
     const serviciosRecibidos = Array.from(new Set(data.map(p => p.Nombre)))
     console.log('Pacientes recibidos:', data.length, 'Servicios:', serviciosRecibidos)
     
@@ -458,16 +434,12 @@ async function cargarPacientes(servicioId: string = '') {
 // Cargar pacientes al iniciar
 async function cargarNotasDesdeBackend() {
   try {
-    const response = await fetch('http://localhost:3000/api/notas')
-    if (response.ok) {
-      const notasBD = await response.json()
-      notas.value = notasBD || []
-      // Limpiar sessionStorage para evitar datos antiguos
-      sessionStorage.setItem('notasEnfermeria', JSON.stringify(notas.value))
-      console.log('Notas cargadas desde BD:', notasBD?.length || 0)
-      return true
-    }
-    return false
+    const notasBD = await notasService.getNotas()
+    notas.value = notasBD || []
+    // Limpiar sessionStorage para evitar datos antiguos
+    sessionStorage.setItem('notasEnfermeria', JSON.stringify(notas.value))
+    console.log('Notas cargadas desde BD:', notasBD?.length || 0)
+    return true
   } catch (err) {
     console.error('Error cargando notas desde BD:', err)
     return false
@@ -477,11 +449,9 @@ async function cargarNotasDesdeBackend() {
 // Cargar servicios desde el backend
 async function cargarServicios() {
   try {
-    const response = await fetch('http://localhost:3000/api/servicios')
-    if (response.ok) {
-      servicios.value = await response.json()
-      console.log('Servicios cargados:', servicios.value.length)
-    }
+    const data = await pacientesService.getServicios()
+    servicios.value = data || []
+    console.log('Servicios cargados:', servicios.value.length)
   } catch (err) {
     console.error('Error cargando servicios:', err)
   }
@@ -696,30 +666,20 @@ function handleSaveNote(nota: NotaEnfermeria) {
   }
 
   // Guardar en el backend
-  fetch('http://localhost:3000/api/notas', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
-  .then(res => {
-    if (!res.ok) {
-      throw new Error('Error del servidor: ' + res.status)
-    }
-    return res.json()
-  })
-  .then(data => {
-    if (data.success && data.id) {
-      console.log('Nota guardada correctamente en BD con ID:', data.id)
-      // Buscar la nota por su ID temporal (o el anterior) y actualizarla con el ID real de la BD
-      const idx = notas.value.findIndex(n => n.id === nota.id)
-      if (idx !== -1) {
-        notas.value[idx].id = String(data.id)
+  notasService.guardarNota(payload)
+    .then(data => {
+      if (data.success && data.id) {
+        console.log('Nota guardada correctamente en BD con ID:', data.id)
+        // Buscar la nota por su ID temporal (o el anterior) y actualizarla con el ID real de la BD
+        const idx = notas.value.findIndex(n => n.id === nota.id)
+        if (idx !== -1) {
+          notas.value[idx].id = String(data.id)
+        }
+      } else if (!data.success) {
+        console.error('Error al guardar nota')
       }
-    } else if (!data.success) {
-      console.error('Error al guardar nota:', data.mensaje)
-    }
-  })
-  .catch(err => console.error('Error guardando nota en BD:', err))
+    })
+    .catch(err => console.error('Error guardando nota en BD:', err))
   
   // Mantener el modal abierto; se cierra cuando el usuario confirme "Entendido"
   successModalType.value = 'nota'

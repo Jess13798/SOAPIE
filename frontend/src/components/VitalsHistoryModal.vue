@@ -98,6 +98,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { Book, X, Database } from 'lucide-vue-next'
+import { notasService } from '@/services/api'
 
 const props = defineProps<{
   isOpen: boolean
@@ -139,8 +140,7 @@ const fetchHistory = async (isLoadMore = false) => {
   }
 
   try {
-    const response = await fetch(`http://localhost:3000/api/notas/${props.idNota}/vitals?page=${page.value}&limit=${LIMIT}`)
-    const data = await response.json()
+    const data = await notasService.getHistorialVitals(props.idNota, LIMIT, page.value)
     
     if (data.length > 0) {
       if (isLoadMore) {
