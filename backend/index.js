@@ -3,12 +3,12 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const cors = require('cors'); // <--- 1. AGREGAR ESTO
 
-const { obtenerPacientes, obtenerServicios } = require('./pacientes');
+const pacientesModule = require('./src/modules/pacientes');
 const validarEmpleado = require('./login');
 const notasModule = require('./notas');
-const pacienteSinCamaModule = require('./pacienteSinCama');
-const diagnosticosModule = require('./diagnosticos');
-const medicosModule = require('./medicos');
+const pacienteSinCamaModule = require('./src/modules/pacientes-sin-cama');
+const diagnosticosModule = require('./src/modules/diagnosticos');
+const medicosModule = require('./src/modules/medicos');
 
 const app = express();
 
@@ -53,7 +53,7 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/pacientes', async (req, res) => {
     try {
         const servicioId = req.query.servicioId;
-        const datos = await obtenerPacientes(servicioId);
+        const datos = await pacientesModule.obtenerPacientes(servicioId);
         res.json(datos);
     } catch (err) {
         console.error('Error en /api/pacientes:', err);
@@ -65,7 +65,7 @@ app.get('/api/pacientes', async (req, res) => {
 // Ruta para obtener lista de servicios
 app.get('/api/servicios', async (req, res) => {
     try {
-        const datos = await obtenerServicios();
+        const datos = await pacientesModule.obtenerServicios();
         res.json(datos);
     } catch (err) {
         res.status(500).send('Error: ' + err.message);
