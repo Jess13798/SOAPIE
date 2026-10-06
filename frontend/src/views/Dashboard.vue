@@ -153,6 +153,7 @@ import TransferModal from '@/components/TransferModal.vue'
 import { usePatients } from '@/composables/usePatients'
 import { useNotes } from '@/composables/useNotes'
 import { useBedModals } from '@/composables/useBedModals'
+import { useDashboard } from '@/composables/useDashboard'
 
 // 1. Estado y operaciones de Pacientes y Servicios
 const {
@@ -202,74 +203,30 @@ const {
 
 // 4. Estado de Navegación y UI
 const activeView = ref('pacientes')
-const sidebarOpen = ref(false)
-const empleadoLogueado = ref(sessionStorage.getItem('empleadoLogueado') || sessionStorage.getItem('usuarioLogueado') || '')
-
-const viewTitles: Record<string, string> = {
-  pacientes: '',
-  notas: 'Notas de Enfermeria',
-  'nueva-nota': 'Nueva Nota de Enfermeria',
-  vitales: 'Signos Vitales',
-}
-
-const totalNotesForSelected = computed(() => {
-  const patientId = patientForNewNote.value?.id || selectedPatient.value?.id
-  if (!patientId) return 0
-  return notas.value.filter(n => String(n.pacienteId) === String(patientId)).length
+const {
+  sidebarOpen,
+  empleadoLogueado,
+  totalNotesForSelected,
+  modalNoteNumber,
+  viewTitle,
+  successModalTitle,
+  successModalButtonLabel,
+  successModalCheckOnlyButton,
+  handleSelectPatient,
+  handleChangeView,
+  handleConfirmSuccess,
+} = useDashboard({
+  activeView,
+  selectedPatient,
+  pacientes,
+  notas,
+  servicioSeleccionado,
+  cargarPacientes,
+  refreshPacientesSinCamaToken,
+  successModalType,
+  showSuccessModal,
+  handleCloseModal,
 })
-
-const modalNoteNumber = computed(() => {
-  if (selectedNoteForModal.value) {
-    const patientNotas = notas.value
-      .filter(n => String(n.pacienteId) === String(selectedNoteForModal.value?.pacienteId))
-      .sort((a, b) => {
-        const dateA = new Date(`${a.fecha}T${a.hora}`)
-        const dateB = new Date(`${b.fecha}T${b.hora}`)
-        return dateA.getTime() - dateB.getTime()
-      })
-    const index = patientNotas.findIndex(n => n.id === selectedNoteForModal.value?.id)
-    return index !== -1 ? index + 1 : 0
-  }
-  return totalNotesForSelected.value + 1
-})
-
-const viewTitle = computed(() => {
-  if (activeView.value === 'pacientes' && selectedPatient.value) {
-    return `${selectedPatient.value.nombre} ${selectedPatient.value.apellido}`
-  }
-  if (activeView.value === 'nueva-nota') {
-    return `NOTA DE ENFERMERIA NRO ${totalNotesForSelected.value + 1}`
-  }
-  return viewTitles[activeView.value] || 'Seleccionar Paciente'
-})
-
-const successModalTitle = computed(() => {
-  return successModalType.value === 'asignacion-cama'
-    ? 'SE REGISTRO CORRECTAMENTE'
-    : successModalType.value === 'transferencia'
-      ? 'TRANSFERENCIA GUARDADA'
-      : 'SE REGISTRO'
-})
-
-const successModalButtonLabel = computed(() => {
-  return successModalType.value === 'asignacion-cama'
-    ? 'SE REGISTRO CORRECTAMENTE'
-    : 'ENTENDIDO'
-})
-
-const successModalCheckOnlyButton = computed(() => {
-  return successModalType.value === 'asignacion-cama'
-})
-
-function handleSelectPatient(patient: Patient) {
-  selectedPatient.value = patient
-  sidebarOpen.value = false
-}
-
-function handleChangeView(view: string) {
-  activeView.value = view
-  sidebarOpen.value = false
-}
 
 async function onSaveNote(nota: NotaEnfermeria) {
   await guardarNota(nota)
@@ -281,21 +238,6 @@ async function onSignNote(nota: NotaEnfermeria) {
   await firmarNota(nota)
   successModalType.value = 'nota'
   showSuccessModal.value = true
-}
-
-function handleConfirmSuccess() {
-  showSuccessModal.value = false
-
-  if (successModalType.value === 'asignacion-cama') {
-    cargarPacientes(servicioSeleccionado.value)
-    refreshPacientesSinCamaToken.value++
-    return
-  }
-
-  handleCloseModal()
-  if (activeView.value === 'nueva-nota') {
-    activeView.value = 'pacientes'
-  }
 }
 
 onMounted(async () => {

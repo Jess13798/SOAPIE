@@ -31,7 +31,7 @@
                 : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
             ]"
           >
-            ☀️ Día (07:00 - 19:00)
+            Día (07:00 - 19:00)
           </button>
           <button
             type="button"
@@ -44,7 +44,7 @@
                 : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
             ]"
           >
-            🌙 Noche (19:00 - 07:00)
+            Noche (19:00 - 07:00)
           </button>
         </div>
       </div>
