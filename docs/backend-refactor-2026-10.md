@@ -91,3 +91,11 @@ backend helper refactor OK
 ## Estado actual
 
 La etapa de refactor del backend queda cerrada como una base sólida para continuar con la siguiente fase del proyecto, sin bloquear el avance por la base de datos actual.
+
+## Persistencia SOAPIE pendiente
+
+La base SIGH revisada contiene estructuras antiguas de visitas y variables de enfermería, pero no se confirmó un esquema dedicado para notas SOAPIE. El módulo frontend y las rutas existen; la persistencia no está conectada a tablas aprobadas.
+
+Hasta que enfermería e ingeniería validen los campos, estados y firma, el repositorio de notas responde con `NOTAS_SCHEMA_NOT_CONFIGURED` y las rutas SOAPIE devuelven HTTP 503. No se deben crear ni adaptar tablas de SIGH basándose solo en el formulario provisional.
+
+Las pruebas de esta condición se ejecutan con `npm test`. Cuando se apruebe el modelo, se debe implementar el repositorio con el esquema confirmado y agregar pruebas de lectura, creación, edición, firma y trazabilidad.

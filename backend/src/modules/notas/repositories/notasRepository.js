@@ -1,24 +1,48 @@
-// Repositorio de notas de enfermería.
-// Centraliza el acceso a la tabla de notas para que la lógica del servicio
-// no dependa de columnas específicas de SQL Server.
+const SCHEMA_NOT_CONFIGURED = 'NOTAS_SCHEMA_NOT_CONFIGURED';
 
-const sql = require('mssql');
-const { dbConfig } = require('../../../config/db');
+function schemaNotConfigured() {
+    const error = new Error(
+        'La persistencia de notas SOAPIE aún no está configurada para el esquema de SIGH.'
+    );
+    error.code = SCHEMA_NOT_CONFIGURED;
+    throw error;
+}
 
-async function getNotasPorPaciente(idPaciente) {
-    const pool = await sql.connect(dbConfig);
-    const result = await pool.request()
-        .input('IdPaciente', sql.Int, Number(idPaciente))
-        .query(`
-            SELECT *
-            FROM NotaEnfermeria
-            WHERE IdPaciente = @IdPaciente
-            ORDER BY Fecha_Hora_Inicio DESC
-        `);
+// SIGH no tiene aún un esquema de notas SOAPIE aprobado para conectar.
+async function getNotasPorPaciente() {
+    return schemaNotConfigured();
+}
 
-    return result.recordset || [];
+async function getAllNotas() {
+    return schemaNotConfigured();
+}
+
+async function insertNota() {
+    return schemaNotConfigured();
+}
+
+async function updateNota() {
+    return schemaNotConfigured();
+}
+
+async function insertVitales() {
+    return schemaNotConfigured();
+}
+
+async function getHistorialVitals() {
+    return schemaNotConfigured();
+}
+
+async function deleteNotaById() {
+    return schemaNotConfigured();
 }
 
 module.exports = {
     getNotasPorPaciente,
+    getAllNotas,
+    insertNota,
+    updateNota,
+    insertVitales,
+    getHistorialVitals,
+    deleteNotaById,
 };

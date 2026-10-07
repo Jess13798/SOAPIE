@@ -6,7 +6,7 @@
     "server": "node backend/index.js",
     "client": "npm run dev --prefix frontend",
     "start": "node backend/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test backend/src/modules/notas/repositories/notasRepository.test.js"
   },
   "keywords": [],
   "author": "",
