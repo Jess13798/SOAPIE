@@ -1,22 +1,13 @@
-// Servicio principal para notas de enfermería.
-// Aquí vive la lógica del dominio: decidir si una nota es nueva o existente,
-// construir el payload SOAPIE, firmar y validar el guardado.
+// Servicio de notas de enfermería. La persistencia espera el esquema clínico
+// aprobado y configurado en el repositorio.
 
-const sql = require('mssql');
-const { getPool } = require('../../../../dbHelper');
 const { nullIfEmpty } = require('../../../../utils');
-const { buildSoapiePayload } = require('../../../../soapieHelper');
 const notasRepository = require('../repositories/notasRepository');
 
 async function guardarNota(nota) {
     try {
         const idEmp = nota.idEmpleado || nota.IDEMPLEADO;
         const turnoNota = nota.turno || 'dia';
-        const pool = await getPool();
-
-        const soapiePayload = buildSoapiePayload(nota);
-        const signosVitales = JSON.stringify(nota.signosVitales || {});
-        const soapie = JSON.stringify(soapiePayload);
 
         let idNota = nota.id;
         const isNew = isNaN(Number(idNota)) || String(idNota).length > 20;

@@ -20,6 +20,19 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 
 // --- RUTAS DE LA API ---
 
+function sendNotasError(res, err, message) {
+    console.error(message, err);
+    if (err?.code === 'NOTAS_SCHEMA_NOT_CONFIGURED') {
+        return res.status(503).json({
+            success: false,
+            mensaje: 'El almacenamiento de notas SOAPIE aún no está configurado para esta base de datos.',
+        });
+    }
+
+    const detalle = err?.code ? `${err.code}: ${err.message}` : err.message;
+    return res.status(500).json({ success: false, mensaje: message, detalle });
+}
+
 // Ruta para el Login (POST)
 app.post('/api/login', async (req, res) => {
     const { usuario, Password } = req.body;
@@ -79,9 +92,7 @@ app.get('/api/notas', async (req, res) => {
         const datos = await notasModule.obtenerNotas();
         res.json(datos);
     } catch (err) {
-        console.error('Error en /api/notas:', err);
-        const detalle = err?.code ? `${err.code}: ${err.message}` : err.message;
-        res.status(500).json({ success: false, mensaje: 'Error al cargar notas', detalle });
+        sendNotasError(res, err, 'Error al cargar notas');
     }
 });
 
@@ -208,7 +219,7 @@ app.post('/api/notas', async (req, res) => {
         const resultado = await notasModule.guardarNota(nota);
         res.json(resultado);
     } catch (err) {
-        res.status(500).json({ success: false, mensaje: 'Error: ' + err.message });
+        sendNotasError(res, err, 'Error al guardar nota');
     }
 });
 
@@ -219,7 +230,7 @@ app.delete('/api/notas/:id', async (req, res) => {
         const resultado = await notasModule.eliminarNota(id);
         res.json(resultado);
     } catch (err) {
-        res.status(500).json({ success: false, mensaje: 'Error: ' + err.message });
+        sendNotasError(res, err, 'Error al eliminar nota');
     }
 });
 
@@ -234,8 +245,7 @@ app.get('/api/notas/:id/vitals', async (req, res) => {
         const datos = await notasModule.obtenerHistorialVitals(id, limit, offset);
         res.json(datos);
     } catch (err) {
-        console.error('Error en /api/notas/:id/vitals:', err);
-        res.status(500).json({ success: false, mensaje: 'Error al cargar historial de vitales' });
+        sendNotasError(res, err, 'Error al cargar historial de vitales');
     }
 });
 
