@@ -40,6 +40,7 @@ export function useDashboard({
     notas: 'Notas de Enfermeria',
     'nueva-nota': 'Nueva Nota de Enfermeria',
     vitales: 'Signos Vitales',
+    'catalogos-nanda': 'Catálogo NANDA / NOC / NIC',
   }
 
   const totalNotesForSelected = computed(() => {

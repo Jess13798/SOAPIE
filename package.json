@@ -6,7 +6,7 @@
     "server": "node backend/index.js",
     "client": "npm run dev --prefix frontend",
     "start": "node backend/index.js",
-    "test": "node --test backend/src/modules/notas/repositories/notasRepository.test.js"
+    "test": "node --test backend/src/modules/notas/repositories/notasRepository.test.js backend/src/modules/catalogos/services/nandaNocNicService.test.js"
   },
   "keywords": [],
   "author": "",
