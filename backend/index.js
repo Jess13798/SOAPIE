@@ -23,11 +23,11 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 
 function sendNotasError(res, err, message) {
     console.error(message, err);
-    if (err?.code === 'NOTAS_SCHEMA_NOT_CONFIGURED') {
-        return res.status(503).json({
-            success: false,
-            mensaje: 'El almacenamiento de notas SOAPIE aún no está configurado para esta base de datos.',
-        });
+    if (err?.code === 'NOTAS_INVALID_INPUT' || err?.code === 'CARE_PLAN_RELATION_INVALID') {
+        return res.status(400).json({ success: false, mensaje: err.message });
+    }
+    if (err?.code === 'NOTA_NOT_FOUND') {
+        return res.status(404).json({ success: false, mensaje: err.message });
     }
 
     const detalle = err?.code ? `${err.code}: ${err.message}` : err.message;

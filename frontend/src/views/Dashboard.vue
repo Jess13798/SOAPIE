@@ -1,5 +1,14 @@
 <template>
   <div class="flex h-screen overflow-hidden bg-background">
+    <div
+      v-if="notaError"
+      role="alert"
+      class="fixed right-4 top-4 z-[200] flex max-w-lg items-start gap-3 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-medium text-red-900 shadow-xl"
+    >
+      <span class="flex-1">{{ notaError }}</span>
+      <button type="button" class="font-black text-red-700" aria-label="Cerrar error" @click="notaError = ''">×</button>
+    </div>
+
     <!-- Mobile overlay -->
     <Transition name="fade">
       <div
@@ -206,6 +215,7 @@ const {
 
 // 4. Estado de Navegación y UI
 const activeView = ref('pacientes')
+const notaError = ref('')
 const {
   sidebarOpen,
   empleadoLogueado,
@@ -232,13 +242,23 @@ const {
 })
 
 async function onSaveNote(nota: NotaEnfermeria) {
-  await guardarNota(nota)
+  notaError.value = ''
+  const result = await guardarNota(nota)
+  if (!result.success) {
+    notaError.value = result.error instanceof Error ? result.error.message : 'No se pudo guardar la nota SOAPIE.'
+    return
+  }
   successModalType.value = 'nota'
   showSuccessModal.value = true
 }
 
 async function onSignNote(nota: NotaEnfermeria) {
-  await firmarNota(nota)
+  notaError.value = ''
+  const result = await firmarNota(nota)
+  if (!result.success) {
+    notaError.value = result.error instanceof Error ? result.error.message : 'No se pudo firmar la nota SOAPIE.'
+    return
+  }
   successModalType.value = 'nota'
   showSuccessModal.value = true
 }
