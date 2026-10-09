@@ -134,6 +134,11 @@
       </div>
     </div>
 
+    <SoapieCarePlanSelector
+      v-model="planCuidados"
+      :disabled="isReadOnly"
+    />
+
     <!-- Pie del Formulario / Botones de Acción -->
     <footer class="modal-footer py-2 px-4 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-3 rounded-b-xl">
       <template v-if="!isReadOnly">
@@ -163,7 +168,8 @@
 <script setup lang="ts">
 import { ref, reactive, watch, computed } from 'vue'
 import { Save, CheckCircle, AlertCircle } from 'lucide-vue-next'
-import type { Patient, NotaEnfermeria } from '@/types'
+import type { Patient, NotaEnfermeria, PlanCuidadoNota } from '@/types'
+import SoapieCarePlanSelector from './SoapieCarePlanSelector.vue'
 
 const props = defineProps<{
   pacientes: Patient[]
@@ -220,6 +226,7 @@ const defaultForm = () => ({
 })
 
 const form = reactive(defaultForm())
+const planCuidados = ref<PlanCuidadoNota[]>(props.initialNota?.planCuidados || [])
 
 // Presion Arterial dividida SIS / DIA
 const sis = computed({
@@ -273,6 +280,7 @@ watch(() => props.initialNota, (newNote) => {
     form.farmacia = newNote.farmacia || ""
     form.laboratorio = newNote.laboratorio || ""
     form.imagen = newNote.imagen || ""
+    planCuidados.value = newNote.planCuidados || []
   }
   
 }, { deep: true })
@@ -343,19 +351,12 @@ function handleSubmit(shouldSign = false) {
   }
 
   const now = new Date()
-  
-  // Debug: mostrar el paciente seleccionado para verificar
-  console.log('Paciente seleccionado en handleSubmit:', JSON.stringify(props.selectedPatient))
-  console.log('ID del paciente:', props.selectedPatient?.id)
-  console.log('Todas las props:', JSON.stringify(props.selectedPatient))
-  
-  // Obtener el ID del paciente de forma segura
+
   let pacienteIdValue = ''
   const pacienteId = props.selectedPatient?.id
   if (pacienteId && pacienteId !== undefined && pacienteId !== null && pacienteId !== '' && pacienteId !== 'undefined') {
     pacienteIdValue = pacienteId
   } else {
-    // Si no hay paciente seleccionado, mostrar error
     showToast('Error: No se ha seleccionado un paciente válido', 'error')
     return
   }
@@ -390,6 +391,7 @@ function handleSubmit(shouldSign = false) {
     farmacia: form.farmacia,
     laboratorio: form.laboratorio,
     imagen: form.imagen,
+    planCuidados: planCuidados.value,
     enfermera: props.initialNota?.enfermera || nombreEnfermeraActual.value,
     isFirmada: shouldSign || props.initialNota?.isFirmada
   }

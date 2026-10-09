@@ -54,14 +54,35 @@ export interface SignosVitales {
   hemoglucotest?: string
 }
 
+export interface PlanCuidadoNota {
+  idNANDA: number
+  codigoNANDA: string
+  diagnostico: string
+  nocIds: number[]
+  nicIds: number[]
+  noc?: Array<{
+    id: number
+    codigo: string
+    resultado: string
+    escalaLikert?: string | null
+  }>
+  nic?: Array<{
+    id: number
+    codigo: string
+    intervencion: string
+  }>
+}
+
 export interface NotaEnfermeria {
   id: string
   pacienteId: string
+  idCuenta?: string
   fecha: string
   hora: string
   turno: 'dia' | 'noche' | 'manana' | 'tarde' // <-- Cambiar esta línea
   tipo: 'valoracion' | 'evolucion' | 'medicacion' | 'procedimiento' | 'incidencia'
   signosVitales?: SignosVitales
+  planCuidados?: PlanCuidadoNota[]
   subjetivo: string
   objetivo: string
   analisis: string
