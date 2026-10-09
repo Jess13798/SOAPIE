@@ -125,12 +125,15 @@ async function getServicios() {
 
 // Búsqueda global y ágil de pacientes para el buscador del frontend.
 // Coincide por nombre completo, DNI (NroDocumento), historia clínica o número de cuenta.
-// Devuelve, si la hay, la atención activa, el servicio actual y la cama.
+// Devuelve, si la hay, la atención, el servicio actual y la cama/estancia del paciente.
 //
 // Estrategia de rendimiento: primero se buscan los IDs candidatos con filtros
 // simples (sin subconsultas correlacionadas por fila) y recién después se
-// enriquece cada resultado con su servicio/cama. Así no se aplican los
-// OUTER APPLY a toda la tabla Pacientes.
+// enriquece cada resultado. Así no se aplican los OUTER APPLY a toda Pacientes.
+//
+// Importante: el "servicio actual" se calcula igual que en la tabla
+// "Pacientes Sin Cama": se prioriza la estancia pendiente (LlegoAlServicio = 0
+// con facturación en estado 12) y, si no la hay, la cama ocupada.
 async function buscarPacientes(texto) {
     try {
         const like = `%${texto}%`;
@@ -149,7 +152,25 @@ async function buscarPacientes(texto) {
             ISNULL(p.SegundoNombre, '') + ' ' +
             ISNULL(p.TercerNombre, '')`;
 
+        // Rama 1: pacientes hospitalizados (con cama o con estancia pendiente)
+        // que coinciden por nombre. Se buscan primero para que aparezcan arriba
+        // y no queden fuera del TOP por orden alfabético.
         const ramas = [
+            `SELECT TOP 20 p.IdPaciente
+             FROM Pacientes p
+             WHERE (${nombreCompleto}) LIKE @like
+               AND (
+                   EXISTS (SELECT 1 FROM Camas c WHERE c.IdPaciente = p.IdPaciente)
+                   OR EXISTS (
+                       SELECT 1
+                       FROM AtencionesEstanciaHospitalaria e
+                       INNER JOIN Atenciones a ON a.IdCuentaAtencion = e.IdAtencion
+                       WHERE a.IdPaciente = p.IdPaciente
+                         AND a.idEstadoAtencion = 1
+                         AND e.LlegoAlServicio = 0
+                   )
+               )`,
+            // Rama 2: cualquier paciente que coincida por nombre.
             `SELECT TOP 20 p.IdPaciente
              FROM Pacientes p
              WHERE (${nombreCompleto}) LIKE @like`,
@@ -185,12 +206,26 @@ async function buscarPacientes(texto) {
                 )) AS Paciente,
                 p.NroDocumento AS Dni,
                 p.NroHistoriaClinica AS Historia,
-                COALESCE(cama.IdServicioPropietario, estancia.IdServicio) AS IdServicio,
-                COALESCE(scama.Nombre, sestancia.Nombre) AS Servicio,
-                cama.Codigo AS Cama,
-                atencion.IdCuentaAtencion
+                COALESCE(pendiente.IdServicio, cama.IdServicioPropietario) AS IdServicio,
+                COALESCE(spendiente.Nombre, scama.Nombre) AS Servicio,
+                CASE WHEN pendiente.Cuenta IS NULL THEN cama.Codigo ELSE NULL END AS Cama,
+                COALESCE(pendiente.Cuenta, atencion.IdCuentaAtencion) AS IdCuentaAtencion
             FROM (SELECT DISTINCT IdPaciente FROM candidatos) cand
             INNER JOIN Pacientes p ON p.IdPaciente = cand.IdPaciente
+            OUTER APPLY (
+                -- Estancia pendiente de cama (paciente sin cama), la misma que
+                -- usa la tabla "Pacientes Sin Cama".
+                SELECT TOP 1 e.IdAtencion AS Cuenta, e.IdServicio
+                FROM AtencionesEstanciaHospitalaria e
+                INNER JOIN Atenciones a ON a.IdCuentaAtencion = e.IdAtencion
+                INNER JOIN FacturacionCuentasAtencion f ON f.IdCuentaAtencion = a.IdCuentaAtencion
+                WHERE a.IdPaciente = p.IdPaciente
+                  AND a.idEstadoAtencion = 1
+                  AND e.LlegoAlServicio = 0
+                  AND f.IdEstado = 12
+                ORDER BY e.Secuencia DESC, e.FechaOcupacion DESC
+            ) pendiente
+            LEFT JOIN Servicios spendiente ON spendiente.IdServicio = pendiente.IdServicio
             OUTER APPLY (
                 SELECT TOP 1 c.IdCama, c.Codigo, c.IdServicioPropietario
                 FROM Camas c
@@ -204,14 +239,9 @@ async function buscarPacientes(texto) {
                 WHERE a.IdPaciente = p.IdPaciente AND a.idEstadoAtencion = 1
                 ORDER BY a.FechaIngreso DESC, a.IdAtencion DESC
             ) atencion
-            OUTER APPLY (
-                SELECT TOP 1 e.IdServicio
-                FROM AtencionesEstanciaHospitalaria e
-                WHERE e.IdAtencion = atencion.IdAtencion
-                ORDER BY e.Secuencia DESC
-            ) estancia
-            LEFT JOIN Servicios sestancia ON sestancia.IdServicio = estancia.IdServicio
-            ORDER BY p.ApellidoPaterno, p.ApellidoMaterno, p.PrimerNombre;
+            ORDER BY
+                CASE WHEN COALESCE(pendiente.IdServicio, cama.IdServicioPropietario) IS NOT NULL THEN 0 ELSE 1 END,
+                p.ApellidoPaterno, p.ApellidoMaterno, p.PrimerNombre;
         `, params);
 
         return result.recordset || [];
