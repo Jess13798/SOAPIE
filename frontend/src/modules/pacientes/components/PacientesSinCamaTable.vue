@@ -10,23 +10,13 @@
       </div>
       <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
         <!-- Selector/Buscador de Servicio -->
-        <div class="relative w-full sm:w-72 xl:w-80">
-          <input
-            ref="servicioInputRef"
-            v-model="servicioSearchQuery"
-            :list="servicioInputFocused ? 'servicios-list' : undefined"
-            autocomplete="off"
+        <div class="w-full sm:w-72 xl:w-80">
+          <ServiceCombobox
+            :servicios="props.servicios"
+            :model-value="props.servicioSeleccionado || ''"
             placeholder="Buscar servicio..."
-            class="w-full px-3 py-1.5 border border-sky-200 bg-white text-slate-700 placeholder:text-slate-400 rounded-lg text-xs focus:ring-2 focus:ring-sky-300 focus:border-sky-300"
-            @focus="handleServicioInputFocus"
-            @change="handleServicioChange"
-            @blur="servicioInputFocused = false"
+            @update:model-value="$emit('cambio-servicio', $event)"
           />
-          <datalist id="servicios-list">
-            <option v-for="servicio in props.servicios" :key="servicio.IdServicio" :value="servicio.Nombre">
-              {{ servicio.Nombre }}
-            </option>
-          </datalist>
         </div>
 
         <!-- Buscador de Paciente -->
@@ -142,11 +132,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import {
   List, Search, Hash, User, CalendarDays, Clock3, Timer, BriefcaseMedical, Settings2
 } from 'lucide-vue-next'
 import type { PacienteSinCama, Servicio } from '@/services/api'
+import ServiceCombobox from '@/modules/pacientes/components/ServiceCombobox.vue'
 
 const props = defineProps<{
   pacientesSinCama: PacienteSinCama[]
@@ -161,48 +151,6 @@ const emit = defineEmits<{
   'cambio-servicio': [servicioId: string]
   'update:searchQuery': [value: string]
 }>()
-
-const servicioSearchQuery = ref('')
-const servicioInputRef = ref<HTMLInputElement | null>(null)
-const servicioInputFocused = ref(false)
-
-watch(
-  () => [props.servicioSeleccionado, props.servicios?.length],
-  () => {
-    if (!props.servicioSeleccionado || props.servicioSeleccionado === 'todos') {
-      servicioSearchQuery.value = ''
-      return
-    }
-    const servicio = props.servicios?.find(s => String(s.IdServicio) === String(props.servicioSeleccionado))
-    servicioSearchQuery.value = servicio?.Nombre || ''
-  },
-  { immediate: true }
-)
-
-function handleServicioChange(e: Event) {
-  const val = (e.target as HTMLInputElement).value.trim()
-  const servicio = props.servicios?.find(s => s.Nombre.toLowerCase() === val.toLowerCase())
-
-  if (servicio) {
-    emit('cambio-servicio', String(servicio.IdServicio))
-    servicioSearchQuery.value = servicio.Nombre
-    servicioInputFocused.value = false
-    setTimeout(() => servicioInputRef.value?.blur(), 0)
-    return
-  }
-
-  emit('cambio-servicio', 'todos')
-  servicioSearchQuery.value = ''
-  servicioInputFocused.value = false
-  setTimeout(() => servicioInputRef.value?.blur(), 0)
-}
-
-function handleServicioInputFocus() {
-  servicioInputFocused.value = true
-  if (props.servicioSeleccionado && props.servicioSeleccionado !== 'todos') {
-    servicioSearchQuery.value = ''
-  }
-}
 
 function formatFecha(fecha?: string | null) {
   if (!fecha) return '-'

@@ -243,14 +243,8 @@ async function onSignNote(nota: NotaEnfermeria) {
 onMounted(async () => {
   await cargarServicios()
 
-  // Seleccionar Medicina o el primer servicio disponible
-  if (servicios.value.length > 0) {
-    const servicioMedicina = servicios.value.find(s => s.Nombre.toUpperCase().includes('MEDICINA'))
-    const servicioInicial = servicioMedicina || servicios.value[0]
-    servicioSeleccionado.value = String(servicioInicial.IdServicio)
-    await cargarPacientes(servicioSeleccionado.value)
-  }
-
+  // Sin servicio preseleccionado: el usuario elige desde el buscador.
+  // La lista de pacientes se carga al seleccionar un servicio.
   await cargarNotasDesdeBackend()
 })
 </script>
