@@ -53,7 +53,8 @@
             :servicios="servicios"
             :servicio-seleccionado="servicioSeleccionado"
             :refresh-pacientes-sin-cama-token="refreshPacientesSinCamaToken"
-            @select="handleSelectPatient" 
+            @select="handleSelectPatient"
+            @buscar-paciente="handleBuscarPaciente" 
             @new-note="handleNewNoteFromList"
             @edit-draft="handleEditDraft($event, selectedPatient)"
             @cambio-servicio="cambiarServicio"
@@ -139,6 +140,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { Menu, X } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
+import type { PacienteBusqueda } from '@/services/api'
 import AppSidebar from '@/components/AppSidebar.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
 import PatientListView from '@/modules/pacientes/components/PatientListView.vue'
@@ -164,6 +166,7 @@ const {
   cargarPacientes,
   cargarServicios,
   cambiarServicio,
+  seleccionarPacienteGlobal,
 } = usePatients()
 
 // 2. Estado y operaciones de Notas de Enfermería
@@ -238,6 +241,11 @@ async function onSignNote(nota: NotaEnfermeria) {
   await firmarNota(nota)
   successModalType.value = 'nota'
   showSuccessModal.value = true
+}
+
+async function handleBuscarPaciente(paciente: PacienteBusqueda) {
+  activeView.value = 'pacientes'
+  await seleccionarPacienteGlobal(paciente)
 }
 
 onMounted(async () => {

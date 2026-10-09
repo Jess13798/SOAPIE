@@ -7,4 +7,5 @@ const pacientesService = require('./services/pacientesService');
 module.exports = {
     obtenerPacientes: pacientesService.obtenerPacientes,
     obtenerServicios: pacientesService.obtenerServicios,
+    buscarPacientes: pacientesService.buscarPacientes,
 };

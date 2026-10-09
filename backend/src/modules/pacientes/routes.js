@@ -6,6 +6,25 @@ const pacientesModule = require('./index');
 
 const router = express.Router();
 
+// Búsqueda global de pacientes para el buscador ágil del frontend.
+// Recibe ?q=... y responde un arreglo con los pacientes que coinciden
+// por nombre, DNI, historia clínica o número de cuenta.
+// Requiere al menos 2 caracteres para evitar devolver todo.
+router.get('/pacientes/buscar', async (req, res) => {
+    try {
+        const texto = (req.query.q || '').toString().trim();
+        if (texto.length < 2) {
+            return res.json([]);
+        }
+        const datos = await pacientesModule.buscarPacientes(texto);
+        res.json(datos);
+    } catch (err) {
+        console.error('Error en /api/pacientes/buscar:', err);
+        const detalle = err?.code ? `${err.code}: ${err.message}` : err.message;
+        res.status(500).json({ success: false, mensaje: 'Error al buscar pacientes', detalle });
+    }
+});
+
 // Ruta para Pacientes (Lista de pacientes desde BD)
 // Acepta parámetro opcional ?servicioId=xxx
 router.get('/pacientes', async (req, res) => {

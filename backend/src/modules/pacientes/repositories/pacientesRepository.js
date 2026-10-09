@@ -123,7 +123,106 @@ async function getServicios() {
     }
 }
 
+// Búsqueda global y ágil de pacientes para el buscador del frontend.
+// Coincide por nombre completo, DNI (NroDocumento), historia clínica o número de cuenta.
+// Devuelve, si la hay, la atención activa, el servicio actual y la cama.
+//
+// Estrategia de rendimiento: primero se buscan los IDs candidatos con filtros
+// simples (sin subconsultas correlacionadas por fila) y recién después se
+// enriquece cada resultado con su servicio/cama. Así no se aplican los
+// OUTER APPLY a toda la tabla Pacientes.
+async function buscarPacientes(texto) {
+    try {
+        const like = `%${texto}%`;
+        const prefijo = `${texto}%`;
+        const esNumerico = /^[0-9]+$/.test(texto);
+
+        const params = [
+            { name: 'like', type: sql.VarChar, value: like },
+        ];
+
+        // Cada rama devuelve como máximo 20 IDs; el total de candidatos es chico.
+        const nombreCompleto = `
+            ISNULL(p.ApellidoPaterno, '') + ' ' +
+            ISNULL(p.ApellidoMaterno, '') + ' ' +
+            ISNULL(p.PrimerNombre, '') + ' ' +
+            ISNULL(p.SegundoNombre, '') + ' ' +
+            ISNULL(p.TercerNombre, '')`;
+
+        const ramas = [
+            `SELECT TOP 20 p.IdPaciente
+             FROM Pacientes p
+             WHERE (${nombreCompleto}) LIKE @like`,
+        ];
+
+        if (esNumerico) {
+            params.push({ name: 'prefijo', type: sql.VarChar, value: prefijo });
+            ramas.push(
+                `SELECT TOP 20 p.IdPaciente
+                 FROM Pacientes p
+                 WHERE p.NroDocumento LIKE @prefijo
+                    OR CAST(p.NroHistoriaClinica AS varchar(20)) LIKE @prefijo`,
+                `SELECT TOP 20 a.IdPaciente
+                 FROM Atenciones a
+                 WHERE CAST(a.IdCuentaAtencion AS varchar(20)) LIKE @prefijo`
+            );
+        }
+
+        const candidatos = ramas.join('\n                UNION ALL\n                ');
+
+        const result = await query(`
+            WITH candidatos AS (
+                ${candidatos}
+            )
+            SELECT TOP 20
+                p.IdPaciente,
+                LTRIM(RTRIM(
+                    ISNULL(p.ApellidoPaterno, '') + ' ' +
+                    ISNULL(p.ApellidoMaterno, '') + ' ' +
+                    ISNULL(p.PrimerNombre, '') + ' ' +
+                    ISNULL(p.SegundoNombre, '') + ' ' +
+                    ISNULL(p.TercerNombre, '')
+                )) AS Paciente,
+                p.NroDocumento AS Dni,
+                p.NroHistoriaClinica AS Historia,
+                COALESCE(cama.IdServicioPropietario, estancia.IdServicio) AS IdServicio,
+                COALESCE(scama.Nombre, sestancia.Nombre) AS Servicio,
+                cama.Codigo AS Cama,
+                atencion.IdCuentaAtencion
+            FROM (SELECT DISTINCT IdPaciente FROM candidatos) cand
+            INNER JOIN Pacientes p ON p.IdPaciente = cand.IdPaciente
+            OUTER APPLY (
+                SELECT TOP 1 c.IdCama, c.Codigo, c.IdServicioPropietario
+                FROM Camas c
+                WHERE c.IdPaciente = p.IdPaciente
+                ORDER BY c.IdCama DESC
+            ) cama
+            LEFT JOIN Servicios scama ON scama.IdServicio = cama.IdServicioPropietario
+            OUTER APPLY (
+                SELECT TOP 1 a.IdAtencion, a.IdCuentaAtencion
+                FROM Atenciones a
+                WHERE a.IdPaciente = p.IdPaciente AND a.idEstadoAtencion = 1
+                ORDER BY a.FechaIngreso DESC, a.IdAtencion DESC
+            ) atencion
+            OUTER APPLY (
+                SELECT TOP 1 e.IdServicio
+                FROM AtencionesEstanciaHospitalaria e
+                WHERE e.IdAtencion = atencion.IdAtencion
+                ORDER BY e.Secuencia DESC
+            ) estancia
+            LEFT JOIN Servicios sestancia ON sestancia.IdServicio = estancia.IdServicio
+            ORDER BY p.ApellidoPaterno, p.ApellidoMaterno, p.PrimerNombre;
+        `, params);
+
+        return result.recordset || [];
+    } catch (error) {
+        console.error('Error en pacientesRepository.buscarPacientes:', error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     getPacientesByServicio,
     getServicios,
+    buscarPacientes,
 };

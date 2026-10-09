@@ -6,8 +6,7 @@
       :loading="loadingPacientesSinCama"
       :servicios="props.servicios"
       :servicio-seleccionado="props.servicioSeleccionado"
-      :search-query="searchQuery"
-      @update:search-query="searchQuery = $event"
+      @buscar-paciente="$emit('buscar-paciente', $event)"
       @assign-bed="$emit('assign-bed', $event)"
       @cambio-servicio="$emit('cambio-servicio', $event)"
     />
@@ -200,7 +199,7 @@ import {
   User, Settings2, HeartPulse, BriefcaseMedical
 } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
-import { pacientesService, type PacienteSinCama, type Servicio } from '@/services/api'
+import { pacientesService, type PacienteBusqueda, type PacienteSinCama, type Servicio } from '@/services/api'
 import PacientesSinCamaTable from '@/modules/pacientes/components/PacientesSinCamaTable.vue'
 import BedCountersHeader from '@/modules/pacientes/components/BedCountersHeader.vue'
 import BedActionMenu from '@/modules/pacientes/components/BedActionMenu.vue'
@@ -222,12 +221,12 @@ const emit = defineEmits<{
   'view-bed': [patient: Patient]
   'view-transfer': [patient: Patient]
   'assign-bed': [paciente: PacienteSinCama]
+  'buscar-paciente': [paciente: PacienteBusqueda]
   'view-total': []
 }>()
 
 const pacientesSinCama = ref<PacienteSinCama[]>([])
 const loadingPacientesSinCama = ref(false)
-const searchQuery = ref('')
 
 const servicioNombreSeleccionado = computed(() => {
   if (!props.servicioSeleccionado || props.servicioSeleccionado === 'todos') return ''
@@ -263,18 +262,7 @@ watch(
 )
 
 const filteredPatients = computed(() => {
-  const query = (searchQuery.value || '').toLowerCase().trim()
-
-  if (!query) {
-    return props.pacientes.filter(p => p.numCuenta)
-  }
-
-  const filtered = props.pacientes.filter(patient => {
-    const searchStr = `${patient.apellido} ${patient.nombre} ${patient.numCuenta || ''} ${patient.historiaClinica} ${patient.servicio}`.toLowerCase()
-    return searchStr.includes(query)
-  })
-
-  return filtered.filter(p => p.numCuenta)
+  return props.pacientes.filter(p => p.numCuenta)
 })
 
 const totalCamas = computed(() => props.pacientes.length)

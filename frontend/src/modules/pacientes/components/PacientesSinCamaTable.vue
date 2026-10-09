@@ -19,15 +19,11 @@
           />
         </div>
 
-        <!-- Buscador de Paciente -->
-        <div class="relative w-full sm:w-64">
-          <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            :value="searchQuery"
-            type="text"
-            placeholder="Buscar por apellido, cuenta, historia..."
-            class="w-full rounded-md border border-slate-200 bg-white py-1 pl-9 pr-3 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-sky-300"
-            @input="$emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
+        <!-- Buscador global de Paciente (nombre, DNI, cuenta o historia) -->
+        <div class="w-full sm:w-72 xl:w-80">
+          <PatientSearchCombobox
+            placeholder="Buscar paciente (nombre, DNI o cuenta)..."
+            @select="$emit('buscar-paciente', $event)"
           />
         </div>
       </div>
@@ -133,23 +129,23 @@
 
 <script setup lang="ts">
 import {
-  List, Search, Hash, User, CalendarDays, Clock3, Timer, BriefcaseMedical, Settings2
+  List, Hash, User, CalendarDays, Clock3, Timer, BriefcaseMedical, Settings2
 } from 'lucide-vue-next'
-import type { PacienteSinCama, Servicio } from '@/services/api'
+import type { PacienteBusqueda, PacienteSinCama, Servicio } from '@/services/api'
 import ServiceCombobox from '@/modules/pacientes/components/ServiceCombobox.vue'
+import PatientSearchCombobox from '@/modules/pacientes/components/PatientSearchCombobox.vue'
 
 const props = defineProps<{
   pacientesSinCama: PacienteSinCama[]
   loading: boolean
   servicios?: Servicio[]
   servicioSeleccionado?: string
-  searchQuery: string
 }>()
 
 const emit = defineEmits<{
   'assign-bed': [paciente: PacienteSinCama]
   'cambio-servicio': [servicioId: string]
-  'update:searchQuery': [value: string]
+  'buscar-paciente': [paciente: PacienteBusqueda]
 }>()
 
 function formatFecha(fecha?: string | null) {

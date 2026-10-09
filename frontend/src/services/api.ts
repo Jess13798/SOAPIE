@@ -110,6 +110,17 @@ export interface PacienteSinCama {
     IdEspecialidad?: string | number | null
 }
 
+export interface PacienteBusqueda {
+    IdPaciente: number
+    Paciente: string
+    Dni: string | null
+    Historia: string | number | null
+    IdServicio: number | null
+    Servicio: string | null
+    Cama: string | null
+    IdCuentaAtencion: number | null
+}
+
 export const pacientesService = {
     getPacientes(servicioId?: string): Promise<PacienteBD[]> {
         const query = servicioId && servicioId !== 'todos' ? `?servicioId=${encodeURIComponent(servicioId)}` : ''
@@ -118,6 +129,10 @@ export const pacientesService = {
 
     getServicios(): Promise<Servicio[]> {
         return request<Servicio[]>('/servicios')
+    },
+
+    buscarPacientes(query: string): Promise<PacienteBusqueda[]> {
+        return request<PacienteBusqueda[]>(`/pacientes/buscar?q=${encodeURIComponent(query)}`)
     },
 
     getPacientesSinCama(nombreServicio?: string): Promise<PacienteSinCama[]> {

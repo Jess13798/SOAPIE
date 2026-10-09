@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { Patient, PacienteBD } from '@/types'
-import { pacientesService, type Servicio } from '@/services/api'
+import { pacientesService, type PacienteBusqueda, type Servicio } from '@/services/api'
 
 export function usePatients() {
   const pacientes = ref<Patient[]>([])
@@ -83,6 +83,22 @@ export function usePatients() {
     cargarPacientes(servicioId)
   }
 
+  // Selecciona un paciente encontrado con el buscador global:
+  // cambia al servicio donde está y lo marca como paciente seleccionado.
+  async function seleccionarPacienteGlobal(paciente: PacienteBusqueda) {
+    const servicioId = paciente.IdServicio ? String(paciente.IdServicio) : ''
+    if (!servicioId) return
+
+    servicioSeleccionado.value = servicioId
+    await cargarPacientes(servicioId)
+
+    const encontrado = pacientes.value.find((p) =>
+      String(p.id) === String(paciente.IdPaciente) ||
+      (paciente.IdCuentaAtencion != null && String(p.numCuenta) === String(paciente.IdCuentaAtencion))
+    )
+    if (encontrado) selectedPatient.value = encontrado
+  }
+
   return {
     pacientes,
     selectedPatient,
@@ -93,5 +109,6 @@ export function usePatients() {
     cargarPacientes,
     cargarServicios,
     cambiarServicio,
+    seleccionarPacienteGlobal,
   }
 }
