@@ -40,14 +40,19 @@
                 v-for="paciente in pacientes"
                 :key="paciente.id"
                 @click="selectPaciente(paciente)"
+                :title="paciente.cama + (paciente.tipoCama ? ' · ' + paciente.tipoCama : '')"
                 :class="[
-                  'flex h-[52px] flex-col items-center justify-center px-2 rounded-lg border transition-all text-center text-slate-800',
+                  'flex h-[58px] flex-col items-center justify-center gap-0.5 px-1 rounded-lg border transition-all text-center text-slate-800',
                   selectedPaciente?.id === paciente.id
                     ? 'border-green-600 bg-green-600 text-white'
                     : 'border-slate-200 hover:border-green-500 hover:bg-green-500 hover:text-white'
                 ]"
               >
-                <p class="w-full text-center text-[17px] font-bold leading-none translate-y-[8px]">{{ paciente.apellido }}</p>
+                <span class="w-full text-center text-[15px] font-bold leading-none">{{ paciente.cama }}</span>
+                <span
+                  v-if="paciente.tipoCama"
+                  class="w-full truncate text-center text-[10px] leading-none opacity-75"
+                >{{ paciente.tipoCama }}</span>
               </button>
             </div>
             <div v-if="mostrarMedico" class="mt-3 relative">
@@ -74,10 +79,11 @@
                     v-for="med in filteredMedicos"
                     :key="med.IdMedico"
                     type="button"
-                    class="block w-full px-4 py-2.5 text-left text-[13px] font-semibold text-slate-800 hover:bg-emerald-50"
+                    class="block w-full px-4 py-2 text-left hover:bg-emerald-50"
                     @mousedown.prevent="selectMedico(med)"
                   >
-                    {{ med.Medico }}
+                    <span class="block text-[13px] font-semibold text-slate-800">{{ med.Medico }}</span>
+                    <span v-if="med.Especialidad" class="block text-[11px] text-slate-400">{{ med.Especialidad }}</span>
                   </button>
                 <div v-if="filteredMedicos.length === 0" class="px-3 py-2 text-xs text-slate-400">Sin resultados</div>
                 </template>
@@ -128,7 +134,7 @@ const emit = defineEmits<{
 const loading = ref(false)
 const pacientes = ref<Patient[]>([])
 const selectedPaciente = ref<Patient | null>(null)
-const medicos = ref<{ IdMedico: number; IdEmpleado: number; IdEspecialidad: number; Medico: string }[]>([])
+const medicos = ref<{ IdMedico: number; IdEmpleado: number; IdEspecialidad: number; Especialidad?: string; Medico: string }[]>([])
 const medicoSearch = ref('')
 const medicoSeleccionadoNombre = ref('')
 const medicoSeleccionadoId = ref<number | null>(null)
@@ -140,10 +146,10 @@ const hideMedicoTimeout = ref<number | null>(null)
 const editandoMedico = ref(false)
 
 async function fetchMedicos() {
-  const especialidadId = props.idEspecialidad ?? props.servicioSeleccionado
+  const especialidadId = props.idEspecialidad
   if (!especialidadId) {
     medicos.value = []
-    medicosError.value = 'Seleccione un servicio primero'
+    medicosError.value = 'No se pudo determinar la especialidad del servicio'
     return
   }
   try {
@@ -198,6 +204,7 @@ async function fetchPacientes() {
         financiamiento: 'ESTRATEGIA',
         habitacion: p.Codigo || '',
         cama: p.Codigo || '',
+        tipoCama: p.TipoCama || '',
         diagnostico: '',
         fechaIngreso: new Date().toISOString().split('T')[0],
         estado: 'estable' as const,

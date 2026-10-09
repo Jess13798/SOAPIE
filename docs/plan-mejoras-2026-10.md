@@ -224,6 +224,9 @@ la historia de la base de datos.
 | 2026-10-09 | Anexo B — `git rm --cached backend/.env`. |
 | 2026-10-09 | Anexo A — creado `backend/sql/001-crear-tablas-notas.sql` (sin ejecutar). |
 | 2026-10-09 | Anexo A — tablas de notas **aplicadas** en `sigh`; `/api/notas` verificado 200 (crear → vitales → borrar, sin datos de prueba). |
+| 2026-10-09 | Buscador global de pacientes (nombre / DNI / cuenta) con servicio actual; al seleccionar, cambia al servicio y permite **Asignar Cama**. |
+| 2026-10-09 | Corrección `e70cbe4` — el servicio actual se toma de la **estancia pendiente** (no de la atención de `FechaIngreso` más reciente) y se priorizan los pacientes hospitalizados. |
+| 2026-10-09 | Asignar Cama — cada cama muestra **número + tipo** (`TiposCama`); la lista de médicos se filtra por la **especialidad del servicio** y muestra su especialidad (se corrigió el refresco entre pacientes/servicios). |
 
 ---
 

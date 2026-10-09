@@ -11,13 +11,15 @@ async function getMedicosByEspecialidad(idEspecialidad) {
         SELECT DISTINCT 
             me.IdMedico,
             me.IdEmpleado,
-            s.IdEspecialidad,
+            m.IdEspecialidad,
+            ISNULL(esp.Nombre, '') AS Especialidad,
             UPPER(LTRIM(RTRIM(ISNULL(e.ApellidoPaterno, '') + ' ' + ISNULL(e.ApellidoMaterno, '') + ' ' + ISNULL(e.Nombres, '')))) AS Medico
         FROM MedicosEspecialidad m
         INNER JOIN Medicos me ON me.IdMedico = m.IdMedico
         INNER JOIN Empleados e ON e.IdEmpleado = me.IdEmpleado
-        INNER JOIN Servicios s ON s.IdEspecialidad = m.IdEspecialidad
+        LEFT JOIN Especialidades esp ON esp.IdEspecialidad = m.IdEspecialidad
         WHERE m.IdEspecialidad = @IdEspecialidad
+        ORDER BY Medico
     `, [
         { name: 'IdEspecialidad', type: sql.Int, value: Number(idEspecialidad) }
     ]);

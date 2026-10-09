@@ -17,6 +17,7 @@ export interface Patient {
   financiamiento: string
   habitacion: string
   cama: string
+  tipoCama?: string
   diagnostico: string
   fechaIngreso: string
   estado: 'estable' | 'observacion' | 'critico' | 'alta'

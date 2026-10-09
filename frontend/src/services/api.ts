@@ -226,6 +226,7 @@ export interface Medico {
     IdMedico: number
     IdEmpleado: number
     IdEspecialidad: number
+    Especialidad?: string
     Medico: string
 }
 
