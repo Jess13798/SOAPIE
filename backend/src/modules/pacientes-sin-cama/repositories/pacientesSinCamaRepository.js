@@ -2,11 +2,12 @@
 // Encapsula la lógica SQL y las transacciones para que el servicio no dependa
 // directamente del detalle de la base de datos ni del manejo de conexiones.
 
-const { sql, dbConfig } = require('../../../../database');
+const sql = require('mssql');
+const { getPool } = require('../../../../dbHelper');
 
 async function getPacientesSinCama(nombreServicio = null) {
     try {
-        const pool = await sql.connect(dbConfig);
+        const pool = await getPool();
         const request = pool.request();
         request.timeout = 60000;
         request.input(
@@ -83,7 +84,7 @@ async function getPacientesSinCama(nombreServicio = null) {
 }
 
 async function asignarCama({ IdPaciente, IdCuentaAtencion, IdCama, IdMedicoOrdena }) {
-    const pool = await sql.connect(dbConfig);
+    const pool = await getPool();
     const transaction = new sql.Transaction(pool);
 
     try {
@@ -129,7 +130,7 @@ async function asignarCama({ IdPaciente, IdCuentaAtencion, IdCama, IdMedicoOrden
 }
 
 async function moverPacienteDeCama({ IdPaciente, IdCama, IdCuentaAtencion }) {
-    const pool = await sql.connect(dbConfig);
+    const pool = await getPool();
     const transaction = new sql.Transaction(pool);
 
     try {
@@ -195,7 +196,7 @@ async function registrarTransferenciaEstancia({
         throw new Error('idAtencion e idServicio son obligatorios');
     }
 
-    const pool = await sql.connect(dbConfig);
+    const pool = await getPool();
     const transaction = new sql.Transaction(pool);
 
     try {

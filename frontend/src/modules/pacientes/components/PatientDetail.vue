@@ -64,7 +64,7 @@
 import { computed } from 'vue'
 import { Bed, Calendar, Stethoscope, Clock } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
-import NoteCard from './NoteCard.vue'
+import NoteCard from '@/modules/notas/components/NoteCard.vue'
 
 const props = defineProps<{
   patient: Patient

@@ -77,6 +77,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { limpiarSesion } from '@/services/api'
 import { 
   Users,
   Activity, LogOut, Menu, ChevronLeft 
@@ -108,8 +109,7 @@ function handleNavClick(view: string) {
 }
 
 function logout() {
-  sessionStorage.removeItem('usuarioLogueado')
-  sessionStorage.removeItem('empleadoLogueado')
+  limpiarSesion()
   router.push('/')
 }
 </script>

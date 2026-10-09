@@ -7,18 +7,49 @@ import type { Patient, NotaEnfermeria, PacienteBD } from '@/types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
 
+// ==========================================
+// 0. SESIÓN / TOKEN
+// ==========================================
+const TOKEN_KEY = 'token'
+
+export function getToken(): string | null {
+    return sessionStorage.getItem(TOKEN_KEY)
+}
+
+export function setToken(token: string): void {
+    sessionStorage.setItem(TOKEN_KEY, token)
+}
+
+export function limpiarSesion(): void {
+    sessionStorage.removeItem(TOKEN_KEY)
+    sessionStorage.removeItem('usuarioLogueado')
+    sessionStorage.removeItem('empleadoLogueado')
+    sessionStorage.removeItem('idEmpleado')
+}
+
 // Helper interno para peticiones JSON
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${BASE_URL}${endpoint}`
+    const token = getToken()
+
     const config: RequestInit = {
         ...options,
         headers: {
             'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
             ...options.headers,
         },
     }
 
     const response = await fetch(url, config)
+
+    // Token inválido o expirado: se limpia la sesión y se vuelve al login
+    if (response.status === 401) {
+        limpiarSesion()
+        if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+            window.location.href = '/'
+        }
+    }
 
     if (!response.ok) {
         let errorDetalle = `Error HTTP ${response.status}: ${response.statusText}`
@@ -45,6 +76,7 @@ export interface LoginPayload {
 export interface LoginResponse {
     success: boolean
     mensaje: string
+    token?: string
     usuario?: string
     empleado?: string
     idEmpleado?: string | number

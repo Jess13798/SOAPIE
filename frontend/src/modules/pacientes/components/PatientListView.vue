@@ -201,9 +201,9 @@ import {
 } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
 import { pacientesService, type PacienteSinCama, type Servicio } from '@/services/api'
-import PacientesSinCamaTable from '@/components/PacientesSinCamaTable.vue'
-import BedCountersHeader from '@/components/BedCountersHeader.vue'
-import BedActionMenu from '@/components/BedActionMenu.vue'
+import PacientesSinCamaTable from '@/modules/pacientes/components/PacientesSinCamaTable.vue'
+import BedCountersHeader from '@/modules/pacientes/components/BedCountersHeader.vue'
+import BedActionMenu from '@/modules/pacientes/components/BedActionMenu.vue'
 
 const props = defineProps<{
   pacientes: Patient[]

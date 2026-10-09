@@ -1,0 +1,342 @@
+================================================================================
+RESUMEN DE CAMBIOS Y PLAN DE MEJORAS
+Proyecto: Sistema de Notas de Enfermeria - Hospital Rezola (Canete)
+Fecha: 2026-10-09 (actualizacion)
+Rama: JJRama
+Stack: Node.js + Express 5 + SQL Server (mssql)  |  Vue 3 + Vite + TypeScript + Tailwind
+================================================================================
+
+Este archivo documenta TODO lo realizado hasta ahora y el plan de trabajo
+pendiente. Complementa a: docs/plan-mejoras-2026-10.md
+
+
+--------------------------------------------------------------------------------
+1. TRABAJO REALIZADO
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------
+PASO 1 - UNIFICAR LA CONEXION A BASE DE DATOS          [ HECHO ]
+--------------------------------------------------------------------
+Objetivo: una sola forma de conectarse y una sola configuracion.
+
+Que se hizo:
+  - backend/src/config/db.js  -> pasa a ser la UNICA fuente de configuracion
+    de la base de datos (usuario, password, servidor, base, timeouts).
+  - backend/database.js       -> pasa a ser un "wrapper" de 4 lineas que solo
+    re-exporta desde src/config/db.js (compatibilidad con el codigo legacy).
+  - Todos los repositorios y el login usan dbHelper (pool compartido +
+    parametros nombrados), en lugar de abrir conexiones con sql.connect().
+  - dbHelper.js queda como el UNICO lugar del backend que llama a sql.connect().
+
+Archivos:
+  - backend/src/config/db.js
+  - backend/database.js
+  - backend/login.js
+  - backend/check_table.js
+  - backend/src/modules/notas/repositories/notasRepository.js
+  - backend/src/modules/pacientes-sin-cama/repositories/pacientesSinCamaRepository.js
+  - backend/src/modules/notas/services/notasService.js
+
+Resultado: sql.connect() aparece en un solo archivo; una sola configuracion.
+
+
+--------------------------------------------------------------------
+BUG CORREGIDO (encontrado durante el Paso 1)            [ ARREGLADO ]
+--------------------------------------------------------------------
+Problema: el commit de refactor "feat: nomalizacion D" (4360d5b) movio la logica
+de notas a notasService.js, pero el repositorio (notasRepository.js) nunca
+recibio las funciones getAllNotas, insertNota, updateNota, insertVitales y
+deleteNotaById. El servicio las llamaba, pero NO existian.
+
+Consecuencia: los endpoints GET /api/notas, POST /api/notas y
+DELETE /api/notas/:id fallaban con 500 en tiempo de ejecucion.
+
+Solucion: se recupero el codigo original desde Git
+(git show <commit>:backend/notas.js) y se reimplementaron esas 5 funciones
+en notasRepository.js usando el patron de dbHelper.
+Nota: se corrigio tambien un duplicado (ApellidoPaterno x2) en la consulta
+de enfermeras de getAllNotas.
+
+
+--------------------------------------------------------------------
+PASO 2 - PROTEGER LA API                               [ HECHO ]
+--------------------------------------------------------------------
+Objetivo: que nadie consuma los datos sin estar autenticado.
+
+Que se hizo:
+  - NUEVO backend/auth.js: firma y verifica tokens con HMAC-SHA256 usando el
+    modulo crypto de Node (SIN dependencias nuevas). Vigencia: 8 horas.
+    Exporta firmarToken(), verificarToken() y el middleware requiereAuth().
+  - POST /api/login ahora devuelve un "token" cuando las credenciales son validas.
+  - Todas las rutas /api/* EXCEPTO /api/login exigen token valido
+    (middleware app.use('/api', requiereAuth)).
+  - CORS restringido: solo se permiten los origenes definidos en CORS_ORIGIN.
+    Un origen desconocido recibe HTTP 403.
+  - Frontend: la capa de servicios (api.ts) adjunta el header
+    "Authorization: Bearer <token>" en cada peticion; ante un 401 limpia la
+    sesion y regresa al login.
+  - Login guarda el token; logout lo borra; el router (guard) exige token
+    (antes bastaba un sessionStorage falsificable).
+
+Variables nuevas en backend/.env:
+  - AUTH_SECRET   = secreto aleatorio para firmar los tokens (mantener privado)
+  - CORS_ORIGIN   = origenes permitidos, separados por coma
+
+Archivos:
+  - backend/auth.js (NUEVO), backend/index.js, backend/.env
+  - frontend/src/services/api.ts
+  - frontend/src/views/Login.vue
+  - frontend/src/components/AppSidebar.vue
+  - frontend/src/router/index.js
+
+Pruebas realizadas (servidor real + peticiones):
+  - Sin token ................... 401
+  - Token falso ................. 401
+  - Token valido ................ 200 (datos reales)
+  - Origen permitido ............ 200 + cabecera CORS
+  - Origen desconocido .......... 403 (bloqueado)
+  - Login invalido .............. 401 (ruta sigue publica)
+  - npm run build (frontend) .... compila sin errores
+
+
+--------------------------------------------------------------------
+ANEXO A - TABLAS DE NOTAS (script SQL)                 [ APLICADO ]
+--------------------------------------------------------------------
+Problema: las tablas NotaEnfermeria y NotaEnfermeriaSignosVitales NO existian
+en la base "sigh" (se buscaron en todas las bases del servidor). Por eso
+GET /api/notas devolvia 500.
+
+Se reconstruyo su definicion a partir del codigo y del esquema historico
+(backend/out2.json) y SE APLICARON el 2026-10-09.
+
+Archivo: backend/sql/001-crear-tablas-notas.sql  (idempotente: solo agrega)
+
+Validado tras aplicar:
+  - /api/notas .................. 500 -> 200
+  - Flujo completo probado: crear nota -> consultar vitales -> borrar nota.
+  - La base quedo sin datos de prueba (0 notas, 0 signos vitales).
+
+Como aplicarlo:
+  1. Abrir el .sql en SQL Server Management Studio.
+  2. Conectarse a 192.168.80.11 y seleccionar la base "sigh".
+  3. Ejecutar (F5).
+  4. Verificar:
+       SELECT name FROM sys.tables WHERE name LIKE 'NotaEnfermeria%';
+
+Regla a futuro: cada cambio de esquema = un archivo nuevo y numerado
+(002-...sql, 003-...sql). Nunca editar uno ya aplicado.
+
+
+--------------------------------------------------------------------
+ANEXO B - .ENV FUERA DE GIT                            [ HECHO ]
+--------------------------------------------------------------------
+Problema: backend/.env (con DB_PASSWORD y AUTH_SECRET) estaba rastreado en Git
+porque se agrego antes de existir el .gitignore.
+
+Accion realizada:
+  - git rm --cached backend/.env
+    (deja de rastrearse; el archivo LOCAL se conserva intacto)
+
+PENDIENTE (importante):
+  - Hacer el commit:  git commit -m "chore: dejar de versionar backend/.env"
+  - ROTAR las credenciales porque estuvieron expuestas en el historial:
+      * cambiar DB_PASSWORD
+      * generar un AUTH_SECRET nuevo
+  - Opcional: purgar el historial con git filter-repo / BFG (afecta a todo
+    el equipo; solo si el repo debe tratarse como confidencial).
+
+
+--------------------------------------------------------------------------------
+2. PLAN DE TRABAJO (estado de cada paso)
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------
+PASO 3 - ROUTERS POR MODULO                            [ HECHO ]
+--------------------------------------------------------------------
+Objetivo: que backend/index.js deje de crecer con cada modulo clinico.
+
+Que se hizo:
+  - Cada dominio tiene su archivo de rutas en:
+      backend/src/modules/<modulo>/routes.js
+  - Se montan en index.js con:  app.use('/api', <modulo>Routes)
+  - backend/index.js quedo como solo "cableado" (middlewares + montaje de
+    routers), SIN logica de negocio. Ahora tiene ~55 lineas.
+
+Routers creados:
+  - modules/auth/routes.js               -> POST /api/login  (PUBLICO)
+  - modules/pacientes/routes.js          -> GET /api/pacientes, GET /api/servicios
+  - modules/notas/routes.js              -> GET/POST /api/notas,
+                                            DELETE /api/notas/:id,
+                                            GET /api/notas/:id/vitals
+  - modules/pacientes-sin-cama/routes.js -> GET /api/pacientes-sin-cama,
+                                            POST /api/asignar-cama,
+                                            POST /api/mover-cama,
+                                            POST /api/transferencia-estancia
+  - modules/diagnosticos/routes.js       -> GET /api/diagnosticos
+  - modules/medicos/routes.js            -> GET /api/medicos
+
+Orden en index.js: authRoutes (publico) -> requiereAuth('/api') -> routers
+protegidos. LAS URLs NO CAMBIAN -> el frontend no se ve afectado.
+
+Validado (servidor real + peticiones):
+  - /api/servicios .......... 401 sin token / 200 con token
+  - /api/pacientes .......... 200
+  - /api/pacientes-sin-cama . 200
+  - /api/diagnosticos ....... 400 sin parametro / 200 con parametro
+  - /api/medicos ............ 400 sin parametro
+  - /api/notas .............. 500 (tabla pendiente) igual que antes
+  - /api/asignar-cama { } ... 400 (validacion)
+  - /api/login .............. 401 (sigue publico)
+Los 7 archivos (index + 6 routers) pasan node --check.
+
+Beneficio: cada modulo clinico nuevo (SOAPIE, Kardex, balance hidrico...)
+se agrega como un router propio sin tocar un archivo gigante.
+
+
+--------------------------------------------------------------------
+PASO 4 - TESTS MINIMOS                                 [ HECHO ]
+--------------------------------------------------------------------
+Objetivo: detectar si un cambio rompe una funcion clinica sin que nadie lo note.
+
+Que se hizo:
+  - Pruebas con el runner nativo node:test (incluido en Node; NO se instala nada).
+  - Doble de prueba (mock) de los repositorios -> los tests NO tocan la BD.
+  - Se ejecutan con:  npm test
+
+Archivos nuevos (backend/tests/):
+  - auth.test.js                    -> firma/verificacion de token, manipulacion,
+                                        expiracion y middleware requiereAuth.
+  - login.test.js                   -> credenciales validas/incorrectas, usuario
+                                        inexistente y error de consulta (bcrypt real).
+  - notasService.test.js            -> mapeo de filas, alta, edicion, firma,
+                                        borrado e historial de vitales.
+  - pacientesSinCamaService.test.js -> asignar/mover cama y transferencia.
+  - rutas.test.js                   -> cada modulo exporta un router valido.
+
+Configuracion: en package.json el script "test" pasa de error a:
+  node --test "backend/tests/*.test.js"
+
+Resultado: 30 tests, 30 pasan, 0 fallan (~0.75 s), sin tocar la base de datos.
+
+Beneficio: un cambio que rompa una funcion clinica (notas, camas, login,
+tokens) falla en `npm test` antes de llegar al hospital.
+
+
+--------------------------------------------------------------------
+PASO 5 - FRONTEND POR MODULOS                          [ HECHO ]
+--------------------------------------------------------------------
+Objetivo: ordenar el frontend por dominio clinico.
+
+Que se hizo:
+  1. Se movieron los componentes de la carpeta plana frontend/src/components/
+     a la estructura por dominio bajo frontend/src/modules/:
+       modules/pacientes/components/  -> PatientListView, PatientDetail,
+           PacientesSinCamaTable, BedModal, BedActionMenu, BedCountersHeader,
+           StatsHeader, TotalBedsModal, TransferModal.
+       modules/notas/components/      -> NewNoteModal, NewNoteForm, NoteCard,
+           NotesHistoryPanel.
+       modules/vitales/components/    -> VitalsOverview, VitalsHistoryModal.
+       components/ (compartido)       -> AppSidebar (layout), SuccessModal.
+  2. Se movieron los composables a su modulo:
+       usePatients.ts, useBedModals.ts -> modules/pacientes/composables/
+       useNotes.ts                     -> modules/notas/composables/
+       useDashboard.ts                 -> sigue en composables/ (orquestacion).
+  3. Se actualizaron los imports a las rutas nuevas de modulo
+     (@/modules/<dominio>/components/...) en Dashboard.vue, PatientListView.vue,
+     PatientDetail.vue y NewNoteModal.vue. LAS URLs NO CAMBIAN.
+  4. Split de NewNoteForm.vue (439 lineas) en 3 subcomponentes de presentacion:
+       modules/notas/components/NoteShiftBar.vue  -> turno (dia/noche) + autoria
+       modules/notas/components/VitalsGrid.vue    -> signos vitales (SIS/DIA)
+       modules/notas/components/SoapieEditor.vue  -> pestanas + textarea SOAPIE
+     El estado reactivo "form", la validacion estricta, el watch de initialNota,
+     clearVitals (defineExpose), el toast y el pie de botones SE MANTIENEN EN EL
+     PADRE para no alterar la logica. Los hijos comparten el objeto form (tipo
+     NotaFormState en modules/notas/notaForm.ts).
+
+Validado: npm run build compila (1773 modulos) y la app arranca en el navegador
+(login renderiza sin errores).
+
+Nota: el split movio la presentacion; la validacion y la construccion de la nota
+siguen exactamente igual en el padre. Se puede profundizar luego si se desea.
+
+
+--------------------------------------------------------------------------------
+3. ESTADO RESUMIDO
+--------------------------------------------------------------------------------
+  | Paso | Descripcion                              | Estado     |
+  |------|------------------------------------------|------------|
+  |  1   | Unificar conexion a BD (+ bug de notas)  | HECHO      |
+  |  2   | Proteger la API (token + CORS)           | HECHO      |
+  |  3   | Routers por modulo                       | HECHO      |
+  |  4   | Tests minimos                            | HECHO      |
+  |  5   | Frontend por modulos                     | HECHO      |
+  |  A   | Script de tablas de notas                | APLICADO   |
+  |  B   | .env fuera de Git (+ rotar secretos)     | HECHO*     |  (*falta commit y rotar)
+
+
+--------------------------------------------------------------------------------
+4. ARCHIVOS TOCADOS EN TOTAL (sin commitear)
+--------------------------------------------------------------------------------
+  backend/auth.js                                             [NUEVO]
+  backend/sql/001-crear-tablas-notas.sql                      [NUEVO]
+  backend/.env                                                [modificado + destrackeado]
+  backend/database.js
+  backend/check_table.js
+  backend/index.js
+  backend/login.js
+  backend/src/config/db.js
+  backend/src/modules/auth/routes.js                          [NUEVO]
+  backend/src/modules/pacientes/routes.js                     [NUEVO]
+  backend/src/modules/notas/routes.js                         [NUEVO]
+  backend/src/modules/pacientes-sin-cama/routes.js            [NUEVO]
+  backend/src/modules/diagnosticos/routes.js                  [NUEVO]
+  backend/src/modules/medicos/routes.js                       [NUEVO]
+  backend/src/modules/notas/repositories/notasRepository.js
+  backend/src/modules/notas/services/notasService.js
+  backend/src/modules/pacientes-sin-cama/repositories/pacientesSinCamaRepository.js
+  backend/tests/auth.test.js                                  [NUEVO]
+  backend/tests/login.test.js                                 [NUEVO]
+  backend/tests/notasService.test.js                          [NUEVO]
+  backend/tests/pacientesSinCamaService.test.js               [NUEVO]
+  backend/tests/rutas.test.js                                 [NUEVO]
+  package.json                                                [script test]
+  frontend/src/services/api.ts
+  frontend/src/views/Login.vue
+  frontend/src/views/Dashboard.vue
+  frontend/src/components/AppSidebar.vue                      [modificado]
+  frontend/src/router/index.js
+  frontend/src/modules/README.md                              [actualizado]
+  frontend/src/modules/pacientes/components/*                 [MOVIDOS]
+  frontend/src/modules/pacientes/composables/*                [MOVIDOS]
+  frontend/src/modules/notas/components/*                     [MOVIDOS]
+  frontend/src/modules/notas/composables/useNotes.ts          [MOVIDO]
+  frontend/src/modules/vitales/components/*                   [MOVIDOS]
+  frontend/src/modules/notas/notaForm.ts                      [NUEVO]
+  frontend/src/modules/notas/components/NoteShiftBar.vue      [NUEVO]
+  frontend/src/modules/notas/components/VitalsGrid.vue        [NUEVO]
+  frontend/src/modules/notas/components/SoapieEditor.vue      [NUEVO]
+  docs/plan-mejoras-2026-10.md                                [NUEVO]
+  docs/RESUMEN-CAMBIOS-Y-PLAN.txt                             [ESTE ARCHIVO]
+
+  (frontend/src/modules/notas/components/NewNoteModal.vue aparece modificado,
+   pero es un cambio previo del usuario; no fue tocado en estas mejoras.)
+
+
+--------------------------------------------------------------------------------
+5. COMO VER LOS CAMBIOS
+--------------------------------------------------------------------------------
+  cd C:\Proyectos\enfermeria
+  git status                      # ver archivos modificados/nuevos
+  git diff                        # ver el detalle de cada cambio
+  git diff backend/index.js       # ver solo un archivo
+
+  Servidor:
+  npm run server                  # backend en http://localhost:3000
+  npm run client                  # frontend (Vite dev)
+
+  Tests (no requieren base de datos):
+  npm test                        # corre los 30 tests con node:test
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
