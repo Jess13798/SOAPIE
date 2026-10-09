@@ -189,6 +189,32 @@ export interface Diagnostico {
     Codigo: string
 }
 
+export interface CatalogoNoc {
+    id: number
+    codigo: string
+    resultado: string
+    definicion: string | null
+    escalaLikert: string | null
+}
+
+export interface CatalogoNic {
+    id: number
+    codigo: string
+    intervencion: string
+    definicion: string | null
+}
+
+export interface NandaConInterrelaciones {
+    id: number
+    codigo: string
+    dominio: string | null
+    clase: string | null
+    diagnostico: string
+    definicion: string | null
+    noc: CatalogoNoc[]
+    nic: CatalogoNic[]
+}
+
 export const catalogosService = {
     getMedicosPorEspecialidad(especialidadId: string | number): Promise<Medico[]> {
         return request<Medico[]>(`/medicos?especialidadId=${encodeURIComponent(especialidadId)}`)
@@ -196,5 +222,10 @@ export const catalogosService = {
 
     getDiagnosticosPorCuenta(idCuentaAtencion: string | number): Promise<Diagnostico[]> {
         return request<Diagnostico[]>(`/diagnosticos?idCuentaAtencion=${encodeURIComponent(idCuentaAtencion)}`)
+    },
+
+    buscarNandaNocNic(buscar = ''): Promise<NandaConInterrelaciones[]> {
+        const query = buscar ? `?buscar=${encodeURIComponent(buscar)}` : ''
+        return request<NandaConInterrelaciones[]>(`/catalogos/nanda-noc-nic${query}`)
     },
 }

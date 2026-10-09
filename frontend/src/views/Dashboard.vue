@@ -87,6 +87,8 @@
           :pacientes="pacientes"
           :notas="notas"
         />
+
+        <NandaNocNicView v-if="activeView === 'catalogos-nanda'" />
       </div>
     </main>
 
@@ -144,6 +146,7 @@ import PatientListView from '@/components/PatientListView.vue'
 import NewNoteModal from '@/components/NewNoteModal.vue'
 import NewNoteForm from '@/components/NewNoteForm.vue'
 import VitalsOverview from '@/components/VitalsOverview.vue'
+import NandaNocNicView from '@/components/NandaNocNicView.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
 import BedModal from '@/components/BedModal.vue'
 import NotesHistoryPanel from '@/components/NotesHistoryPanel.vue'

@@ -9,6 +9,7 @@ const notasModule = require('./notas');
 const pacienteSinCamaModule = require('./src/modules/pacientes-sin-cama');
 const diagnosticosModule = require('./src/modules/diagnosticos');
 const medicosModule = require('./src/modules/medicos');
+const catalogosModule = require('./src/modules/catalogos');
 
 const app = express();
 
@@ -82,6 +83,28 @@ app.get('/api/servicios', async (req, res) => {
         res.json(datos);
     } catch (err) {
         res.status(500).send('Error: ' + err.message);
+    }
+});
+
+// Catálogo de demostración NANDA con resultados NOC e intervenciones NIC.
+app.get('/api/catalogos/nanda-noc-nic', async (req, res) => {
+    const buscar = typeof req.query.buscar === 'string' ? req.query.buscar.trim() : '';
+    if (buscar.length > 100) {
+        return res.status(400).json({
+            success: false,
+            mensaje: 'El texto de búsqueda no puede superar 100 caracteres.',
+        });
+    }
+
+    try {
+        const datos = await catalogosModule.buscarNandaNocNic(buscar);
+        res.json(datos);
+    } catch (err) {
+        console.error('Error en /api/catalogos/nanda-noc-nic:', err);
+        res.status(500).json({
+            success: false,
+            mensaje: 'No se pudo consultar el catálogo de demostración.',
+        });
     }
 });
 

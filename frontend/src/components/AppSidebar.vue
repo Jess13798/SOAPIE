@@ -79,7 +79,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   Users,
-  Activity, LogOut, Menu, ChevronLeft 
+  Activity, BookOpen, LogOut, Menu, ChevronLeft
 } from 'lucide-vue-next'
 
 // --- LÃGICA DE COLAPSO ---
@@ -101,6 +101,7 @@ const emit = defineEmits<{
 const navItems = [
   { view: 'pacientes', label: 'Pacientes', icon: Users },
   { view: 'vitales', label: 'Signos Vitales', icon: Activity },
+  { view: 'catalogos-nanda', label: 'Catálogo NANDA / NOC / NIC', icon: BookOpen },
 ]
 
 function handleNavClick(view: string) {
@@ -113,7 +114,5 @@ function logout() {
   router.push('/')
 }
 </script>
-
-
 
 
