@@ -138,10 +138,12 @@ Accion realizada:
     (deja de rastrearse; el archivo LOCAL se conserva intacto)
 
 PENDIENTE (importante):
-  - Hacer el commit:  git commit -m "chore: dejar de versionar backend/.env"
   - ROTAR las credenciales porque estuvieron expuestas en el historial:
       * cambiar DB_PASSWORD
       * generar un AUTH_SECRET nuevo
+
+  (El commit ya se hizo: a84af11. El archivo local backend/.env se conserva y
+   dejo de versionarse.)
   - Opcional: purgar el historial con git filter-repo / BFG (afecta a todo
     el equipo; solo si el repo debe tratarse como confidencial).
 

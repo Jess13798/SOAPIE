@@ -203,10 +203,10 @@ la historia de la base de datos.
 ## Anexo B — Pendiente de seguridad / higiene
 
 1. **`backend/.env` estaba versionado en Git** (se agregó antes del `.gitignore`).
-   - **Hecho:** `git rm --cached backend/.env` (el archivo local se conserva; queda
-     en staging para el commit).
-   - **Pendiente:** hacer el commit y **rotar** credenciales (`DB_PASSWORD`,
-     `AUTH_SECRET`), porque estuvieron expuestas en el historial.
+   - **Hecho:** `git rm --cached backend/.env` **y commit** `a84af11` (el archivo
+     local se conserva; ahora está `.gitignore`).
+   - **Pendiente (importante): rotar las credenciales** porque estuvieron expuestas
+     en el historial: cambiar `DB_PASSWORD` y generar un `AUTH_SECRET` nuevo.
    - Opcional: purgar el historial con `git filter-repo`/BFG si se requiere.
 2. Los archivos `backend/out.json`, `backend/out2.json` son salidas de diagnóstico.
 
