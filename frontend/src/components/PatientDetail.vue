@@ -5,7 +5,7 @@
       <div class="flex items-start justify-between px-5 pt-5 pb-3">
         <div>
           <h3 class="text-xl font-semibold text-card-foreground">
-            {{ patient.nombre }} {{ patient.apellido }}
+            {{ patient.nombreCompleto || `${patient.nombre} ${patient.apellido}`.trim() }}
           </h3>
           <p class="mt-1 text-sm text-muted-foreground">{{ patient.diagnostico }}</p>
         </div>

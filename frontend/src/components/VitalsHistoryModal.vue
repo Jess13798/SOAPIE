@@ -13,7 +13,7 @@
           </div>
           <div>
             <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Historial de Signos Vitales</h3>
-            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">Registros capturados para esta nota</p>
+            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">Registros capturados durante esta atención</p>
           </div>
         </div>
         
@@ -73,7 +73,7 @@
                 <td class="px-4 py-2.5 text-[11px] font-black text-slate-700 border-r border-slate-100">{{ row.Frec_Respiratoria }}</td>
                 <td class="px-4 py-2.5 text-[11px] font-black text-orange-600 border-r border-slate-100">{{ row.Temperatura }}</td>
                 <td class="px-4 py-2.5 text-[11px] font-black text-emerald-600 border-r border-slate-100">{{ row.Saturacion }}</td>
-                <td class="px-4 py-2.5 text-[10px] font-bold text-slate-500">{{ row.IdEmpleado ?? 'Sin usuario' }}</td>
+                <td class="px-4 py-2.5 text-[10px] font-bold text-slate-500">{{ row.NombreEmpleado || 'Sin usuario' }}</td>
               </tr>
             </tbody>
           </table>
@@ -107,7 +107,7 @@ import type { SignoVitalHistorial } from '@/types'
 
 const props = defineProps<{
   isOpen: boolean
-  idNota: string | number
+  idCuenta: string | number
   registrosTemporales?: SignoVitalHistorial[]
 }>()
 
@@ -117,7 +117,7 @@ defineEmits<{
   close: []
 }>()
 
-const history = ref<any[]>([])
+const history = ref<SignoVitalHistorial[]>([])
 const loading = ref(false)
 const loadingMore = ref(false)
 const historyError = ref('')
@@ -131,12 +131,12 @@ function registrosLocales() {
 
 const headers = [
   'ID', 'FECHA / HORA', 'PESO', 'TALLA', 'P.CEF', 'P.ABD', 
-  'HEMOG', 'P. ART', 'F.CARD', 'F.RESP', 'TEMP', 'SAT', 'ID EMPLEADO'
+  'HEMOG', 'P. ART', 'F.CARD', 'F.RESP', 'TEMP', 'SAT', 'ENFERMERA'
 ]
 
 const fetchHistory = async (isLoadMore = false) => {
   historyError.value = ''
-  if (!props.idNota || isNaN(Number(props.idNota))) {
+  if (!props.idCuenta || isNaN(Number(props.idCuenta))) {
     history.value = [...registrosLocales()].reverse()
     hasMore.value = false
     return
@@ -153,7 +153,7 @@ const fetchHistory = async (isLoadMore = false) => {
   historyError.value = ''
 
   try {
-    const data = await notasService.getHistorialVitals(props.idNota, LIMIT, page.value)
+    const data = await notasService.getHistorialVitalsPorAtencion(props.idCuenta, LIMIT, page.value)
     
     if (data.length > 0) {
       if (isLoadMore) {
@@ -208,7 +208,7 @@ const formatFecha = (dateStr: string) => {
   })
 }
 
-watch([() => props.isOpen, () => props.idNota, () => props.registrosTemporales], ([newVal]) => {
+watch([() => props.isOpen, () => props.idCuenta, () => props.registrosTemporales], ([newVal]) => {
   if (newVal) fetchHistory()
 })
 </script>

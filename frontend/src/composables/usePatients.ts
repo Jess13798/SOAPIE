@@ -15,13 +15,15 @@ export function usePatients() {
     const edadNum = Number(pacienteBD.Edad)
     const edad = Number.isFinite(edadNum) ? edadNum : 0
     const edadDescripcion = (pacienteBD.TipoEdad || '').toString().trim()
+    const nombreCompleto = (pacienteBD.Pacientes || '').trim()
 
     return {
       id: pacienteId,
       idEspecialidad: pacienteBD.IdEspecialidad ? String(pacienteBD.IdEspecialidad) : '',
       idProducto: pacienteBD.IdProducto ? String(pacienteBD.IdProducto) : '',
-      nombre: pacienteBD.Pacientes?.split(' ')[0] || '',
-      apellido: pacienteBD.Pacientes || '',
+      nombreCompleto,
+      nombre: nombreCompleto.split(/\s+/)[0] || '',
+      apellido: nombreCompleto,
       edad,
       edadDescripcion,
       genero: 'M' as 'M' | 'F',

@@ -15,45 +15,6 @@
       </div>
     </Transition>
 
-    <!-- Selector de 2 Turnos (12 Horas) y Autoría -->
-    <div class="flex items-center justify-between bg-slate-100 px-4 py-2 border-b border-slate-200">
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-black uppercase text-slate-600">Turno:</span>
-        <div class="inline-flex rounded-md shadow-sm" role="group">
-          <button
-            type="button"
-            @click="selectedTurno = 'dia'"
-            :disabled="isReadOnly"
-            :class="[
-              'px-4 py-1 text-xs font-bold rounded-l-lg border transition-colors',
-              selectedTurno === 'dia'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-            ]"
-          >
-            Día (07:00 - 19:00)
-          </button>
-          <button
-            type="button"
-            @click="selectedTurno = 'noche'"
-            :disabled="isReadOnly"
-            :class="[
-              'px-4 py-1 text-xs font-bold rounded-r-lg border transition-colors',
-              selectedTurno === 'noche'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-            ]"
-          >
-            Noche (19:00 - 07:00)
-          </button>
-        </div>
-      </div>
-
-      <div class="text-xs font-bold text-slate-500">
-        Enfermero/a: <span class="text-slate-800 font-extrabold uppercase">{{ nombreEnfermeraActual }}</span>
-      </div>
-    </div>
-
     <!-- Fila de Signos Vitales -->
     <section class="triaje-row grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-10 gap-1 px-0 py-0.5 bg-blue-50/10 bg-blue-color-print">
       <div v-for="(label, key) in etiquetasVitals" :key="key" class="input-vitals bg-white border border-slate-200 rounded-md overflow-hidden hover:border-blue-300 transition-colors shadow-sm text-center flex flex-col">
@@ -118,7 +79,7 @@
     </div>
 
     <!-- Área de Texto SOAPIE -->
-    <div class="pt-1 bg-slate-50/50">
+    <div v-if="activeTab !== 'a' || permiteEditarAnalisisAnterior" class="pt-1 bg-slate-50/50">
       <div class="border-x border-b border-slate-200 overflow-hidden shadow-sm min-h-[320px] bg-white flex">
         <div class="w-16 bg-blue-50/50 flex items-center justify-center border-r border-slate-100">
           <span class="text-4xl font-black text-blue-700 uppercase">{{ activeTab }}</span>
@@ -216,10 +177,10 @@ const defaultForm = () => ({
   spo2: props.initialNota?.signosVitales?.saturacionOxigeno || "", 
   s: props.initialNota?.subjetivo || "", 
   o: props.initialNota?.objetivo || "", 
-  a: props.initialNota?.analisis || "", 
-  p: props.initialNota?.plan || "", 
-  i: props.initialNota?.intervencion || "", 
-  e: props.initialNota?.evaluacion || "",
+  a: textoLibre(props.initialNota?.analisis || "", 'DIAGNOSTICOS NANDA'),
+  p: textoLibre(props.initialNota?.plan || "", 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS'),
+  i: textoLibre(props.initialNota?.intervencion || "", 'INTERVENCIONES NIC REALIZADAS'),
+  e: textoLibre(props.initialNota?.evaluacion || "", 'EVALUACION DE RESULTADOS NOC'),
   antecedentes: props.initialNota?.antecedentes || "", 
   diagnosticos: props.initialNota?.diagnosticos || "", 
   farmacia: props.initialNota?.farmacia || "", 
@@ -228,6 +189,9 @@ const defaultForm = () => ({
 })
 
 const form = reactive(defaultForm())
+const permiteEditarAnalisisAnterior = ref(
+  Boolean(textoLibre(props.initialNota?.analisis || '', 'DIAGNOSTICOS NANDA')),
+)
 const planCuidados = ref<PlanCuidadoNota[]>(
   props.initialNota ? hidratarPlanCuidados(props.initialNota) : [],
 )
@@ -251,18 +215,19 @@ const dia = computed({
     else form.presionArterial = `${sisVal}/${val}`
   }
 })
-const selectedTurno = ref<'dia' | 'noche'>(
-  (props.initialNota?.turno as 'dia' | 'noche') || 'dia'
-)
-
 const nombreEnfermeraActual = computed(() => {
   return props.enfermeraProp || sessionStorage.getItem('empleadoLogueado') || sessionStorage.getItem('usuarioLogueado') || 'Enfermero/a en turno'
 })
 
-function bloqueEstructurado(texto: string, titulo: string, lineas: string[]) {
+function textoLibre(texto: string, titulo: string) {
   const marker = `\n\n[${titulo}]`
-  const base = texto.split(marker)[0].trimEnd()
+  return texto.split(marker)[0].trimEnd()
+}
+
+function bloqueEstructurado(texto: string, titulo: string, lineas: string[]) {
+  const base = textoLibre(texto, titulo)
   if (!lineas.length) return base
+  const marker = `\n\n[${titulo}]`
   return `${base}${marker}\n${lineas.join('\n')}`
 }
 
@@ -294,12 +259,6 @@ function hidratarPlanCuidados(nota: NotaEnfermeria) {
       nicRealizadasIds: Array.from(new Set([...(item.nicRealizadasIds || []), ...realizadas])),
     }
   })
-}
-
-function lineasAnalisis() {
-  return planCuidados.value.map(item =>
-    `NANDA ${item.codigoNANDA}: ${item.diagnostico}`,
-  )
 }
 
 function lineasPlan() {
@@ -343,9 +302,6 @@ function lineasEvaluacion() {
 watch(() => props.initialNota, (newNote) => {
   if (newNote) {
       draftId.value = newNote.id
-      if (newNote.turno) {
-  selectedTurno.value = (newNote.turno === 'noche' ? 'noche' : 'dia') as 'dia' | 'noche'
-  }
     form.peso = newNote.signosVitales?.peso || ""
     form.talla = newNote.signosVitales?.talla || ""
     form.pCefalico = newNote.signosVitales?.pCefalico || ""
@@ -358,10 +314,11 @@ watch(() => props.initialNota, (newNote) => {
     form.spo2 = newNote.signosVitales?.saturacionOxigeno || ""
     form.s = newNote.subjetivo || ""
     form.o = newNote.objetivo || ""
-    form.a = newNote.analisis || ""
-    form.p = newNote.plan || ""
-    form.i = newNote.intervencion || ""
-    form.e = newNote.evaluacion || ""
+    form.a = textoLibre(newNote.analisis || "", 'DIAGNOSTICOS NANDA')
+    permiteEditarAnalisisAnterior.value = Boolean(form.a)
+    form.p = textoLibre(newNote.plan || "", 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS')
+    form.i = textoLibre(newNote.intervencion || "", 'INTERVENCIONES NIC REALIZADAS')
+    form.e = textoLibre(newNote.evaluacion || "", 'EVALUACION DE RESULTADOS NOC')
     form.antecedentes = newNote.antecedentes || ""
     form.diagnosticos = newNote.diagnosticos || ""
     form.farmacia = newNote.farmacia || ""
@@ -435,8 +392,13 @@ function handleSubmit(shouldSign = false) {
   }
 
   // STRICT VALIDATION: All SOAPIE fields must be filled
-  if (!form.s || !form.o || !form.a || !form.p || !form.i || !form.e) {
+  if (!form.s || !form.o || !form.p || !form.i || !form.e) {
     showToast('Por favor, complete todas las secciones del SOAPIE antes de guardar.', 'error')
+    return
+  }
+
+  if (!form.a.trim() && planCuidados.value.length === 0) {
+    showToast('Seleccione al menos un diagnóstico NANDA para completar la sección Análisis.', 'error')
     return
   }
 
@@ -456,7 +418,7 @@ function handleSubmit(shouldSign = false) {
     pacienteId: pacienteIdValue,
     fecha: props.initialNota?.fecha || now.toISOString().split('T')[0],
     hora: props.initialNota?.hora || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-    turno: selectedTurno.value,
+    turno: props.initialNota?.turno || 'dia',
     tipo: props.initialNota?.tipo || 'valoracion',
     signosVitales: {
       temperatura: form.temp,
@@ -472,7 +434,7 @@ function handleSubmit(shouldSign = false) {
     },
     subjetivo: form.s,
     objetivo: form.o,
-    analisis: bloqueEstructurado(form.a, 'DIAGNOSTICOS NANDA', lineasAnalisis()),
+    analisis: bloqueEstructurado(form.a, 'DIAGNOSTICOS NANDA', []),
     plan: bloqueEstructurado(form.p, 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS', lineasPlan()),
     intervencion: bloqueEstructurado(form.i, 'INTERVENCIONES NIC REALIZADAS', lineasIntervencionesRealizadas()),
     evaluacion: bloqueEstructurado(form.e, 'EVALUACION DE RESULTADOS NOC', lineasEvaluacion()),

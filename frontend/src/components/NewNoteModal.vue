@@ -65,7 +65,7 @@
           <div class="flex items-center gap-6">
             <div class="flex flex-col">
               <span class="text-[8px] font-bold text-slate-400 uppercase leading-none mb-1">Paciente</span>
-              <span class="text-[10.5px] font-black text-slate-700 uppercase">{{ patient.nombre }} {{ patient.apellido }}</span>
+              <span class="text-[10.5px] font-black text-slate-700 uppercase">{{ patient.nombreCompleto || `${patient.nombre} ${patient.apellido}`.trim() }}</span>
             </div>
             <div class="h-6 w-[1px] bg-slate-200"></div>
             <div class="flex flex-col">
@@ -97,18 +97,6 @@
             </div>
           </div>
 
-          <!-- Boton + -->
-          <div class="flex items-center gap-2">
-            <!-- Boton Libro -->
-            <button 
-              @click="showVitalsHistory = true"
-              type="button"
-              class="flex items-center justify-center w-8 h-8 rounded-md bg-slate-500 text-white hover:bg-slate-600 transition-colors shadow-sm active:scale-95 border border-slate-600"
-              title="Historial de Signos Vitales"
-            >
-              <Book class="h-4 w-4" />
-            </button>
-          </div>
         </div>
       </div>
 
@@ -127,23 +115,15 @@
       </div>
     </div>
   </div>
-  <VitalsHistoryModal 
-    :is-open="showVitalsHistory" 
-    :id-nota="nota?.id || ''" 
-    :registros-temporales="nota?.historialTemporalSignosVitales || []"
-    @close="showVitalsHistory = false"
-  />
 </template>
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { PlusCircle, X, Clock, Pencil, ClipboardList, Plus, Book } from 'lucide-vue-next'
+import { PlusCircle, X, Clock, Pencil, ClipboardList, Plus } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
 import NewNoteForm from './NewNoteForm.vue'
-import VitalsHistoryModal from './VitalsHistoryModal.vue'
 
 const formRef = ref<InstanceType<typeof NewNoteForm> | null>(null)
-const showVitalsHistory = ref(false)
 
 const props = defineProps<{
   isOpen: boolean
