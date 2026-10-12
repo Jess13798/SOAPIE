@@ -119,7 +119,7 @@
 
     <!-- Área de Texto SOAPIE -->
     <div class="pt-1 bg-slate-50/50">
-      <div class="border-x border-b border-slate-200 overflow-hidden shadow-sm h-[320px] bg-white flex">
+      <div class="border-x border-b border-slate-200 overflow-hidden shadow-sm min-h-[320px] bg-white flex">
         <div class="w-16 bg-blue-50/50 flex items-center justify-center border-r border-slate-100">
           <span class="text-4xl font-black text-blue-700 uppercase">{{ activeTab }}</span>
         </div>
@@ -128,14 +128,16 @@
             v-model="(form as any)[activeTab]"
             :placeholder="(soapiePlaceholders as any)[activeTab]"
             :disabled="isReadOnly"
-            class="w-full h-full border-none p-6 text-[13px] font-semibold text-slate-800 bg-transparent focus:ring-0 resize-none leading-relaxed placeholder:italic placeholder:text-slate-300 disabled:opacity-100 disabled:text-slate-800"
+            class="w-full min-h-[320px] border-none p-6 text-[13px] font-semibold text-slate-800 bg-transparent focus:ring-0 resize-y leading-relaxed placeholder:italic placeholder:text-slate-300 disabled:opacity-100 disabled:text-slate-800"
           ></textarea>
         </div>
       </div>
     </div>
 
     <SoapieCarePlanSelector
+      v-if="['a', 'p', 'i', 'e'].includes(activeTab)"
       v-model="planCuidados"
+      :section="activeTab"
       :disabled="isReadOnly"
     />
 
@@ -226,7 +228,10 @@ const defaultForm = () => ({
 })
 
 const form = reactive(defaultForm())
-const planCuidados = ref<PlanCuidadoNota[]>(props.initialNota?.planCuidados || [])
+const planCuidados = ref<PlanCuidadoNota[]>(
+  props.initialNota ? hidratarPlanCuidados(props.initialNota) : [],
+)
+const draftId = ref(props.initialNota?.id || `n${Date.now()}`)
 
 // Presion Arterial dividida SIS / DIA
 const sis = computed({
@@ -253,9 +258,91 @@ const selectedTurno = ref<'dia' | 'noche'>(
 const nombreEnfermeraActual = computed(() => {
   return props.enfermeraProp || sessionStorage.getItem('empleadoLogueado') || sessionStorage.getItem('usuarioLogueado') || 'Enfermero/a en turno'
 })
+
+function bloqueEstructurado(texto: string, titulo: string, lineas: string[]) {
+  const marker = `\n\n[${titulo}]`
+  const base = texto.split(marker)[0].trimEnd()
+  if (!lineas.length) return base
+  return `${base}${marker}\n${lineas.join('\n')}`
+}
+
+function hidratarPlanCuidados(nota: NotaEnfermeria) {
+  const lineasPlan = nota.plan.split('\n')
+  const lineasIntervencion = nota.intervencion.split('\n')
+  const lineasEvaluacion = nota.evaluacion.split('\n')
+  return (nota.planCuidados || []).map(item => {
+    const metas = { ...(item.nocMetas || {}) }
+    const evaluaciones = { ...(item.nocEvaluaciones || {}) }
+    for (const noc of item.noc || []) {
+      const planLine = lineasPlan.find(line => line.startsWith(`NOC ${noc.codigo}:`))
+      const meta = planLine?.match(/\|\s*Meta:\s*(.+)$/)
+      if (meta?.[1]) metas[noc.id] = meta[1]
+
+      const evaluationLine = lineasEvaluacion.find(line => line.startsWith(`NOC ${noc.codigo}:`))
+      const evaluation = evaluationLine?.match(/\|\s*Resultado observado:\s*(.+)$/)
+      if (evaluation?.[1]) evaluaciones[noc.id] = evaluation[1]
+    }
+
+    const realizadas = (item.nic || [])
+      .filter(nic => lineasIntervencion.some(line => line.startsWith(`NIC ${nic.codigo}:`)))
+      .map(nic => nic.id)
+
+    return {
+      ...item,
+      nocMetas: metas,
+      nocEvaluaciones: evaluaciones,
+      nicRealizadasIds: Array.from(new Set([...(item.nicRealizadasIds || []), ...realizadas])),
+    }
+  })
+}
+
+function lineasAnalisis() {
+  return planCuidados.value.map(item =>
+    `NANDA ${item.codigoNANDA}: ${item.diagnostico}`,
+  )
+}
+
+function lineasPlan() {
+  const lineas: string[] = []
+  for (const item of planCuidados.value) {
+    for (const noc of item.noc || []) {
+      if (!item.nocIds.includes(noc.id)) continue
+      const meta = item.nocMetas?.[noc.id]?.trim()
+      lineas.push(`NOC ${noc.codigo}: ${noc.resultado}${meta ? ` | Meta: ${meta}` : ''}`)
+    }
+    for (const nic of item.nic || []) {
+      if (item.nicIds.includes(nic.id)) {
+        lineas.push(`NIC ${nic.codigo}: ${nic.intervencion}`)
+      }
+    }
+  }
+  return lineas
+}
+
+function lineasIntervencionesRealizadas() {
+  return planCuidados.value.flatMap(item =>
+    (item.nic || [])
+      .filter(nic => (item.nicRealizadasIds || []).includes(nic.id))
+      .map(nic => `NIC ${nic.codigo}: ${nic.intervencion}`),
+  )
+}
+
+function lineasEvaluacion() {
+  const lineas: string[] = []
+  for (const item of planCuidados.value) {
+    for (const noc of item.noc || []) {
+      if (!item.nocIds.includes(noc.id)) continue
+      const resultado = item.nocEvaluaciones?.[noc.id]?.trim()
+      if (resultado) lineas.push(`NOC ${noc.codigo}: ${noc.resultado} | Resultado observado: ${resultado}`)
+    }
+  }
+  return lineas
+}
+
 // Update form if initialNota changes (useful if the modal stays open but note changes)
 watch(() => props.initialNota, (newNote) => {
   if (newNote) {
+      draftId.value = newNote.id
       if (newNote.turno) {
   selectedTurno.value = (newNote.turno === 'noche' ? 'noche' : 'dia') as 'dia' | 'noche'
   }
@@ -280,7 +367,10 @@ watch(() => props.initialNota, (newNote) => {
     form.farmacia = newNote.farmacia || ""
     form.laboratorio = newNote.laboratorio || ""
     form.imagen = newNote.imagen || ""
-    planCuidados.value = newNote.planCuidados || []
+    planCuidados.value = hidratarPlanCuidados(newNote)
+  }
+  else {
+    draftId.value = `n${Date.now()}`
   }
   
 }, { deep: true })
@@ -362,7 +452,7 @@ function handleSubmit(shouldSign = false) {
   }
   
   const nota: NotaEnfermeria = {
-    id: props.initialNota?.id || `n${Date.now()}`,
+    id: draftId.value,
     pacienteId: pacienteIdValue,
     fecha: props.initialNota?.fecha || now.toISOString().split('T')[0],
     hora: props.initialNota?.hora || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
@@ -382,10 +472,10 @@ function handleSubmit(shouldSign = false) {
     },
     subjetivo: form.s,
     objetivo: form.o,
-    analisis: form.a,
-    plan: form.p,
-    intervencion: form.i,
-    evaluacion: form.e,
+    analisis: bloqueEstructurado(form.a, 'DIAGNOSTICOS NANDA', lineasAnalisis()),
+    plan: bloqueEstructurado(form.p, 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS', lineasPlan()),
+    intervencion: bloqueEstructurado(form.i, 'INTERVENCIONES NIC REALIZADAS', lineasIntervencionesRealizadas()),
+    evaluacion: bloqueEstructurado(form.e, 'EVALUACION DE RESULTADOS NOC', lineasEvaluacion()),
     antecedentes: form.antecedentes,
     diagnosticos: form.diagnosticos,
     farmacia: form.farmacia,

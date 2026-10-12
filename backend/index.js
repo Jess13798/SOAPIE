@@ -86,7 +86,7 @@ app.get('/api/servicios', async (req, res) => {
     }
 });
 
-// Catálogo de demostración NANDA con resultados NOC e intervenciones NIC.
+// NANDA/NOC/NIC academic sample catalog; requires its SQL Server tables.
 app.get('/api/catalogos/nanda-noc-nic', async (req, res) => {
     const buscar = typeof req.query.buscar === 'string' ? req.query.buscar.trim() : '';
     if (buscar.length > 100) {
@@ -101,9 +101,15 @@ app.get('/api/catalogos/nanda-noc-nic', async (req, res) => {
         res.json(datos);
     } catch (err) {
         console.error('Error en /api/catalogos/nanda-noc-nic:', err);
+        if (err?.number === 208) {
+            return res.status(503).json({
+                success: false,
+                mensaje: 'No están instaladas las tablas del catálogo NANDA/NOC/NIC en la base de datos.',
+            });
+        }
         res.status(500).json({
             success: false,
-            mensaje: 'No se pudo consultar el catálogo de demostración.',
+            mensaje: 'No se pudo consultar el catálogo NANDA/NOC/NIC. Revisa el registro del servidor.',
         });
     }
 });

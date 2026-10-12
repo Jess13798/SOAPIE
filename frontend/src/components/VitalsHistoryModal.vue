@@ -36,7 +36,6 @@
             {{ historyError }}
             <button type="button" class="ml-2 font-bold underline" @click="fetchHistory()">Reintentar</button>
           </p>
-
           <div v-if="loading && history.length === 0" class="flex flex-col items-center justify-center py-20 gap-4 bg-white">
           <div class="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
           <span class="text-sm font-bold text-slate-500 uppercase tracking-widest animate-pulse">Cargando Historial...</span>
@@ -104,10 +103,12 @@
 import { ref, watch, nextTick } from 'vue'
 import { Book, X, Database } from 'lucide-vue-next'
 import { notasService } from '@/services/api'
+import type { SignoVitalHistorial } from '@/types'
 
 const props = defineProps<{
   isOpen: boolean
   idNota: string | number
+  registrosTemporales?: SignoVitalHistorial[]
 }>()
 
 const scrollContainer = ref<HTMLElement | null>(null)
@@ -124,6 +125,10 @@ const page = ref(1)
 const hasMore = ref(true)
 const LIMIT = 10
 
+function registrosLocales() {
+  return props.registrosTemporales || []
+}
+
 const headers = [
   'ID', 'FECHA / HORA', 'PESO', 'TALLA', 'P.CEF', 'P.ABD', 
   'HEMOG', 'P. ART', 'F.CARD', 'F.RESP', 'TEMP', 'SAT', 'ID EMPLEADO'
@@ -132,7 +137,7 @@ const headers = [
 const fetchHistory = async (isLoadMore = false) => {
   historyError.value = ''
   if (!props.idNota || isNaN(Number(props.idNota))) {
-    history.value = []
+    history.value = [...registrosLocales()].reverse()
     hasMore.value = false
     return
   }
@@ -154,11 +159,11 @@ const fetchHistory = async (isLoadMore = false) => {
       if (isLoadMore) {
         history.value = [...history.value, ...data]
       } else {
-        history.value = data
+        history.value = [...registrosLocales()].reverse().concat(data)
       }
 
       const totalCount = data[0].TotalCount || 0
-      if (history.value.length >= totalCount) {
+      if (history.value.length >= totalCount + registrosLocales().length) {
         hasMore.value = false
       }
 
@@ -169,10 +174,14 @@ const fetchHistory = async (isLoadMore = false) => {
         await fetchHistory(true)
       }
     } else {
+      if (!isLoadMore) history.value = [...registrosLocales()].reverse()
       hasMore.value = false
     }
   } catch (err) {
     console.error('Error fetching vitals history:', err)
+    if (!isLoadMore && registrosLocales().length) {
+      history.value = [...registrosLocales()].reverse()
+    }
     historyError.value = err instanceof Error ? err.message : 'No se pudo cargar el historial de signos vitales.'
   } finally {
     loading.value = false
@@ -199,7 +208,7 @@ const formatFecha = (dateStr: string) => {
   })
 }
 
-watch([() => props.isOpen, () => props.idNota], ([newVal]) => {
+watch([() => props.isOpen, () => props.idNota, () => props.registrosTemporales], ([newVal]) => {
   if (newVal) fetchHistory()
 })
 </script>

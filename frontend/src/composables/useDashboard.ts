@@ -80,6 +80,8 @@ export function useDashboard({
   const successModalTitle = computed(() => {
     if (successModalType.value === 'asignacion-cama') return 'SE REGISTRO CORRECTAMENTE'
     if (successModalType.value === 'transferencia') return 'TRANSFERENCIA GUARDADA'
+    if (successModalType.value === 'nota-temporal') return 'NOTA VISIBLE SOLO EN ESTA SESIÓN'
+    if (successModalType.value === 'nota-pendiente') return 'CAMBIOS NO GUARDADOS EN SQL SERVER'
     return 'SE REGISTRO'
   })
 

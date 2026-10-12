@@ -118,6 +118,10 @@
       :title="successModalTitle"
       :button-label="successModalButtonLabel"
       :check-only-button="successModalCheckOnlyButton"
+      :warning="successModalType === 'nota-temporal' || successModalType === 'nota-pendiente'"
+      :warning-message="successModalType === 'nota-pendiente'
+        ? 'La versión anterior de esta nota sigue en la base de datos, pero estos cambios y signos vitales nuevos están solo en la memoria de esta sesión. Se perderán al cerrar o recargar.'
+        : undefined"
       @confirm="handleConfirmSuccess" 
     />
 
@@ -248,7 +252,9 @@ async function onSaveNote(nota: NotaEnfermeria) {
     notaError.value = result.error instanceof Error ? result.error.message : 'No se pudo guardar la nota SOAPIE.'
     return
   }
-  successModalType.value = 'nota'
+  successModalType.value = result.persisted === false
+    ? (/^\d+$/.test(nota.id) ? 'nota-pendiente' : 'nota-temporal')
+    : 'nota'
   showSuccessModal.value = true
 }
 
@@ -259,7 +265,9 @@ async function onSignNote(nota: NotaEnfermeria) {
     notaError.value = result.error instanceof Error ? result.error.message : 'No se pudo firmar la nota SOAPIE.'
     return
   }
-  successModalType.value = 'nota'
+  successModalType.value = result.persisted === false
+    ? (/^\d+$/.test(nota.id) ? 'nota-pendiente' : 'nota-temporal')
+    : 'nota'
   showSuccessModal.value = true
 }
 
