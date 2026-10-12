@@ -12,6 +12,7 @@ const notasRoutes = require('./src/modules/notas/routes');
 const pacientesSinCamaRoutes = require('./src/modules/pacientes-sin-cama/routes');
 const diagnosticosRoutes = require('./src/modules/diagnosticos/routes');
 const medicosRoutes = require('./src/modules/medicos/routes');
+const catalogosRoutes = require('./src/modules/catalogos/routes');
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use('/api', notasRoutes);
 app.use('/api', pacientesSinCamaRoutes);
 app.use('/api', diagnosticosRoutes);
 app.use('/api', medicosRoutes);
+app.use('/api', catalogosRoutes);
 
 // --- INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 3000;

@@ -39,7 +39,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import type { NotaFormState } from '../notaForm'
 
 defineProps<{
@@ -47,7 +46,9 @@ defineProps<{
   readOnly?: boolean
 }>()
 
-const activeTab = ref('s')
+// Sección SOAPIE activa. Se sincroniza con el padre (v-model:section) para que
+// el selector de plan de cuidados sepa a qué sección agregar el NANDA/NOC/NIC.
+const activeTab = defineModel<'s' | 'o' | 'a' | 'p' | 'i' | 'e'>('section', { default: 's' })
 
 const clinicalTabs = [
   { id: 's', label: 'Subjetivo' },

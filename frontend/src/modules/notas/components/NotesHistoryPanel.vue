@@ -32,6 +32,13 @@
             </div>
             <div class="min-w-0 flex-1 self-center flex flex-col justify-center gap-0.5">
               <p class="truncate text-[11px] font-bold uppercase tracking-tight leading-[1.05] text-slate-800">{{ nota.enfermera }}</p>
+              <span
+                v-if="nota.estadoGuardado && nota.estadoGuardado !== 'guardada'"
+                class="w-fit rounded bg-amber-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-amber-900"
+                :title="nota.estadoGuardado === 'temporal' ? 'Esta nota solo existe en la sesión actual.' : 'Hay cambios o signos vitales temporales no guardados en la base de datos.'"
+              >
+                {{ nota.estadoGuardado === 'temporal' ? 'Solo en esta sesión' : 'Cambios temporales' }}
+              </span>
               <div class="flex flex-col gap-0.5 leading-none">
                 <p class="flex items-center gap-1 text-[10px] tracking-tight leading-[1.05] font-bold text-slate-600">
                                     <span class="w-7 shrink-0 font-semibold uppercase text-sky-700">Inicio</span>

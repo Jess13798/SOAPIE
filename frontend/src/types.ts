@@ -55,14 +55,57 @@ export interface SignosVitales {
   hemoglucotest?: string
 }
 
+export interface PlanCuidadoNota {
+  idNANDA: number
+  codigoNANDA: string
+  diagnostico: string
+  nocIds: number[]
+  nicIds: number[]
+  nicRealizadasIds?: number[]
+  nocMetas?: Record<number, string>
+  nocEvaluaciones?: Record<number, string>
+  noc?: Array<{
+    id: number
+    codigo: string
+    resultado: string
+    escalaLikert?: string | null
+  }>
+  nic?: Array<{
+    id: number
+    codigo: string
+    intervencion: string
+  }>
+}
+
+export interface SignoVitalHistorial {
+  IdSignoVital: string | number
+  Fecha_Hora: string
+  Peso?: string | number | null
+  Talla?: string | number | null
+  P_Cefalico?: string | number | null
+  P_Abdominal?: string | number | null
+  Hemoglucotest?: string | number | null
+  Presion_Arterial?: string | null
+  Frec_Cardiaca?: string | number | null
+  Frec_Respiratoria?: string | number | null
+  Temperatura?: string | number | null
+  Saturacion?: string | number | null
+  IdEmpleado?: string | number | null
+  TotalCount?: number
+}
+
 export interface NotaEnfermeria {
   id: string
   pacienteId: string
+  idCuenta?: string
   fecha: string
   hora: string
   turno: 'dia' | 'noche' | 'manana' | 'tarde' // <-- Cambiar esta línea
   tipo: 'valoracion' | 'evolucion' | 'medicacion' | 'procedimiento' | 'incidencia'
   signosVitales?: SignosVitales
+  planCuidados?: PlanCuidadoNota[]
+  estadoGuardado?: 'guardada' | 'temporal' | 'cambios-pendientes'
+  historialTemporalSignosVitales?: SignoVitalHistorial[]
   subjetivo: string
   objetivo: string
   analisis: string

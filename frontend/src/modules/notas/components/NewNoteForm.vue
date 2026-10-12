@@ -27,7 +27,14 @@
     <VitalsGrid :form="form" :read-only="isReadOnly" />
 
     <!-- SOAPIE -->
-    <SoapieEditor :form="form" :read-only="isReadOnly" />
+    <SoapieEditor v-model:section="activeTab" :form="form" :read-only="isReadOnly" />
+
+    <SoapieCarePlanSelector
+      v-if="['a', 'p', 'i', 'e'].includes(activeTab)"
+      v-model="planCuidados"
+      :section="activeTab"
+      :disabled="isReadOnly"
+    />
 
     <!-- Pie del Formulario / Botones de Acción -->
     <footer class="modal-footer py-2 px-4 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-3 rounded-b-xl">
@@ -58,10 +65,11 @@
 <script setup lang="ts">
 import { ref, reactive, watch, computed } from 'vue'
 import { Save, CheckCircle, AlertCircle } from 'lucide-vue-next'
-import type { Patient, NotaEnfermeria } from '@/types'
+import type { Patient, NotaEnfermeria, PlanCuidadoNota } from '@/types'
 import NoteShiftBar from './NoteShiftBar.vue'
 import VitalsGrid from './VitalsGrid.vue'
 import SoapieEditor from './SoapieEditor.vue'
+import SoapieCarePlanSelector from './SoapieCarePlanSelector.vue'
 
 const props = defineProps<{
   pacientes: Patient[]
@@ -108,6 +116,13 @@ const defaultForm = () => ({
 })
 
 const form = reactive(defaultForm())
+// Sección SOAPIE activa. La maneja SoapieEditor (v-model:section) y la usa el
+// selector de plan de cuidados para saber a qué sección agregar el NANDA/NOC/NIC.
+const activeTab = ref<'s' | 'o' | 'a' | 'p' | 'i' | 'e'>('s')
+const planCuidados = ref<PlanCuidadoNota[]>(
+  props.initialNota ? hidratarPlanCuidados(props.initialNota) : [],
+)
+const draftId = ref(props.initialNota?.id || `n${Date.now()}`)
 
 const selectedTurno = ref<'dia' | 'noche'>(
   (props.initialNota?.turno as 'dia' | 'noche') || 'dia'
@@ -116,9 +131,91 @@ const selectedTurno = ref<'dia' | 'noche'>(
 const nombreEnfermeraActual = computed(() => {
   return props.enfermeraProp || sessionStorage.getItem('empleadoLogueado') || sessionStorage.getItem('usuarioLogueado') || 'Enfermero/a en turno'
 })
+
+function bloqueEstructurado(texto: string, titulo: string, lineas: string[]) {
+  const marker = `\n\n[${titulo}]`
+  const base = texto.split(marker)[0].trimEnd()
+  if (!lineas.length) return base
+  return `${base}${marker}\n${lineas.join('\n')}`
+}
+
+function hidratarPlanCuidados(nota: NotaEnfermeria) {
+  const lineasPlan = nota.plan.split('\n')
+  const lineasIntervencion = nota.intervencion.split('\n')
+  const lineasEvaluacion = nota.evaluacion.split('\n')
+  return (nota.planCuidados || []).map(item => {
+    const metas = { ...(item.nocMetas || {}) }
+    const evaluaciones = { ...(item.nocEvaluaciones || {}) }
+    for (const noc of item.noc || []) {
+      const planLine = lineasPlan.find(line => line.startsWith(`NOC ${noc.codigo}:`))
+      const meta = planLine?.match(/\|\s*Meta:\s*(.+)$/)
+      if (meta?.[1]) metas[noc.id] = meta[1]
+
+      const evaluationLine = lineasEvaluacion.find(line => line.startsWith(`NOC ${noc.codigo}:`))
+      const evaluation = evaluationLine?.match(/\|\s*Resultado observado:\s*(.+)$/)
+      if (evaluation?.[1]) evaluaciones[noc.id] = evaluation[1]
+    }
+
+    const realizadas = (item.nic || [])
+      .filter(nic => lineasIntervencion.some(line => line.startsWith(`NIC ${nic.codigo}:`)))
+      .map(nic => nic.id)
+
+    return {
+      ...item,
+      nocMetas: metas,
+      nocEvaluaciones: evaluaciones,
+      nicRealizadasIds: Array.from(new Set([...(item.nicRealizadasIds || []), ...realizadas])),
+    }
+  })
+}
+
+function lineasAnalisis() {
+  return planCuidados.value.map(item =>
+    `NANDA ${item.codigoNANDA}: ${item.diagnostico}`,
+  )
+}
+
+function lineasPlan() {
+  const lineas: string[] = []
+  for (const item of planCuidados.value) {
+    for (const noc of item.noc || []) {
+      if (!item.nocIds.includes(noc.id)) continue
+      const meta = item.nocMetas?.[noc.id]?.trim()
+      lineas.push(`NOC ${noc.codigo}: ${noc.resultado}${meta ? ` | Meta: ${meta}` : ''}`)
+    }
+    for (const nic of item.nic || []) {
+      if (item.nicIds.includes(nic.id)) {
+        lineas.push(`NIC ${nic.codigo}: ${nic.intervencion}`)
+      }
+    }
+  }
+  return lineas
+}
+
+function lineasIntervencionesRealizadas() {
+  return planCuidados.value.flatMap(item =>
+    (item.nic || [])
+      .filter(nic => (item.nicRealizadasIds || []).includes(nic.id))
+      .map(nic => `NIC ${nic.codigo}: ${nic.intervencion}`),
+  )
+}
+
+function lineasEvaluacion() {
+  const lineas: string[] = []
+  for (const item of planCuidados.value) {
+    for (const noc of item.noc || []) {
+      if (!item.nocIds.includes(noc.id)) continue
+      const resultado = item.nocEvaluaciones?.[noc.id]?.trim()
+      if (resultado) lineas.push(`NOC ${noc.codigo}: ${noc.resultado} | Resultado observado: ${resultado}`)
+    }
+  }
+  return lineas
+}
+
 // Update form if initialNota changes (useful if the modal stays open but note changes)
 watch(() => props.initialNota, (newNote) => {
   if (newNote) {
+      draftId.value = newNote.id
       if (newNote.turno) {
   selectedTurno.value = (newNote.turno === 'noche' ? 'noche' : 'dia') as 'dia' | 'noche'
   }
@@ -143,6 +240,10 @@ watch(() => props.initialNota, (newNote) => {
     form.farmacia = newNote.farmacia || ""
     form.laboratorio = newNote.laboratorio || ""
     form.imagen = newNote.imagen || ""
+    planCuidados.value = hidratarPlanCuidados(newNote)
+  }
+  else {
+    draftId.value = `n${Date.now()}`
   }
   
 }, { deep: true })
@@ -173,25 +274,18 @@ function handleSubmit(shouldSign = false) {
   }
 
   const now = new Date()
-  
-  // Debug: mostrar el paciente seleccionado para verificar
-  console.log('Paciente seleccionado en handleSubmit:', JSON.stringify(props.selectedPatient))
-  console.log('ID del paciente:', props.selectedPatient?.id)
-  console.log('Todas las props:', JSON.stringify(props.selectedPatient))
-  
-  // Obtener el ID del paciente de forma segura
+
   let pacienteIdValue = ''
   const pacienteId = props.selectedPatient?.id
   if (pacienteId && pacienteId !== undefined && pacienteId !== null && pacienteId !== '' && pacienteId !== 'undefined') {
     pacienteIdValue = pacienteId
   } else {
-    // Si no hay paciente seleccionado, mostrar error
     showToast('Error: No se ha seleccionado un paciente válido', 'error')
     return
   }
   
   const nota: NotaEnfermeria = {
-    id: props.initialNota?.id || `n${Date.now()}`,
+    id: draftId.value,
     pacienteId: pacienteIdValue,
     fecha: props.initialNota?.fecha || now.toISOString().split('T')[0],
     hora: props.initialNota?.hora || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
@@ -211,15 +305,16 @@ function handleSubmit(shouldSign = false) {
     },
     subjetivo: form.s,
     objetivo: form.o,
-    analisis: form.a,
-    plan: form.p,
-    intervencion: form.i,
-    evaluacion: form.e,
+    analisis: bloqueEstructurado(form.a, 'DIAGNOSTICOS NANDA', lineasAnalisis()),
+    plan: bloqueEstructurado(form.p, 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS', lineasPlan()),
+    intervencion: bloqueEstructurado(form.i, 'INTERVENCIONES NIC REALIZADAS', lineasIntervencionesRealizadas()),
+    evaluacion: bloqueEstructurado(form.e, 'EVALUACION DE RESULTADOS NOC', lineasEvaluacion()),
     antecedentes: form.antecedentes,
     diagnosticos: form.diagnosticos,
     farmacia: form.farmacia,
     laboratorio: form.laboratorio,
     imagen: form.imagen,
+    planCuidados: planCuidados.value,
     enfermera: props.initialNota?.enfermera || nombreEnfermeraActual.value,
     isFirmada: shouldSign || props.initialNota?.isFirmada
   }

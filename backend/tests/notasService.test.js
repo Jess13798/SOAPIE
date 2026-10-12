@@ -82,13 +82,12 @@ test('obtenerNotas devuelve [] si la consulta no trae recordset', async (t) => {
     assert.deepEqual(notas, []);
 });
 
-test('guardarNota crea una nota nueva e inserta los signos vitales', async (t) => {
+test('guardarNota crea una nota nueva y persiste los signos vitales', async (t) => {
     silenciarErrores(t);
-    const insertNota = t.mock.method(notasRepository, 'insertNota', async () => 55);
-    const insertVitales = t.mock.method(notasRepository, 'insertVitales', async () => {});
-    const updateNota = t.mock.method(notasRepository, 'updateNota', async () => {});
+    const guardarCompleta = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => 55);
 
     const resultado = await notasService.guardarNota({
+        pacienteId: '3',
         fecha: '2026-10-09',
         hora: '08:00',
         subjetivo: 'sin dolor',
@@ -97,39 +96,39 @@ test('guardarNota crea una nota nueva e inserta los signos vitales', async (t) =
 
     assert.equal(resultado.success, true);
     assert.equal(resultado.id, 55, 'devuelve el id generado por la BD');
-    assert.equal(insertNota.mock.callCount(), 1);
-    assert.equal(insertVitales.mock.callCount(), 1, 'siempre guarda vitales');
-    assert.equal(updateNota.mock.callCount(), 0, 'no actualiza una nota nueva');
+    assert.equal(guardarCompleta.mock.callCount(), 1);
+
+    const payload = guardarCompleta.mock.calls[0].arguments[0];
+    assert.equal(payload.idNota, null, 'sin id se trata como nota nueva');
+    assert.equal(payload.subjetivo, 'sin dolor');
+    assert.equal(payload.signosVitales.peso, 70, 'convierte los vitales a número');
 });
 
-test('guardarNota actualiza una nota existente y NO la vuelve a insertar', async (t) => {
+test('guardarNota conserva el id de una nota existente', async (t) => {
     silenciarErrores(t);
-    const insertNota = t.mock.method(notasRepository, 'insertNota', async () => 999);
-    const insertVitales = t.mock.method(notasRepository, 'insertVitales', async () => {});
-    const updateNota = t.mock.method(notasRepository, 'updateNota', async () => {});
+    const guardarCompleta = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => 12);
 
     const resultado = await notasService.guardarNota({
         id: '12',
+        pacienteId: '3',
         fecha: '2026-10-09',
         hora: '09:00',
         subjetivo: 'evoluciona',
     });
 
     assert.equal(resultado.success, true);
-    assert.equal(resultado.id, '12', 'conserva el id de la nota editada');
-    assert.equal(insertNota.mock.callCount(), 0);
-    assert.equal(updateNota.mock.callCount(), 1);
-    assert.equal(insertVitales.mock.callCount(), 1);
+    assert.equal(resultado.id, 12, 'devuelve el id de la nota editada');
+    const payload = guardarCompleta.mock.calls[0].arguments[0];
+    assert.equal(payload.idNota, 12, 'conserva el id de la nota editada');
 });
 
 test('guardarNota firma la nota cuando isFirmada es true', async (t) => {
     silenciarErrores(t);
-    t.mock.method(notasRepository, 'insertNota', async () => 42);
-    t.mock.method(notasRepository, 'insertVitales', async () => {});
-    const updateNota = t.mock.method(notasRepository, 'updateNota', async () => {});
+    const guardarCompleta = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => 42);
 
     await notasService.guardarNota({
         id: '42',
+        pacienteId: '3',
         fecha: '2026-10-09',
         hora: '10:00',
         isFirmada: true,
@@ -137,8 +136,12 @@ test('guardarNota firma la nota cuando isFirmada es true', async (t) => {
         horaFirmada: '10:30',
     });
 
-    const payload = updateNota.mock.calls[0].arguments[0];
-    assert.equal(payload.fechaFin, '2026-10-09 10:30:00');
+    const payload = guardarCompleta.mock.calls[0].arguments[0];
+    assert.equal(
+        payload.fechaFin.getTime(),
+        new Date('2026-10-09T10:30:00').getTime(),
+        'fechaFin refleja la fecha y hora de firma'
+    );
 });
 
 test('eliminarNota delega en el repositorio', async (t) => {
@@ -149,7 +152,7 @@ test('eliminarNota delega en el repositorio', async (t) => {
 
     assert.deepEqual(resultado, { success: true });
     assert.equal(del.mock.callCount(), 1);
-    assert.equal(del.mock.calls[0].arguments[0], '12');
+    assert.equal(del.mock.calls[0].arguments[0], 12, 'normaliza el id a número');
 });
 
 test('obtenerHistorialVitals devuelve el recordset y tolera vacios', async (t) => {
