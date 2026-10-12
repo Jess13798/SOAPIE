@@ -130,6 +130,7 @@
   <VitalsHistoryModal 
     :is-open="showVitalsHistory" 
     :id-nota="nota?.id || ''" 
+    :registros-temporales="nota?.historialTemporalSignosVitales || []"
     @close="showVitalsHistory = false"
   />
 </template>
@@ -221,4 +222,3 @@ function handleClearVitals() {
   background: #cbd5e1;
 }
 </style>
-
