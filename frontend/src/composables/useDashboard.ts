@@ -67,7 +67,8 @@ export function useDashboard({
 
   const viewTitle = computed(() => {
     if (activeView.value === 'pacientes' && selectedPatient.value) {
-      return `${selectedPatient.value.nombre} ${selectedPatient.value.apellido}`
+      return selectedPatient.value.nombreCompleto
+        || `${selectedPatient.value.nombre} ${selectedPatient.value.apellido}`.trim()
     }
 
     if (activeView.value === 'nueva-nota') {

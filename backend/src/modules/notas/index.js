@@ -9,4 +9,5 @@ module.exports = {
     obtenerNotas: notasService.obtenerNotas,
     eliminarNota: notasService.eliminarNota,
     obtenerHistorialVitals: notasService.obtenerHistorialVitals,
+    obtenerHistorialVitalsPorAtencion: notasService.obtenerHistorialVitalsPorAtencion,
 };

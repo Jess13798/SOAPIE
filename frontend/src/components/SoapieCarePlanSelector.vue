@@ -5,60 +5,71 @@
         {{ sectionTitle }}
       </h3>
       <p class="mt-1 text-xs text-slate-600">{{ sectionDescription }}</p>
-      <p class="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-        Catálogo académico de demostración; no validado para decisiones clínicas. Confirme los criterios NOC con su institución.
-      </p>
     </div>
 
-    <form v-if="section === 'a'" class="flex flex-col gap-2 sm:flex-row" @submit.prevent="buscar">
+    <div v-if="section === 'a'" class="relative">
+      <label for="buscar-nanda" class="sr-only">Buscar diagnóstico NANDA por código o texto</label>
       <input
+        id="buscar-nanda"
         v-model="texto"
         type="search"
         maxlength="100"
+        autocomplete="off"
         :disabled="disabled"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-controls="nanda-resultados"
+        :aria-expanded="mostrarResultados"
         placeholder="Buscar diagnóstico NANDA por código o texto"
-        class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:bg-slate-100"
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:bg-slate-100"
+        @focus="mostrarResultados = true"
+        @blur="mostrarResultados = false"
       />
-      <button
-        type="submit"
-        :disabled="disabled || loading"
-        class="rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+      <ul
+        v-if="mostrarResultados"
+        id="nanda-resultados"
+        class="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg"
+        role="listbox"
+        aria-label="Resultados de búsqueda NANDA"
       >
-        {{ loading ? 'Buscando…' : 'Buscar NANDA' }}
-      </button>
-    </form>
+        <li v-if="loading" class="px-3 py-2 text-sm text-slate-500" role="status">
+          Buscando diagnósticos…
+        </li>
+        <li v-for="item in diagnosticos" :key="item.id">
+          <button
+            type="button"
+            role="option"
+            class="flex w-full items-start gap-3 rounded-md px-3 py-2 text-left hover:bg-sky-50"
+            :class="isSelected(item.id) ? 'bg-sky-50' : ''"
+            :aria-pressed="isSelected(item.id)"
+            :aria-selected="isSelected(item.id)"
+            :disabled="disabled"
+            @mousedown.prevent
+            @click="toggleDiagnosis(item)"
+          >
+            <span
+              class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-bold"
+              :class="isSelected(item.id) ? 'border-sky-700 bg-sky-700 text-white' : 'border-slate-300 text-transparent'"
+              aria-hidden="true"
+            >✓</span>
+            <span class="min-w-0 text-sm">
+              <strong class="mr-2 text-sky-800">{{ item.codigo }}</strong>
+              <span class="font-semibold text-slate-800">{{ item.diagnostico }}</span>
+              <span v-if="item.dominio" class="mt-1 block text-xs text-slate-500">
+                Dominio: {{ item.dominio }}<span v-if="item.clase"> · Clase: {{ item.clase }}</span>
+              </span>
+            </span>
+          </button>
+        </li>
+        <li v-if="!loading && diagnosticos.length === 0 && !error" class="px-3 py-2 text-sm text-slate-500">
+          No se encontraron diagnósticos.
+        </li>
+      </ul>
+    </div>
 
     <p v-if="error" role="alert" class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
       {{ error }}
     </p>
-
-    <div v-if="section === 'a'">
-      <div v-if="loading && diagnosticos.length === 0" class="text-sm text-slate-500" role="status">
-        Cargando diagnósticos…
-      </div>
-      <div v-else-if="!error && diagnosticos.length === 0" class="text-sm text-slate-500">
-        No se encontraron diagnósticos.
-      </div>
-      <ul v-else class="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-2">
-        <li v-for="item in diagnosticos" :key="item.id" class="flex items-start gap-3 rounded-md p-2 hover:bg-slate-50">
-          <input
-            :id="`nanda-${item.id}`"
-            type="checkbox"
-            :checked="isSelected(item.id)"
-            :disabled="disabled"
-            class="mt-1 rounded border-slate-300 text-sky-700 focus:ring-sky-600"
-            @change="toggleDiagnosis(item)"
-          />
-          <label :for="`nanda-${item.id}`" class="min-w-0 cursor-pointer text-sm">
-            <span class="mr-2 font-black text-sky-800">{{ item.codigo }}</span>
-            <span class="font-semibold text-slate-800">{{ item.diagnostico }}</span>
-            <span v-if="item.dominio" class="mt-1 block text-xs text-slate-500">
-              Dominio: {{ item.dominio }}<span v-if="item.clase"> · Clase: {{ item.clase }}</span>
-            </span>
-          </label>
-        </li>
-      </ul>
-    </div>
 
     <div v-if="selectedPlans.length" class="space-y-3">
       <h4 class="text-xs font-black uppercase tracking-wide text-slate-600">
@@ -82,6 +93,18 @@
             Quitar
           </button>
         </div>
+
+        <textarea
+          v-if="section === 'a'"
+          :value="plan.comentario || ''"
+          rows="2"
+          maxlength="1000"
+          :disabled="disabled"
+          :aria-label="`Comentario para ${plan.codigoNANDA}: ${plan.diagnostico}`"
+          placeholder="Comentario adicional sobre este diagnóstico (opcional)"
+          class="mt-2 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-xs disabled:bg-slate-100"
+          @input="setComentario(plan.idNANDA, ($event.target as HTMLTextAreaElement).value)"
+        ></textarea>
 
         <div v-if="section === 'p'" class="mt-3 grid gap-4 md:grid-cols-2">
           <fieldset>
@@ -188,7 +211,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { PlanCuidadoNota } from '@/types'
 import { catalogosService, type NandaConInterrelaciones } from '@/services/api'
 
@@ -206,20 +229,22 @@ const texto = ref('')
 const diagnosticos = ref<NandaConInterrelaciones[]>([])
 const loading = ref(false)
 const error = ref('')
+const mostrarResultados = ref(false)
 const selectedPlans = computed(() => props.modelValue || [])
+let solicitudActual = 0
 
 const sectionCopy: Record<string, { title: string; description: string }> = {
   a: {
     title: 'A · Análisis — Diagnósticos NANDA',
-    description: 'Seleccione los diagnósticos que respaldan el juicio enfermero. Documente también su análisis clínico en el campo de texto.',
+    description: 'Seleccione los diagnósticos',
   },
   p: {
     title: 'P · Plan — Resultados NOC y NIC planificadas',
-    description: 'Defina resultados esperados y las intervenciones que planea realizar. Las metas son opcionales.',
+    description: 'resultados esperados y las intervenciones que planea realizar.',
   },
   i: {
     title: 'I · Intervención — NIC realizadas',
-    description: 'Marque solo las intervenciones del plan que realmente se ejecutaron y detalle la atención en el campo de texto.',
+    description: 'intervenciones del plan que se ejecutaron, describir el detalle la atención en el campo de texto? sugerenciaxd.',
   },
   e: {
     title: 'E · Evaluación — Resultados NOC observados',
@@ -230,17 +255,19 @@ const sectionCopy: Record<string, { title: string; description: string }> = {
 const sectionTitle = computed(() => sectionCopy[props.section]?.title || '')
 const sectionDescription = computed(() => sectionCopy[props.section]?.description || '')
 
-async function cargarCatalogo(buscar: string) {
+async function cargarCatalogo(buscar: string, solicitud: number) {
   loading.value = true
-  error.value = ''
   try {
-    diagnosticos.value = await catalogosService.buscarNandaNocNic(buscar)
+    const resultados = await catalogosService.buscarNandaNocNic(buscar)
+    if (solicitud !== solicitudActual) return
+    diagnosticos.value = resultados
     mergeCatalogDetails()
   } catch (err) {
+    if (solicitud !== solicitudActual) return
     diagnosticos.value = []
     error.value = err instanceof Error ? err.message : 'No se pudo consultar el catálogo NANDA/NOC/NIC.'
   } finally {
-    loading.value = false
+    if (solicitud === solicitudActual) loading.value = false
   }
 }
 
@@ -260,10 +287,6 @@ function mergeCatalogDetails() {
   }))
 }
 
-function buscar() {
-  void cargarCatalogo(texto.value.trim())
-}
-
 function isSelected(idNANDA: number) {
   return selectedPlans.value.some(plan => plan.idNANDA === idNANDA)
 }
@@ -280,6 +303,7 @@ function toggleDiagnosis(item: NandaConInterrelaciones) {
     diagnostico: item.diagnostico,
     nocIds: [],
     nicIds: [],
+    comentario: '',
     nicRealizadasIds: [],
     nocMetas: {},
     nocEvaluaciones: {},
@@ -347,7 +371,20 @@ function setNocEvaluation(idNANDA: number, idNOC: number, value: string) {
     : plan))
 }
 
-onMounted(() => {
-  void cargarCatalogo('')
-})
+function setComentario(idNANDA: number, value: string) {
+  emit('update:modelValue', selectedPlans.value.map(plan => plan.idNANDA === idNANDA
+    ? { ...plan, comentario: value }
+    : plan))
+}
+
+watch(texto, (value, _previous, onCleanup) => {
+  const solicitud = ++solicitudActual
+  mostrarResultados.value = true
+  diagnosticos.value = []
+  error.value = ''
+  const timer = setTimeout(() => {
+    void cargarCatalogo(value.trim(), solicitud)
+  }, 250)
+  onCleanup(() => clearTimeout(timer))
+}, { immediate: true })
 </script>

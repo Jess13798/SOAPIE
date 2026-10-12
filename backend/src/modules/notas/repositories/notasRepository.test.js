@@ -28,7 +28,7 @@ test('guardarNota normalizes selections and persists the SOAPIE payload', async 
         subjetivo: 'Refiere dolor',
         signosVitales: { temperatura: '36.7', frecuenciaCardiaca: '80' },
         planCuidados: [
-            { idNANDA: 1, nocIds: [10, 10], nicIds: [20] },
+            { idNANDA: 1, comentario: '  Dolor referido en hipogastrio  ', nocIds: [10, 10], nicIds: [20] },
             { idNANDA: 1, nocIds: [11], nicIds: [] },
         ],
     });
@@ -42,8 +42,17 @@ test('guardarNota normalizes selections and persists the SOAPIE payload', async 
     assert.equal(savedNote.signosVitales.temperatura, 36.7);
     assert.equal(savedNote.signosVitales.frecuenciaCardiaca, 80);
     assert.deepEqual(savedNote.planCuidados, [
-        { idNANDA: 1, nocIds: [10, 11], nicIds: [20] },
+        { idNANDA: 1, comentario: 'Dolor referido en hipogastrio', nocIds: [10, 11], nicIds: [20] },
     ]);
+});
+
+test('guardarNota rejects comments longer than the database column limit', async () => {
+    await assert.rejects(notasService.guardarNota({
+        pacienteId: '100',
+        fecha: '2026-10-09',
+        hora: '12:00',
+        planCuidados: [{ idNANDA: 1, comentario: 'x'.repeat(1001) }],
+    }), { code: 'NOTAS_INVALID_INPUT' });
 });
 
 test('obtenerNotas groups selected NOC and NIC under each note diagnosis', async (context) => {
@@ -59,6 +68,7 @@ test('obtenerNotas groups selected NOC and NIC under each note diagnosis', async
                 PlanIdNANDA: 1,
                 PlanCodigoNANDA: 'N1',
                 PlanDiagnosticoNANDA: 'Diagnóstico de prueba',
+                PlanComentarioNANDA: 'Hallazgo asociado al diagnóstico',
                 PlanIdNOC: 10,
                 PlanCodigoNOC: 'R1',
                 PlanResultadoNOC: 'Resultado',
@@ -85,6 +95,26 @@ test('obtenerNotas groups selected NOC and NIC under each note diagnosis', async
     assert.equal(nota.id, '81');
     assert.equal(nota.signosVitales.temperatura, '36.7');
     assert.equal(nota.planCuidados.length, 1);
+    assert.equal(nota.planCuidados[0].comentario, 'Hallazgo asociado al diagnóstico');
     assert.deepEqual(nota.planCuidados[0].nocIds, [10]);
     assert.deepEqual(nota.planCuidados[0].nicIds, [20]);
+});
+
+test('obtenerHistorialVitalsPorAtencion filters and paginates by account id', async (context) => {
+    let query;
+    context.mock.method(notasRepository, 'getHistorialVitalsPorAtencion', async (...args) => {
+        query = args;
+        return { recordset: [{ IdSignoVital: 9, NombreEmpleado: 'ENFERMERA DE PRUEBA' }] };
+    });
+
+    const result = await notasService.obtenerHistorialVitalsPorAtencion('200', 20, 40);
+
+    assert.deepEqual(query, [200, 20, 40]);
+    assert.equal(result[0].NombreEmpleado, 'ENFERMERA DE PRUEBA');
+});
+
+test('obtenerHistorialVitalsPorAtencion rejects an invalid account id', async () => {
+    await assert.rejects(notasService.obtenerHistorialVitalsPorAtencion('cuenta-invalida'), {
+        code: 'NOTAS_INVALID_INPUT',
+    });
 });

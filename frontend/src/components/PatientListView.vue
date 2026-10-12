@@ -156,6 +156,14 @@
                             @view-transfer="$emit('view-transfer', $event)"
                           />
                           <button
+                            type="button"
+                            class="flex items-center gap-1.5 rounded-full bg-sky-600 p-1.5 text-white shadow-sm transition-all hover:bg-sky-700"
+                            title="Historial de signos vitales de esta atención"
+                            @click.stop="$emit('view-vitals-history', patient)"
+                          >
+                            <Book class="h-4 w-4" />
+                          </button>
+                          <button
                             v-if="draftNoteForPatient(patient.id)"
                             @click.stop="$emit('edit-draft', draftNoteForPatient(patient.id)!)"
                             class="flex items-center gap-1.5 rounded-full bg-orange-500 p-1.5 text-white hover:bg-orange-600 focus:ring-2 focus:ring-orange-400/50 transition-all shadow-sm shadow-orange-200/50"
@@ -197,7 +205,7 @@
 import { ref, computed, watch } from 'vue'
 import {
   ChevronDown, FileText, Users, Plus, Pencil,
-  User, Settings2, HeartPulse, BriefcaseMedical
+  User, Settings2, HeartPulse, BriefcaseMedical, Book
 } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
 import { pacientesService, type PacienteSinCama, type Servicio } from '@/services/api'
@@ -221,6 +229,7 @@ const emit = defineEmits<{
   'cambio-servicio': [servicioId: string]
   'view-bed': [patient: Patient]
   'view-transfer': [patient: Patient]
+  'view-vitals-history': [patient: Patient]
   'assign-bed': [paciente: PacienteSinCama]
   'view-total': []
 }>()
