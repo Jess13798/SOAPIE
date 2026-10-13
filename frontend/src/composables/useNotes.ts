@@ -17,18 +17,41 @@ function snapshotVitals(nota: NotaEnfermeria, idEmpleado: string): SignoVitalHis
   return {
     IdSignoVital: `temporal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     Fecha_Hora: new Date().toISOString(),
-    Peso: vitals.peso || null,
-    Talla: vitals.talla || null,
-    P_Cefalico: vitals.pCefalico || null,
-    P_Abdominal: vitals.pAbdominal || null,
-    Hemoglucotest: vitals.hemoglucotest || vitals.glucosa || null,
-    Presion_Arterial: vitals.presionArterial || null,
-    Frec_Cardiaca: vitals.frecuenciaCardiaca || null,
-    Frec_Respiratoria: vitals.frecuenciaRespiratoria || null,
-    Temperatura: vitals.temperatura || null,
-    Saturacion: vitals.saturacionOxigeno || null,
+    Peso: vitals.peso ?? null,
+    Talla: vitals.talla ?? null,
+    P_Cefalico: vitals.pCefalico ?? null,
+    P_Abdominal: vitals.pAbdominal ?? null,
+    Hemoglucotest: vitals.hemoglucotest ?? vitals.glucosa ?? null,
+    Presion_Arterial: vitals.presionArterial ?? null,
+    Frec_Cardiaca: vitals.frecuenciaCardiaca ?? null,
+    Frec_Respiratoria: vitals.frecuenciaRespiratoria ?? null,
+    Temperatura: vitals.temperatura ?? null,
+    Saturacion: vitals.saturacionOxigeno ?? null,
     IdEmpleado: idEmpleado || null,
   }
+}
+
+function normalizedVital(value: unknown) {
+  const text = String(value ?? '').trim()
+  if (!text) return ''
+  const numeric = Number(text)
+  return Number.isFinite(numeric) ? String(numeric) : text
+}
+
+function hasVitalChanges(next: NotaEnfermeria, previous?: NotaEnfermeria) {
+  if (!previous) return true
+  const nextVitals = next.signosVitales || {}
+  const previousVitals = previous.signosVitales || {}
+  const fields: Array<keyof NonNullable<NotaEnfermeria['signosVitales']>> = [
+    'peso', 'talla', 'pCefalico', 'pAbdominal', 'hemoglucotest',
+    'presionArterial', 'frecuenciaCardiaca', 'frecuenciaRespiratoria',
+    'temperatura', 'saturacionOxigeno',
+  ]
+  return fields.some(field => normalizedVital(nextVitals[field]) !== normalizedVital(
+    field === 'hemoglucotest'
+      ? previousVitals.hemoglucotest ?? previousVitals.glucosa
+      : previousVitals[field],
+  ))
 }
 
 export function useNotes(pacientes: Ref<Patient[]>) {
@@ -99,14 +122,11 @@ export function useNotes(pacientes: Ref<Patient[]>) {
       }
 
       const notaAnterior = notas.value.find(n => n.id === nota.id)
-      const historialTemporal = notaAnterior?.historialTemporalSignosVitales
-        || nota.historialTemporalSignosVitales
-        || []
       const notaGuardada = {
         ...nota,
         id: String(data.id),
-        estadoGuardado: historialTemporal.length ? 'cambios-pendientes' as const : 'guardada' as const,
-        historialTemporalSignosVitales: historialTemporal,
+        estadoGuardado: 'guardada' as const,
+        historialTemporalSignosVitales: [],
       }
       const index = notas.value.findIndex(n => n.id === nota.id || n.id === notaGuardada.id)
       if (index !== -1) {
@@ -116,14 +136,20 @@ export function useNotes(pacientes: Ref<Patient[]>) {
       } else {
         notas.value = [notaGuardada, ...notas.value]
       }
-      return { success: true, persisted: true, id: data.id }
+      return {
+        success: true,
+        persisted: true,
+        id: data.id,
+        vitalesRegistrados: data.vitalesRegistrados,
+      }
     } catch (err) {
       console.error('Error guardando nota en BD:', err)
       // Se conserva temporalmente en memoria de la sesión si falla SQL Server.
       const notaAnterior = notas.value.find(n => n.id === nota.id)
+      const vitalesModificados = hasVitalChanges(nota, notaAnterior)
       const historialTemporal = [
         ...(notaAnterior?.historialTemporalSignosVitales || nota.historialTemporalSignosVitales || []),
-        snapshotVitals(nota, String(payload.idEmpleado || '')),
+        ...(vitalesModificados ? [snapshotVitals(nota, String(payload.idEmpleado || ''))] : []),
       ]
       const esNotaPersistida = notaAnterior
         ? /^\d+$/.test(notaAnterior.id)

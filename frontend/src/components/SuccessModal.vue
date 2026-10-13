@@ -18,6 +18,7 @@
 
         <h3 class="mb-6 text-xl font-black uppercase tracking-tight text-slate-800">{{ title }}</h3>
         <p v-if="warning" class="-mt-3 mb-5 text-sm leading-relaxed text-amber-900">{{ warningMessage }}</p>
+        <p v-else-if="infoMessage" class="-mt-3 mb-5 text-sm leading-relaxed text-slate-600">{{ infoMessage }}</p>
 
         <button
           @click="$emit('confirm')"
@@ -42,6 +43,7 @@ withDefaults(defineProps<{
   checkOnlyButton?: boolean
   warning?: boolean
   warningMessage?: string
+  infoMessage?: string
 }>(), {
   title: 'SE REGISTRO',
   buttonLabel: 'ENTENDIDO',

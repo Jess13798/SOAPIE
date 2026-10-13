@@ -49,6 +49,7 @@ async function guardarNotaCompleta(nota) {
 
     try {
         let idNota = nota.idNota;
+        const isNewNote = !idNota;
         const notaRequest = transaction.request();
         bindNota(notaRequest, nota);
 
@@ -90,23 +91,51 @@ async function guardarNotaCompleta(nota) {
             idNota = insertResult.recordset[0].IdNotaEnfermeria;
         }
 
-        const vitalRequest = transaction.request();
-        vitalRequest.input('idNotaVital', sql.Int, idNota);
-        bindVitales(vitalRequest, nota.signosVitales, nota);
-        await vitalRequest.query(`
-            INSERT INTO dbo.NotaEnfermeriaSignosVitales (
-                IdNotaEnfermeria, IdPaciente, IdCuentaatencion, Fecha_Hora,
-                IdEmpleado, Peso, Talla, P_Cefalico, P_Abdominal, Hemoglucotest,
-                Presion_Arterial, Frec_Cardiaca, Frec_Respiratoria,
-                Temperatura, Saturacion
-            )
-            VALUES (
-                @idNotaVital, @idPacienteVital, @idCuentaVital, @fechaVital,
-                @idEmpleadoVital, @peso, @talla, @pCefalico, @pAbdominal, @hemoglucotest,
-                @presionArterial, @frecuenciaCardiaca, @frecuenciaRespiratoria,
-                @temperatura, @saturacion
-            );
-        `);
+        let vitalesRegistrados = isNewNote;
+        if (!isNewNote) {
+            const latestVitalsRequest = transaction.request();
+            latestVitalsRequest.input('idNotaVitalAnterior', sql.Int, idNota);
+            const latestVitalsResult = await latestVitalsRequest.query(`
+                SELECT TOP (1)
+                    Peso,
+                    Talla,
+                    P_Cefalico,
+                    P_Abdominal,
+                    Hemoglucotest,
+                    Presion_Arterial,
+                    Frec_Cardiaca,
+                    Frec_Respiratoria,
+                    Temperatura,
+                    Saturacion
+                FROM dbo.NotaEnfermeriaSignosVitales WITH (UPDLOCK, HOLDLOCK)
+                WHERE IdNotaEnfermeria = @idNotaVitalAnterior
+                ORDER BY Fecha_Hora DESC, IdSignoVital DESC;
+            `);
+            const latestVitals = latestVitalsResult.recordset[0];
+            vitalesRegistrados = latestVitals
+                ? !sameVitales(latestVitals, nota.signosVitales)
+                : hasVitalValues(nota.signosVitales);
+        }
+
+        if (vitalesRegistrados) {
+            const vitalRequest = transaction.request();
+            vitalRequest.input('idNotaVital', sql.Int, idNota);
+            bindVitales(vitalRequest, nota.signosVitales, nota);
+            await vitalRequest.query(`
+                INSERT INTO dbo.NotaEnfermeriaSignosVitales (
+                    IdNotaEnfermeria, IdPaciente, IdCuentaatencion, Fecha_Hora,
+                    IdEmpleado, Peso, Talla, P_Cefalico, P_Abdominal, Hemoglucotest,
+                    Presion_Arterial, Frec_Cardiaca, Frec_Respiratoria,
+                    Temperatura, Saturacion
+                )
+                VALUES (
+                    @idNotaVital, @idPacienteVital, @idCuentaVital, @fechaVital,
+                    @idEmpleadoVital, @peso, @talla, @pCefalico, @pAbdominal, @hemoglucotest,
+                    @presionArterial, @frecuenciaCardiaca, @frecuenciaRespiratoria,
+                    @temperatura, @saturacion
+                );
+            `);
+        }
 
         const carePlanRequest = transaction.request();
         carePlanRequest.input('idNotaCarePlan', sql.Int, idNota);
@@ -135,11 +164,39 @@ async function guardarNotaCompleta(nota) {
         }
 
         await transaction.commit();
-        return idNota;
+        return { id: idNota, vitalesRegistrados };
     } catch (error) {
         await transaction.rollback();
         throw error;
     }
+}
+
+function sameVitales(existing, current) {
+    const fields = [
+        ['Peso', 'peso'],
+        ['Talla', 'talla'],
+        ['P_Cefalico', 'pCefalico'],
+        ['P_Abdominal', 'pAbdominal'],
+        ['Hemoglucotest', 'hemoglucotest'],
+        ['Frec_Cardiaca', 'frecuenciaCardiaca'],
+        ['Frec_Respiratoria', 'frecuenciaRespiratoria'],
+        ['Temperatura', 'temperatura'],
+        ['Saturacion', 'saturacionOxigeno'],
+    ];
+
+    return fields.every(([databaseField, noteField]) => {
+        const existingValue = existing[databaseField];
+        const currentValue = current[noteField];
+        if (existingValue === null || existingValue === undefined || currentValue === null || currentValue === undefined) {
+            return (existingValue === null || existingValue === undefined)
+                && (currentValue === null || currentValue === undefined);
+        }
+        return Number(existingValue) === Number(currentValue);
+    }) && (existing.Presion_Arterial || null) === (current.presionArterial || null);
+}
+
+function hasVitalValues(vitals) {
+    return Object.values(vitals).some(value => value !== null && value !== undefined && value !== '');
 }
 
 async function insertDiagnosisComment(transaction, idNota, idNANDA, comentario) {
