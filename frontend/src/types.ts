@@ -2,6 +2,7 @@ export interface Patient {
   id: string
   idEspecialidad?: string
   idProducto?: string
+  nombreCompleto?: string
   nombre: string
   apellido: string
   edad: number
@@ -59,6 +60,7 @@ export interface PlanCuidadoNota {
   idNANDA: number
   codigoNANDA: string
   diagnostico: string
+  comentario?: string
   nocIds: number[]
   nicIds: number[]
   nicRealizadasIds?: number[]
@@ -91,6 +93,7 @@ export interface SignoVitalHistorial {
   Temperatura?: string | number | null
   Saturacion?: string | number | null
   IdEmpleado?: string | number | null
+  NombreEmpleado?: string | null
   TotalCount?: number
 }
 

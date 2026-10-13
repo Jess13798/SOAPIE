@@ -113,6 +113,9 @@ async function guardarNotaCompleta(nota) {
         await carePlanRequest.query(`
             DELETE FROM dbo.NotaEnfermeriaPlanCuidado
             WHERE IdNotaEnfermeria = @idNotaCarePlan;
+
+            DELETE FROM dbo.NotaEnfermeriaDiagnostico
+            WHERE IdNotaEnfermeria = @idNotaCarePlan;
         `);
 
         for (const diagnosis of nota.planCuidados) {
@@ -126,6 +129,9 @@ async function guardarNotaCompleta(nota) {
             for (const idNIC of diagnosis.nicIds) {
                 await insertCarePlanSelection(transaction, idNota, diagnosis.idNANDA, null, idNIC);
             }
+            if (diagnosis.comentario) {
+                await insertDiagnosisComment(transaction, idNota, diagnosis.idNANDA, diagnosis.comentario);
+            }
         }
 
         await transaction.commit();
@@ -134,6 +140,19 @@ async function guardarNotaCompleta(nota) {
         await transaction.rollback();
         throw error;
     }
+}
+
+async function insertDiagnosisComment(transaction, idNota, idNANDA, comentario) {
+    const request = transaction.request();
+    request.input('idNotaComentario', sql.Int, idNota);
+    request.input('idNANDAComentario', sql.Int, idNANDA);
+    request.input('comentarioNANDA', sql.NVarChar(1000), comentario);
+    await request.query(`
+        INSERT INTO dbo.NotaEnfermeriaDiagnostico (
+            IdNotaEnfermeria, IdNANDA, Comentario
+        )
+        VALUES (@idNotaComentario, @idNANDAComentario, @comentarioNANDA);
+    `);
 }
 
 async function insertCarePlanSelection(transaction, idNota, idNANDA, idNOC, idNIC) {
@@ -217,6 +236,7 @@ const NOTAS_QUERY = `
         cuidado.IdNANDA AS PlanIdNANDA,
         nanda.Codigo AS PlanCodigoNANDA,
         nanda.Diagnostico AS PlanDiagnosticoNANDA,
+        diagnosticoNota.Comentario AS PlanComentarioNANDA,
         cuidado.IdNOC AS PlanIdNOC,
         noc.Codigo AS PlanCodigoNOC,
         noc.Resultado AS PlanResultadoNOC,
@@ -237,6 +257,9 @@ const NOTAS_QUERY = `
         ON cuidado.IdNotaEnfermeria = n.IdNotaEnfermeria
     LEFT JOIN dbo.Catalogo_NANDA AS nanda
         ON nanda.IdNANDA = cuidado.IdNANDA
+    LEFT JOIN dbo.NotaEnfermeriaDiagnostico AS diagnosticoNota
+        ON diagnosticoNota.IdNotaEnfermeria = cuidado.IdNotaEnfermeria
+       AND diagnosticoNota.IdNANDA = cuidado.IdNANDA
     LEFT JOIN dbo.Catalogo_NOC AS noc
         ON noc.IdNOC = cuidado.IdNOC
     LEFT JOIN dbo.Catalogo_NIC AS nic
@@ -270,13 +293,55 @@ async function getHistorialVitals(idNota, limit = 10, offset = 0) {
             sv.Temperatura,
             sv.Saturacion,
             sv.IdEmpleado,
+            NULLIF(UPPER(LTRIM(RTRIM(
+                ISNULL(empleado.ApellidoPaterno, '') + ' ' +
+                ISNULL(empleado.ApellidoMaterno, '') + ' ' +
+                ISNULL(empleado.Nombres, '')
+            ))), '') AS NombreEmpleado,
             COUNT(*) OVER() AS TotalCount
         FROM dbo.NotaEnfermeriaSignosVitales AS sv
+        LEFT JOIN dbo.Empleados AS empleado
+            ON empleado.IdEmpleado = sv.IdEmpleado
         WHERE sv.IdNotaEnfermeria = @idNota
         ORDER BY sv.Fecha_Hora DESC, sv.IdSignoVital DESC
         OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY;
     `, [
         { name: 'idNota', type: sql.Int, value: idNota },
+        { name: 'offset', type: sql.Int, value: offset },
+        { name: 'limit', type: sql.Int, value: limit },
+    ]);
+}
+
+async function getHistorialVitalsPorAtencion(idCuenta, limit = 10, offset = 0) {
+    return dbHelper.query(`
+        SELECT
+            sv.IdSignoVital,
+            sv.Fecha_Hora,
+            sv.Peso,
+            sv.Talla,
+            sv.P_Cefalico,
+            sv.P_Abdominal,
+            sv.Hemoglucotest,
+            sv.Presion_Arterial,
+            sv.Frec_Cardiaca,
+            sv.Frec_Respiratoria,
+            sv.Temperatura,
+            sv.Saturacion,
+            sv.IdEmpleado,
+            NULLIF(UPPER(LTRIM(RTRIM(
+                ISNULL(empleado.ApellidoPaterno, '') + ' ' +
+                ISNULL(empleado.ApellidoMaterno, '') + ' ' +
+                ISNULL(empleado.Nombres, '')
+            ))), '') AS NombreEmpleado,
+            COUNT(*) OVER() AS TotalCount
+        FROM dbo.NotaEnfermeriaSignosVitales AS sv
+        LEFT JOIN dbo.Empleados AS empleado
+            ON empleado.IdEmpleado = sv.IdEmpleado
+        WHERE sv.IdCuentaatencion = @idCuenta
+        ORDER BY sv.Fecha_Hora DESC, sv.IdSignoVital DESC
+        OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY;
+    `, [
+        { name: 'idCuenta', type: sql.Int, value: idCuenta },
         { name: 'offset', type: sql.Int, value: offset },
         { name: 'limit', type: sql.Int, value: limit },
     ]);
@@ -297,6 +362,9 @@ async function deleteNotaById(idNota) {
             DELETE FROM dbo.NotaEnfermeriaPlanCuidado
             WHERE IdNotaEnfermeria = @idNota;
 
+            DELETE FROM dbo.NotaEnfermeriaDiagnostico
+            WHERE IdNotaEnfermeria = @idNota;
+
             DELETE FROM dbo.NotaEnfermeria
             WHERE IdNotaEnfermeria = @idNota;
         `);
@@ -312,6 +380,7 @@ module.exports = {
     getNotasPorPaciente,
     getAllNotas,
     getHistorialVitals,
+    getHistorialVitalsPorAtencion,
     deleteNotaById,
     CARE_PLAN_RELATION_INVALID,
     NOTA_NOT_FOUND,

@@ -3,9 +3,9 @@
  * Centraliza todas las llamadas HTTP al backend para evitar URLs quemadas y código duplicado.
  */
 
-import type { Patient, NotaEnfermeria, PacienteBD } from '@/types'
+import type { Patient, NotaEnfermeria, PacienteBD, SignoVitalHistorial } from '@/types'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 // ==========================================
 // 0. SESIÓN / TOKEN
@@ -214,8 +214,12 @@ export const notasService = {
         })
     },
 
-    getHistorialVitals(idNota: string | number, limit = 10, page = 1): Promise<any[]> {
-        return request<any[]>(`/notas/${idNota}/vitals?limit=${limit}&page=${page}`)
+    getHistorialVitals(idNota: string | number, limit = 10, page = 1): Promise<SignoVitalHistorial[]> {
+        return request<SignoVitalHistorial[]>(`/notas/${idNota}/vitals?limit=${limit}&page=${page}`)
+    },
+
+    getHistorialVitalsPorAtencion(idCuenta: string | number, limit = 10, page = 1): Promise<SignoVitalHistorial[]> {
+        return request<SignoVitalHistorial[]>(`/atenciones/${idCuenta}/vitals?limit=${limit}&page=${page}`)
     },
 }
 

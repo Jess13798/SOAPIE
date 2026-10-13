@@ -69,6 +69,7 @@
             @cambio-servicio="cambiarServicio"
             @view-bed="handleViewBed"
             @view-transfer="handleViewTransfer"
+            @view-vitals-history="handleViewVitalsHistory"
             @assign-bed="handleAssignBed"
             @view-total="handleViewTotalBeds"
           >
@@ -112,6 +113,12 @@
       @save="onSaveNote"
       @sign="onSignNote"
       @close="handleCloseModal"
+    />
+
+    <VitalsHistoryModal
+      :is-open="isVitalsHistoryOpen"
+      :id-cuenta="patientForVitalsHistory?.numCuenta || ''"
+      @close="isVitalsHistoryOpen = false"
     />
 
     <SuccessModal 
@@ -166,6 +173,7 @@ import TransferModal from '@/modules/pacientes/components/TransferModal.vue'
 import NewNoteModal from '@/modules/notas/components/NewNoteModal.vue'
 import NewNoteForm from '@/modules/notas/components/NewNoteForm.vue'
 import NotesHistoryPanel from '@/modules/notas/components/NotesHistoryPanel.vue'
+import VitalsHistoryModal from '@/modules/vitales/components/VitalsHistoryModal.vue'
 import VitalsOverview from '@/modules/vitales/components/VitalsOverview.vue'
 
 import { usePatients } from '@/modules/pacientes/composables/usePatients'
@@ -223,6 +231,13 @@ const {
 // 4. Estado de Navegación y UI
 const activeView = ref('pacientes')
 const notaError = ref('')
+const patientForVitalsHistory = ref<Patient | null>(null)
+const isVitalsHistoryOpen = ref(false)
+
+function handleViewVitalsHistory(patient: Patient) {
+  patientForVitalsHistory.value = patient
+  isVitalsHistoryOpen.value = true
+}
 const {
   sidebarOpen,
   empleadoLogueado,

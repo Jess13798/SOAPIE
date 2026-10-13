@@ -65,7 +65,7 @@
           <div class="flex items-center gap-6">
             <div class="flex flex-col">
               <span class="text-[8px] font-bold text-slate-400 uppercase leading-none mb-1">Paciente</span>
-              <span class="text-[10.5px] font-black text-slate-700 uppercase">{{ patient.nombre }} {{ patient.apellido }}</span>
+              <span class="text-[10.5px] font-black text-slate-700 uppercase">{{ patient.nombreCompleto || `${patient.nombre} ${patient.apellido}`.trim() }}</span>
             </div>
             <div class="h-6 w-[1px] bg-slate-200"></div>
             <div class="flex flex-col">
@@ -137,9 +137,9 @@
       </div>
     </div>
   </div>
-  <VitalsHistoryModal 
-    :is-open="showVitalsHistory" 
-    :id-nota="nota?.id || ''" 
+  <VitalsHistoryModal
+    :is-open="showVitalsHistory"
+    :id-cuenta="patient.numCuenta || ''"
     :registros-temporales="nota?.historialTemporalSignosVitales || []"
     @close="showVitalsHistory = false"
   />

@@ -27,7 +27,12 @@
     <VitalsGrid :form="form" :read-only="isReadOnly" />
 
     <!-- SOAPIE -->
-    <SoapieEditor v-model:section="activeTab" :form="form" :read-only="isReadOnly" />
+    <SoapieEditor
+      v-model:section="activeTab"
+      :form="form"
+      :read-only="isReadOnly"
+      :permite-editar-analisis="permiteEditarAnalisisAnterior"
+    />
 
     <SoapieCarePlanSelector
       v-if="['a', 'p', 'i', 'e'].includes(activeTab)"
@@ -104,10 +109,10 @@ const defaultForm = () => ({
   spo2: props.initialNota?.signosVitales?.saturacionOxigeno || "", 
   s: props.initialNota?.subjetivo || "", 
   o: props.initialNota?.objetivo || "", 
-  a: props.initialNota?.analisis || "", 
-  p: props.initialNota?.plan || "", 
-  i: props.initialNota?.intervencion || "", 
-  e: props.initialNota?.evaluacion || "",
+  a: textoLibre(props.initialNota?.analisis || "", 'DIAGNOSTICOS NANDA'),
+  p: textoLibre(props.initialNota?.plan || "", 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS'),
+  i: textoLibre(props.initialNota?.intervencion || "", 'INTERVENCIONES NIC REALIZADAS'),
+  e: textoLibre(props.initialNota?.evaluacion || "", 'EVALUACION DE RESULTADOS NOC'),
   antecedentes: props.initialNota?.antecedentes || "", 
   diagnosticos: props.initialNota?.diagnosticos || "", 
   farmacia: props.initialNota?.farmacia || "", 
@@ -119,11 +124,17 @@ const form = reactive(defaultForm())
 // Sección SOAPIE activa. La maneja SoapieEditor (v-model:section) y la usa el
 // selector de plan de cuidados para saber a qué sección agregar el NANDA/NOC/NIC.
 const activeTab = ref<'s' | 'o' | 'a' | 'p' | 'i' | 'e'>('s')
+// El textarea de Análisis solo se muestra si la nota traía un análisis previo;
+// en notas nuevas el Análisis se arma con los diagnósticos NANDA seleccionados.
+const permiteEditarAnalisisAnterior = ref(
+  Boolean(textoLibre(props.initialNota?.analisis || '', 'DIAGNOSTICOS NANDA')),
+)
 const planCuidados = ref<PlanCuidadoNota[]>(
   props.initialNota ? hidratarPlanCuidados(props.initialNota) : [],
 )
 const draftId = ref(props.initialNota?.id || `n${Date.now()}`)
 
+// Selector de turno (Día / Noche) conservado del trabajo local.
 const selectedTurno = ref<'dia' | 'noche'>(
   (props.initialNota?.turno as 'dia' | 'noche') || 'dia'
 )
@@ -132,10 +143,15 @@ const nombreEnfermeraActual = computed(() => {
   return props.enfermeraProp || sessionStorage.getItem('empleadoLogueado') || sessionStorage.getItem('usuarioLogueado') || 'Enfermero/a en turno'
 })
 
-function bloqueEstructurado(texto: string, titulo: string, lineas: string[]) {
+function textoLibre(texto: string, titulo: string) {
   const marker = `\n\n[${titulo}]`
-  const base = texto.split(marker)[0].trimEnd()
+  return texto.split(marker)[0].trimEnd()
+}
+
+function bloqueEstructurado(texto: string, titulo: string, lineas: string[]) {
+  const base = textoLibre(texto, titulo)
   if (!lineas.length) return base
+  const marker = `\n\n[${titulo}]`
   return `${base}${marker}\n${lineas.join('\n')}`
 }
 
@@ -146,33 +162,20 @@ function hidratarPlanCuidados(nota: NotaEnfermeria) {
   return (nota.planCuidados || []).map(item => {
     const metas = { ...(item.nocMetas || {}) }
     const evaluaciones = { ...(item.nocEvaluaciones || {}) }
-    for (const noc of item.noc || []) {
-      const planLine = lineasPlan.find(line => line.startsWith(`NOC ${noc.codigo}:`))
-      const meta = planLine?.match(/\|\s*Meta:\s*(.+)$/)
-      if (meta?.[1]) metas[noc.id] = meta[1]
-
-      const evaluationLine = lineasEvaluacion.find(line => line.startsWith(`NOC ${noc.codigo}:`))
-      const evaluation = evaluationLine?.match(/\|\s*Resultado observado:\s*(.+)$/)
-      if (evaluation?.[1]) evaluaciones[noc.id] = evaluation[1]
-    }
-
-    const realizadas = (item.nic || [])
-      .filter(nic => lineasIntervencion.some(line => line.startsWith(`NIC ${nic.codigo}:`)))
-      .map(nic => nic.id)
-
+    const descripcion = nota.plan.split('\n')
     return {
       ...item,
       nocMetas: metas,
       nocEvaluaciones: evaluaciones,
-      nicRealizadasIds: Array.from(new Set([...(item.nicRealizadasIds || []), ...realizadas])),
+      nicRealizadasIds: Array.from(new Set([...(item.nicRealizadasIds || []), ...hidratarNicRealizadas(item, lineasIntervencion)])),
     }
   })
 }
 
-function lineasAnalisis() {
-  return planCuidados.value.map(item =>
-    `NANDA ${item.codigoNANDA}: ${item.diagnostico}`,
-  )
+function hidratarNicRealizadas(item: PlanCuidadoNota, lineasIntervencion: string[]) {
+  return (item.nic || [])
+    .filter(nic => lineasIntervencion.some(linea => linea.includes(nic.intervencion)))
+    .map(nic => nic.id)
 }
 
 function lineasPlan() {
@@ -216,9 +219,6 @@ function lineasEvaluacion() {
 watch(() => props.initialNota, (newNote) => {
   if (newNote) {
       draftId.value = newNote.id
-      if (newNote.turno) {
-  selectedTurno.value = (newNote.turno === 'noche' ? 'noche' : 'dia') as 'dia' | 'noche'
-  }
     form.peso = newNote.signosVitales?.peso || ""
     form.talla = newNote.signosVitales?.talla || ""
     form.pCefalico = newNote.signosVitales?.pCefalico || ""
@@ -231,10 +231,11 @@ watch(() => props.initialNota, (newNote) => {
     form.spo2 = newNote.signosVitales?.saturacionOxigeno || ""
     form.s = newNote.subjetivo || ""
     form.o = newNote.objetivo || ""
-    form.a = newNote.analisis || ""
-    form.p = newNote.plan || ""
-    form.i = newNote.intervencion || ""
-    form.e = newNote.evaluacion || ""
+    form.a = textoLibre(newNote.analisis || "", 'DIAGNOSTICOS NANDA')
+    permiteEditarAnalisisAnterior.value = Boolean(form.a)
+    form.p = textoLibre(newNote.plan || "", 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS')
+    form.i = textoLibre(newNote.intervencion || "", 'INTERVENCIONES NIC REALIZADAS')
+    form.e = textoLibre(newNote.evaluacion || "", 'EVALUACION DE RESULTADOS NOC')
     form.antecedentes = newNote.antecedentes || ""
     form.diagnosticos = newNote.diagnosticos || ""
     form.farmacia = newNote.farmacia || ""
@@ -268,8 +269,13 @@ function handleSubmit(shouldSign = false) {
   }
 
   // STRICT VALIDATION: All SOAPIE fields must be filled
-  if (!form.s || !form.o || !form.a || !form.p || !form.i || !form.e) {
+  if (!form.s || !form.o || !form.p || !form.i || !form.e) {
     showToast('Por favor, complete todas las secciones del SOAPIE antes de guardar.', 'error')
+    return
+  }
+
+  if (!form.a.trim() && planCuidados.value.length === 0) {
+    showToast('Seleccione al menos un diagnóstico NANDA para completar la sección Análisis.', 'error')
     return
   }
 
@@ -294,18 +300,18 @@ function handleSubmit(shouldSign = false) {
     signosVitales: {
       temperatura: form.temp,
       saturacionOxigeno: form.spo2,
+      presionArterial: form.presionArterial,
+      frecuenciaCardiaca: form.frecuenciaCardiaca,
+      frecuenciaRespiratoria: form.frecuenciaRespiratoria,
       peso: form.peso,
       talla: form.talla,
       pCefalico: form.pCefalico,
       pAbdominal: form.pAbdominal,
       hemoglucotest: form.hemoglucotest,
-      presionArterial: form.presionArterial,
-      frecuenciaCardiaca: form.frecuenciaCardiaca,
-      frecuenciaRespiratoria: form.frecuenciaRespiratoria,
     },
     subjetivo: form.s,
     objetivo: form.o,
-    analisis: bloqueEstructurado(form.a, 'DIAGNOSTICOS NANDA', lineasAnalisis()),
+    analisis: bloqueEstructurado(form.a, 'DIAGNOSTICOS NANDA', []),
     plan: bloqueEstructurado(form.p, 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS', lineasPlan()),
     intervencion: bloqueEstructurado(form.i, 'INTERVENCIONES NIC REALIZADAS', lineasIntervencionesRealizadas()),
     evaluacion: bloqueEstructurado(form.e, 'EVALUACION DE RESULTADOS NOC', lineasEvaluacion()),
@@ -350,15 +356,14 @@ defineExpose({
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
 
 .toast-enter-active, .toast-leave-active {
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: all 0.3s ease;
 }
 .toast-enter-from, .toast-leave-to {
   opacity: 0;
-  transform: translateX(100px);
+  transform: translateX(20px);
 }
 
 @media print {
-  .modal-footer { display: none !important; }
-  .bg-blue-color-print { background-color: white !important; }
+  .modal-footer { display: none; }
 }
 </style>

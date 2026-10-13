@@ -45,6 +45,14 @@ function normalizeBloodPressure(value) {
     return value;
 }
 
+function normalizeComentarioDiagnostico(value) {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== 'string' || value.length > 1000) {
+        throw inputError('El comentario del diagnóstico debe ser texto de hasta 1000 caracteres.');
+    }
+    return value.trim() || null;
+}
+
 function sqlDateTime(fecha, hora, fieldName) {
     if (
         typeof fecha !== 'string'
@@ -81,9 +89,13 @@ function normalizePlanCuidados(planCuidados = []) {
         const idNANDA = nullableInteger(item?.idNANDA, 'IdNANDA', true);
         const diagnosis = diagnoses.get(idNANDA) || {
             idNANDA,
+            comentario: null,
             nocIds: new Set(),
             nicIds: new Set(),
         };
+        if (item.comentario !== undefined) {
+            diagnosis.comentario = normalizeComentarioDiagnostico(item.comentario);
+        }
         if (item.nocIds !== undefined && !Array.isArray(item.nocIds)) {
             throw inputError('nocIds debe ser una lista.');
         }
@@ -101,6 +113,7 @@ function normalizePlanCuidados(planCuidados = []) {
 
     return Array.from(diagnoses.values(), item => ({
         idNANDA: item.idNANDA,
+        comentario: item.comentario,
         nocIds: Array.from(item.nocIds),
         nicIds: Array.from(item.nicIds),
     }));
@@ -233,6 +246,7 @@ async function obtenerNotas() {
                     idNANDA: row.PlanIdNANDA,
                     codigoNANDA: row.PlanCodigoNANDA,
                     diagnostico: row.PlanDiagnosticoNANDA,
+                    comentario: row.PlanComentarioNANDA || '',
                     nocIds: [],
                     nicIds: [],
                     noc: [],
@@ -283,6 +297,23 @@ async function obtenerHistorialVitals(idNota, limit = 10, offset = 0) {
     }
 }
 
+async function obtenerHistorialVitalsPorAtencion(idCuenta, limit = 10, offset = 0) {
+    const cuentaId = nullableInteger(idCuenta, 'IdCuentaAtencion', true);
+    const pageSize = nullablePositiveNumber(limit, 'límite');
+    const startAt = nullablePositiveNumber(offset, 'desplazamiento');
+    if (!pageSize || pageSize > 100 || startAt === null) {
+        throw inputError('La paginación del historial de signos vitales no es válida.');
+    }
+
+    try {
+        const result = await notasRepository.getHistorialVitalsPorAtencion(cuentaId, pageSize, startAt);
+        return result.recordset || [];
+    } catch (error) {
+        console.error('Error al obtener historial de vitales por atención:', error.message);
+        throw error;
+    }
+}
+
 async function eliminarNota(id) {
     const notaId = nullableInteger(id, 'IdNota', true);
     try {
@@ -299,4 +330,5 @@ module.exports = {
     obtenerNotas,
     eliminarNota,
     obtenerHistorialVitals,
+    obtenerHistorialVitalsPorAtencion,
 };

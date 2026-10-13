@@ -1,9 +1,9 @@
 <template>
   <section class="mx-auto max-w-6xl space-y-5">
     <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-      <p class="font-bold">Prototipo de busqueda</p>
+      <p class="font-bold">Prototipo de busqueda </p>
       <p class="mt-1">
-        Catálogo de demostración para probar búsqueda y relaciones.
+        Probar búsqueda y relaciones.
       </p>
     </div>
 

@@ -56,4 +56,20 @@ router.get('/notas/:id/vitals', async (req, res) => {
     }
 });
 
+// Obtener historial de signos vitales de una atención (cuenta) con paginación
+router.get('/atenciones/:idCuenta/vitals', async (req, res) => {
+    try {
+        const { idCuenta } = req.params;
+        const limit = parseInt(req.query.limit) || 10;
+        const page = parseInt(req.query.page) || 1;
+        const offset = (page - 1) * limit;
+
+        const datos = await notasModule.obtenerHistorialVitalsPorAtencion(idCuenta, limit, offset);
+        res.json(datos);
+    } catch (err) {
+        console.error('Error en /api/atenciones/:idCuenta/vitals:', err);
+        res.status(500).json({ success: false, mensaje: 'Error al cargar historial de vitales' });
+    }
+});
+
 module.exports = router;

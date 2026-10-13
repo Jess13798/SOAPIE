@@ -88,7 +88,7 @@ export function useNotes(pacientes: Ref<Patient[]>) {
     const patient = pacientes.value.find(p => String(p.id) === String(nota.pacienteId))
     const payload = {
       ...nota,
-      idCuenta: patient?.numCuenta || nota.idCuenta || '',
+      idCuenta: nota.idCuenta || patient?.numCuenta || '',
       idEmpleado: sessionStorage.getItem('idEmpleado') || '',
     }
 

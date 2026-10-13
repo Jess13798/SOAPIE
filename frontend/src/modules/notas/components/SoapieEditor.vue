@@ -20,7 +20,7 @@
     </div>
 
     <!-- Área de Texto SOAPIE -->
-    <div class="pt-1 bg-slate-50/50">
+    <div v-if="activeTab !== 'a' || permiteEditarAnalisis" class="pt-1 bg-slate-50/50">
       <div class="border-x border-b border-slate-200 overflow-hidden shadow-sm h-[320px] bg-white flex">
         <div class="w-16 bg-blue-50/50 flex items-center justify-center border-r border-slate-100">
           <span class="text-4xl font-black text-blue-700 uppercase">{{ activeTab }}</span>
@@ -44,6 +44,9 @@ import type { NotaFormState } from '../notaForm'
 defineProps<{
   form: NotaFormState
   readOnly?: boolean
+  // Cuando es false, el textarea de Análisis se oculta en notas nuevas sin
+  // análisis previo: el Análisis se arma con los diagnósticos NANDA elegidos.
+  permiteEditarAnalisis?: boolean
 }>()
 
 // Sección SOAPIE activa. Se sincroniza con el padre (v-model:section) para que
