@@ -109,6 +109,7 @@
           :enfermera-prop="enfermeraMostrada"
           :initial-nota="nota"
           :is-read-only="!!nota?.isFirmada"
+          :is-submitting="isSubmitting"
           @save="handleSave"
           @sign="handleSign"
         />
@@ -130,6 +131,7 @@ const props = defineProps<{
   patient: Patient
   noteNumber: number
   nota?: NotaEnfermeria
+  isSubmitting?: boolean
 }>()
 
 const emit = defineEmits<{

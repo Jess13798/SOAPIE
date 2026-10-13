@@ -109,6 +109,7 @@
       :patient="patientForNewNote"
       :nota="selectedNoteForModal || undefined"
       :note-number="modalNoteNumber"
+      :is-submitting="isSavingNote"
       @save="onSaveNote"
       @sign="onSignNote"
       @close="handleCloseModal"
@@ -127,7 +128,10 @@
       :check-only-button="successModalCheckOnlyButton"
       :warning="successModalType === 'nota-temporal' || successModalType === 'nota-pendiente'"
       :warning-message="successModalType === 'nota-pendiente'
-        ? 'La versión anterior de esta nota sigue en la base de datos, pero estos cambios y signos vitales nuevos están solo en la memoria de esta sesión. Se perderán al cerrar o recargar.'
+        ? 'La versión anterior de esta nota sigue en la base de datos. Los cambios pendientes solo están en la memoria de esta sesión y se perderán al cerrar o recargar.'
+        : undefined"
+      :info-message="successModalType === 'nota-editada-sin-toma'
+        ? 'Los cambios SOAPIE se guardaron. No se agregó una nueva toma porque los signos vitales no cambiaron.'
         : undefined"
       @confirm="handleConfirmSuccess" 
     />
@@ -228,6 +232,7 @@ const {
 // 4. Estado de Navegación y UI
 const activeView = ref('pacientes')
 const notaError = ref('')
+const isSavingNote = ref(false)
 const patientForVitalsHistory = ref<Patient | null>(null)
 const isVitalsHistoryOpen = ref(false)
 
@@ -261,29 +266,49 @@ const {
 })
 
 async function onSaveNote(nota: NotaEnfermeria) {
+  if (isSavingNote.value) return
+  isSavingNote.value = true
   notaError.value = ''
-  const result = await guardarNota(nota)
-  if (!result.success) {
-    notaError.value = result.error instanceof Error ? result.error.message : 'No se pudo guardar la nota SOAPIE.'
-    return
+  try {
+    const result = await guardarNota(nota)
+    if (!result.success) {
+      notaError.value = result.error instanceof Error ? result.error.message : 'No se pudo guardar la nota SOAPIE.'
+      return
+    }
+    successModalType.value = result.persisted === false
+      ? (/^\d+$/.test(nota.id) ? 'nota-pendiente' : 'nota-temporal')
+      : result.vitalesRegistrados === false && /^\d+$/.test(nota.id)
+        ? 'nota-editada-sin-toma'
+        : 'nota'
+    showSuccessModal.value = true
+  } catch (error) {
+    notaError.value = error instanceof Error ? error.message : 'No se pudo guardar la nota SOAPIE.'
+  } finally {
+    isSavingNote.value = false
   }
-  successModalType.value = result.persisted === false
-    ? (/^\d+$/.test(nota.id) ? 'nota-pendiente' : 'nota-temporal')
-    : 'nota'
-  showSuccessModal.value = true
 }
 
 async function onSignNote(nota: NotaEnfermeria) {
+  if (isSavingNote.value) return
+  isSavingNote.value = true
   notaError.value = ''
-  const result = await firmarNota(nota)
-  if (!result.success) {
-    notaError.value = result.error instanceof Error ? result.error.message : 'No se pudo firmar la nota SOAPIE.'
-    return
+  try {
+    const result = await firmarNota(nota)
+    if (!result.success) {
+      notaError.value = result.error instanceof Error ? result.error.message : 'No se pudo firmar la nota SOAPIE.'
+      return
+    }
+    successModalType.value = result.persisted === false
+      ? (/^\d+$/.test(nota.id) ? 'nota-pendiente' : 'nota-temporal')
+      : result.vitalesRegistrados === false && /^\d+$/.test(nota.id)
+        ? 'nota-editada-sin-toma'
+        : 'nota'
+    showSuccessModal.value = true
+  } catch (error) {
+    notaError.value = error instanceof Error ? error.message : 'No se pudo firmar la nota SOAPIE.'
+  } finally {
+    isSavingNote.value = false
   }
-  successModalType.value = result.persisted === false
-    ? (/^\d+$/.test(nota.id) ? 'nota-pendiente' : 'nota-temporal')
-    : 'nota'
-  showSuccessModal.value = true
 }
 
 onMounted(async () => {

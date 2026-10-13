@@ -21,15 +21,40 @@ function nullableInteger(value, fieldName, required = false) {
 
 function nullableDecimal(value, fieldName, maximum = 999.99) {
     if (value === undefined || value === null || value === '') return null;
+    if (typeof value === 'string') {
+        value = value.trim();
+        if (!value) return null;
+        if (!/^\d+(\.\d{1,2})?$/.test(value)) {
+            throw inputError(`${fieldName} debe ser numérico y tener hasta dos decimales.`);
+        }
+    } else if (typeof value !== 'number') {
+        throw inputError(`${fieldName} debe ser numérico.`);
+    }
+
     const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 0 || parsed > maximum) {
-        throw inputError(`${fieldName} debe ser un valor numérico entre 0 y ${maximum}.`);
+    if (
+        !Number.isFinite(parsed)
+        || parsed < 0
+        || parsed > maximum
+        || Number(parsed.toFixed(2)) !== parsed
+    ) {
+        throw inputError(`${fieldName} debe ser un valor entre 0 y ${maximum}, con hasta dos decimales.`);
     }
     return parsed;
 }
 
 function nullablePositiveNumber(value, fieldName) {
     if (value === undefined || value === null || value === '') return null;
+    if (typeof value === 'string') {
+        value = value.trim();
+        if (!value) return null;
+        if (!/^\d+$/.test(value)) {
+            throw inputError(`${fieldName} debe ser un número entero no negativo.`);
+        }
+    } else if (typeof value !== 'number') {
+        throw inputError(`${fieldName} debe ser un número entero no negativo.`);
+    }
+
     const parsed = Number(value);
     if (!Number.isInteger(parsed) || parsed < 0 || parsed > 2147483647) {
         throw inputError(`${fieldName} debe ser un número entero válido.`);
@@ -42,6 +67,10 @@ function normalizeBloodPressure(value) {
     if (typeof value !== 'string' || value.length > 10 || !/^\d{1,3}\/\d{1,3}$/.test(value)) {
         throw inputError('La presión arterial debe tener el formato sistólica/diastólica.');
     }
+    const [systolic, diastolic] = value.split('/').map(Number);
+    if (systolic <= diastolic || diastolic === 0) {
+        throw inputError('La presión arterial debe tener la sistólica mayor que la diastólica.');
+    }
     return value;
 }
 
@@ -51,6 +80,13 @@ function normalizeComentarioDiagnostico(value) {
         throw inputError('El comentario del diagnóstico debe ser texto de hasta 1000 caracteres.');
     }
     return value.trim() || null;
+}
+
+function requiredClinicalText(value, fieldName) {
+    if (typeof value !== 'string' || !value.trim()) {
+        throw inputError(`La sección ${fieldName} es obligatoria.`);
+    }
+    return value;
 }
 
 function sqlDateTime(fecha, hora, fieldName) {
@@ -149,12 +185,12 @@ async function guardarNota(nota) {
         turno: nota.turno === 'noche' ? 'noche' : 'dia',
         fechaInicio: sqlDateTime(nota.fecha, nota.hora, 'fecha y hora de inicio'),
         fechaFin: getSignedDateTime(nota),
-        subjetivo: nota.subjetivo ?? '',
-        objetivo: nota.objetivo ?? '',
-        analisis: nota.analisis ?? '',
-        plan: nota.plan ?? '',
-        intervencion: nota.intervencion ?? '',
-        evaluacion: nota.evaluacion ?? '',
+        subjetivo: requiredClinicalText(nota.subjetivo, 'Subjetivo'),
+        objetivo: requiredClinicalText(nota.objetivo, 'Objetivo'),
+        analisis: typeof nota.analisis === 'string' ? nota.analisis : '',
+        plan: requiredClinicalText(nota.plan, 'Plan'),
+        intervencion: requiredClinicalText(nota.intervencion, 'Intervención'),
+        evaluacion: requiredClinicalText(nota.evaluacion, 'Evaluación'),
         signosVitales: {
             peso: nullableDecimal(signos.peso, 'peso'),
             talla: nullableDecimal(signos.talla, 'talla'),
@@ -171,9 +207,38 @@ async function guardarNota(nota) {
         fechaHora: new Date(),
     };
 
+    if (!valores.analisis.trim() && valores.planCuidados.length === 0) {
+        throw inputError('La sección Análisis requiere texto o al menos un diagnóstico NANDA.');
+    }
+
+    if (idNota === null) {
+        const requiredVitales = [
+            ['peso', valores.signosVitales.peso],
+            ['talla', valores.signosVitales.talla],
+            ['perímetro cefálico', valores.signosVitales.pCefalico],
+            ['perímetro abdominal', valores.signosVitales.pAbdominal],
+            ['hemoglucotest', valores.signosVitales.hemoglucotest],
+            ['presión arterial', valores.signosVitales.presionArterial],
+            ['frecuencia cardiaca', valores.signosVitales.frecuenciaCardiaca],
+            ['frecuencia respiratoria', valores.signosVitales.frecuenciaRespiratoria],
+            ['temperatura', valores.signosVitales.temperatura],
+            ['saturación de oxígeno', valores.signosVitales.saturacionOxigeno],
+        ];
+        const missingVital = requiredVitales.find(([, value]) => value === null);
+        if (missingVital) {
+            throw inputError(`El signo vital ${missingVital[0]} es obligatorio al crear una nota.`);
+        }
+    }
+
+    if (valores.signosVitales.saturacionOxigeno !== null && valores.signosVitales.saturacionOxigeno > 100) {
+        throw inputError('La saturación de oxígeno debe estar entre 0 y 100%.');
+    }
+
     try {
-        const id = await notasRepository.guardarNotaCompleta(valores);
-        return { success: true, id };
+        const result = await notasRepository.guardarNotaCompleta(valores);
+        const id = typeof result === 'object' ? result.id : result;
+        const vitalesRegistrados = typeof result === 'object' ? result.vitalesRegistrados : undefined;
+        return { success: true, id, vitalesRegistrados };
     } catch (error) {
         console.error('Error al guardar nota:', error.message);
         throw error;

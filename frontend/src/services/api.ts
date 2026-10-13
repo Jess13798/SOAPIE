@@ -154,8 +154,8 @@ export const notasService = {
         return request<NotaEnfermeria[]>('/notas')
     },
 
-    guardarNota(nota: Partial<NotaEnfermeria>): Promise<{ success: boolean; id: string | number }> {
-        return request<{ success: boolean; id: string | number }>('/notas', {
+    guardarNota(nota: Partial<NotaEnfermeria>): Promise<{ success: boolean; id: string | number; vitalesRegistrados?: boolean }> {
+        return request<{ success: boolean; id: string | number; vitalesRegistrados?: boolean }>('/notas', {
             method: 'POST',
             body: JSON.stringify(nota),
         })
