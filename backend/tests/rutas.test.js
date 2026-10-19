@@ -30,6 +30,75 @@ test('el router de auth expone POST /login', () => {
     assert.ok(tieneLogin, 'debe existir POST /login');
 });
 
+test('el router de medicos expone GET /medicos', () => {
+    const medicos = require('../src/modules/medicos/routes');
+    const tieneMedicos = medicos.stack.some(
+        (capa) => capa.route && capa.route.path === '/medicos' && capa.route.methods.get
+    );
+    assert.ok(tieneMedicos, 'debe existir GET /medicos');
+});
+
+test('GET /medicos sin especialidadId devuelve todos los medicos (no 400)', async (t) => {
+    const medicosModule = require('../src/modules/medicos');
+    // Con especialidadId delega en el filtro por especialidad.
+    const porEspecialidad = t.mock.method(
+        medicosModule,
+        'obtenerMedicosPorEspecialidad',
+        async (id) => [{ IdMedico: 1, Medico: `ESPECIALIDAD ${id}` }]
+    );
+    // Sin especialidadId (filtro "Todos los servicios") trae todos.
+    const todos = t.mock.method(
+        medicosModule,
+        'obtenerTodosLosMedicos',
+        async () => [{ IdMedico: 1, Medico: 'TODOS' }, { IdMedico: 2, Medico: 'OTRO' }]
+    );
+
+    const router = require('../src/modules/medicos/routes');
+    const respuesta = await invocarGet(router, '/medicos', {});
+
+    assert.equal(respuesta.status, 200);
+    assert.equal(respuesta.body.length, 2);
+    assert.equal(todos.mock.callCount(), 1);
+    assert.equal(porEspecialidad.mock.callCount(), 0);
+});
+
+test('GET /medicos con especialidadId filtra por esa especialidad', async (t) => {
+    const medicosModule = require('../src/modules/medicos');
+    const porEspecialidad = t.mock.method(
+        medicosModule,
+        'obtenerMedicosPorEspecialidad',
+        async () => [{ IdMedico: 9, Medico: 'FILTRADO' }]
+    );
+    const todos = t.mock.method(medicosModule, 'obtenerTodosLosMedicos', async () => []);
+
+    const router = require('../src/modules/medicos/routes');
+    const respuesta = await invocarGet(router, '/medicos', { especialidadId: '6' });
+
+    assert.equal(respuesta.status, 200);
+    assert.equal(respuesta.body[0].Medico, 'FILTRADO');
+    assert.deepEqual(porEspecialidad.mock.calls[0].arguments, ['6']);
+    assert.equal(todos.mock.callCount(), 0);
+});
+
+// Ejecuta una ruta GET del router sin levantar el servidor: toma la capa que
+// coincide con la ruta y le pasa req/res falsos. Devuelve el status y el body.
+async function invocarGet(router, ruta, query) {
+    const capa = router.stack.find((c) => c.route && c.route.path === ruta);
+    assert.ok(capa, `debe existir la ruta GET ${ruta}`);
+    const handler = capa.route.stack[0].handle;
+
+    const req = { query };
+    let status = 200;
+    let body = null;
+    const res = {
+        status(codigo) { status = codigo; return this; },
+        json(datos) { body = datos; return this; },
+    };
+
+    await handler(req, res);
+    return { status, body };
+}
+
 test('el router de notas expone las rutas de notas y vitales', () => {
     const notas = require('../src/modules/notas/routes');
     const rutas = notas.stack.filter((c) => c.route).map((c) => `${Object.keys(c.route.methods)[0]} ${c.route.path}`);

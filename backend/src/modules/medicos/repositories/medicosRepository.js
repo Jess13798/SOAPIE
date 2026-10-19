@@ -27,6 +27,29 @@ async function getMedicosByEspecialidad(idEspecialidad) {
     return result.recordset || [];
 }
 
+// Todos los médicos del hospital, sin repetir.
+// Se usa cuando el filtro es "Todos los servicios" y por lo tanto no hay una
+// especialidad concreta de la cual sacarlos. Un mismo médico puede estar en
+// varias especialidades (MedicosEspecialidad), así que se agrupa por médico.
+async function getTodosLosMedicos() {
+    const result = await query(`
+        SELECT
+            me.IdMedico,
+            me.IdEmpleado,
+            MAX(m.IdEspecialidad) AS IdEspecialidad,
+            '' AS Especialidad,
+            UPPER(LTRIM(RTRIM(ISNULL(e.ApellidoPaterno, '') + ' ' + ISNULL(e.ApellidoMaterno, '') + ' ' + ISNULL(e.Nombres, '')))) AS Medico
+        FROM Medicos me
+        INNER JOIN Empleados e ON e.IdEmpleado = me.IdEmpleado
+        LEFT JOIN MedicosEspecialidad m ON m.IdMedico = me.IdMedico
+        GROUP BY me.IdMedico, me.IdEmpleado, e.ApellidoPaterno, e.ApellidoMaterno, e.Nombres
+        ORDER BY Medico
+    `);
+
+    return result.recordset || [];
+}
+
 module.exports = {
     getMedicosByEspecialidad,
+    getTodosLosMedicos,
 };

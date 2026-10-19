@@ -5,4 +5,5 @@ const medicosService = require('./services/medicosService');
 
 module.exports = {
     obtenerMedicosPorEspecialidad: medicosService.obtenerMedicosPorEspecialidad,
+    obtenerTodosLosMedicos: medicosService.obtenerTodosLosMedicos,
 };

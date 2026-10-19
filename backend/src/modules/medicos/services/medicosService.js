@@ -12,6 +12,16 @@ async function obtenerMedicosPorEspecialidad(idEspecialidad) {
     }
 }
 
+async function obtenerTodosLosMedicos() {
+    try {
+        return await medicosRepository.getTodosLosMedicos();
+    } catch (error) {
+        console.error('Error en medicosService.obtenerTodosLosMedicos:', error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     obtenerMedicosPorEspecialidad,
+    obtenerTodosLosMedicos,
 };

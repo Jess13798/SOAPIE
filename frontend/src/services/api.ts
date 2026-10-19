@@ -329,6 +329,12 @@ export const catalogosService = {
         return request<Medico[]>(`/medicos?especialidadId=${encodeURIComponent(especialidadId)}`)
     },
 
+    // Sin especialidad devuelve todos los médicos del hospital (para el filtro
+    // "Todos los servicios", donde no hay una especialidad concreta).
+    getTodosLosMedicos(): Promise<Medico[]> {
+        return request<Medico[]>('/medicos')
+    },
+
     getDiagnosticosPorCuenta(idCuentaAtencion: string | number): Promise<Diagnostico[]> {
         return request<Diagnostico[]>(`/diagnosticos?idCuentaAtencion=${encodeURIComponent(idCuentaAtencion)}`)
     },

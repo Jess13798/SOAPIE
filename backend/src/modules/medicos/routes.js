@@ -6,14 +6,15 @@ const medicosModule = require('./index');
 
 const router = express.Router();
 
-// Ruta para obtener médicos por especialidad
+// Ruta para obtener médicos.
+// Con `especialidadId` devuelve los de esa especialidad; sin él (por ejemplo
+// con el filtro "Todos los servicios") devuelve todos los médicos del hospital.
 router.get('/medicos', async (req, res) => {
     try {
         const { especialidadId } = req.query || {};
-        if (!especialidadId) {
-            return res.status(400).json({ success: false, mensaje: 'especialidadId es requerido' });
-        }
-        const datos = await medicosModule.obtenerMedicosPorEspecialidad(especialidadId);
+        const datos = especialidadId
+            ? await medicosModule.obtenerMedicosPorEspecialidad(especialidadId)
+            : await medicosModule.obtenerTodosLosMedicos();
         res.json(datos);
     } catch (err) {
         console.error('Error en /api/medicos:', err);
