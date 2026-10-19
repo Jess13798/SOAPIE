@@ -104,6 +104,43 @@ test('guardarNota crea una nota nueva y persiste los signos vitales', async (t) 
     assert.equal(payload.signosVitales.peso, 70, 'convierte los vitales a número');
 });
 
+test('guardarNota pone la hora de inicio en el SERVIDOR, no en los datos del cliente', async (t) => {
+    silenciarErrores(t);
+    // El servidor vive a las 10:30 aunque el cliente mande las 08:00.
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 19, 10, 30, 0) });
+    const guardarCompleta = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => 60);
+
+    await notasService.guardarNota({
+        pacienteId: '3',
+        fecha: '2026-10-09',
+        hora: '08:00',
+        subjetivo: 'nota',
+    });
+
+    const payload = guardarCompleta.mock.calls[0].arguments[0];
+    assert.equal(payload.fechaInicio.getHours(), 10, 'usa la hora del servidor');
+    assert.equal(payload.fechaInicio.getMinutes(), 30);
+});
+
+test('guardarNota deriva el turno de la hora del servidor e ignora el que elige el usuario', async (t) => {
+    silenciarErrores(t);
+    // Servidor a las 10:00 = turno "dia", aunque el usuario mande "noche".
+    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 19, 10, 0, 0) });
+    const guardarCompleta = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => 61);
+
+    const resultado = await notasService.guardarNota({
+        pacienteId: '3',
+        fecha: '2026-10-09',
+        hora: '22:00',
+        turno: 'noche',
+        subjetivo: 'nota',
+    });
+
+    const payload = guardarCompleta.mock.calls[0].arguments[0];
+    assert.equal(payload.turno, 'dia', 'el turno lo decide el servidor, no el usuario');
+    assert.equal(resultado.turno, 'dia', 'la respuesta informa el turno guardado');
+});
+
 test('guardarNota conserva el id de una nota existente', async (t) => {
     silenciarErrores(t);
     const guardarCompleta = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => 12);
@@ -122,10 +159,11 @@ test('guardarNota conserva el id de una nota existente', async (t) => {
     assert.equal(payload.idNota, 12, 'conserva el id de la nota editada');
 });
 
-test('guardarNota firma la nota cuando isFirmada es true', async (t) => {
+test('guardarNota sella la firma con la hora del servidor', async (t) => {
     silenciarErrores(t);
     const guardarCompleta = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => 42);
 
+    const antes = Date.now();
     await notasService.guardarNota({
         id: '42',
         pacienteId: '3',
@@ -135,12 +173,12 @@ test('guardarNota firma la nota cuando isFirmada es true', async (t) => {
         fechaFirmada: '2026-10-09',
         horaFirmada: '10:30',
     });
+    const despues = Date.now();
 
     const payload = guardarCompleta.mock.calls[0].arguments[0];
-    assert.equal(
-        payload.fechaFin.getTime(),
-        new Date('2026-10-09T10:30:00').getTime(),
-        'fechaFin refleja la fecha y hora de firma'
+    assert.ok(
+        payload.fechaFin.getTime() >= antes && payload.fechaFin.getTime() <= despues,
+        'fechaFin usa la hora del servidor y no la que manda el cliente'
     );
 });
 

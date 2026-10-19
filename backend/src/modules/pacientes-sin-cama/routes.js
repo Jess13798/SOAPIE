@@ -29,11 +29,15 @@ router.post('/asignar-cama', async (req, res) => {
             });
         }
 
+        // El usuario se toma del token (no del body) para que la auditoría
+        // no pueda falsearse desde el cliente.
         const resultado = await pacienteSinCamaModule.asignarCama({
             IdPaciente,
             IdCuentaAtencion,
             IdCama,
-            IdMedicoOrdena
+            IdMedicoOrdena,
+            idUsuario: req.usuario?.idEmpleado ?? null,
+            usuario: req.usuario?.usuario ?? null,
         });
 
         res.json(resultado);
@@ -57,10 +61,30 @@ router.post('/mover-cama', async (req, res) => {
         const resultado = await pacienteSinCamaModule.moverPacienteDeCama({
             IdPaciente,
             IdCama,
-            IdCuentaAtencion
+            IdCuentaAtencion,
+            idUsuario: req.usuario?.idEmpleado ?? null,
+            usuario: req.usuario?.usuario ?? null,
         });
 
         res.json(resultado);
+    } catch (err) {
+        res.status(500).json({ success: false, mensaje: 'Error: ' + err.message });
+    }
+});
+
+// Ruta para consultar el rastro de auditoría de camas
+router.get('/auditoria-camas', async (req, res) => {
+    try {
+        const { fechaDesde, fechaHasta, servicioId, accion, usuario, limit } = req.query;
+        const datos = await pacienteSinCamaModule.obtenerAuditoriaCamas({
+            fechaDesde,
+            fechaHasta,
+            servicioId,
+            accion,
+            usuario,
+            limit,
+        });
+        res.json(datos);
     } catch (err) {
         res.status(500).json({ success: false, mensaje: 'Error: ' + err.message });
     }
@@ -83,7 +107,9 @@ router.post('/transferencia-estancia', async (req, res) => {
             idProducto,
             idEmpleado,
             fechaModificacion,
-            idPaciente
+            idPaciente,
+            idUsuario: req.usuario?.idEmpleado ?? null,
+            usuario: req.usuario?.usuario ?? null,
         });
         res.json({ success: true, ...resultado });
     } catch (err) {

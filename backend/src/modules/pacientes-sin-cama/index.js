@@ -9,4 +9,5 @@ module.exports = {
     asignarCama: pacientesSinCamaService.asignarCama,
     moverPacienteDeCama: pacientesSinCamaService.moverPacienteDeCama,
     registrarTransferenciaEstancia: pacientesSinCamaService.registrarTransferenciaEstancia,
+    obtenerAuditoriaCamas: pacientesSinCamaService.obtenerAuditoriaCamas,
 };

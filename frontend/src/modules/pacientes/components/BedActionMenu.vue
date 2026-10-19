@@ -2,10 +2,10 @@
   <div class="relative">
     <button
       @click.stop="toggleMenu"
-      class="flex items-center gap-1.5 rounded-full bg-blue-500 p-1.5 text-white hover:bg-blue-600 focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm shadow-blue-200/50"
+      class="flex items-center justify-center rounded-full bg-blue-500 p-2 text-white hover:bg-blue-600 focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm shadow-blue-200/50"
       title="Acciones de cama"
     >
-      <Bed class="h-4 w-4" />
+      <Bed class="h-5 w-5" />
     </button>
     <Transition name="fade">
       <div

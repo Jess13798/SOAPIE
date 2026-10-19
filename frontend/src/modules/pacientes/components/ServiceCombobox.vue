@@ -154,7 +154,7 @@ function seleccionar(servicio: Servicio | null) {
     emit('update:modelValue', String(servicio.IdServicio))
     query.value = servicio.Nombre
   } else {
-    emit('update:modelValue', '')
+    emit('update:modelValue', 'todos')
     query.value = ''
   }
   abierto.value = false

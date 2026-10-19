@@ -25,6 +25,7 @@ export function limpiarSesion(): void {
     sessionStorage.removeItem('usuarioLogueado')
     sessionStorage.removeItem('empleadoLogueado')
     sessionStorage.removeItem('idEmpleado')
+    sessionStorage.removeItem('turno')
 }
 
 // Helper interno para peticiones JSON
@@ -80,6 +81,7 @@ export interface LoginResponse {
     usuario?: string
     empleado?: string
     idEmpleado?: string | number
+    turno?: 'dia' | 'noche'
 }
 
 export const authService = {
@@ -194,6 +196,51 @@ export const camasService = {
 }
 
 // ==========================================
+// 3.5. AUDITORÍA DE CAMAS
+// ==========================================
+export type AccionAuditoriaCama = 'ASIGNAR' | 'MOVER' | 'TRANSFERIR'
+
+export interface RegistroAuditoriaCama {
+    IdAuditoria: number
+    FechaHora: string
+    Accion: AccionAuditoriaCama | string
+    IdCuentaAtencion: number | null
+    IdPaciente: number | null
+    Paciente: string | null
+    IdCama: number | null
+    Cama: string | null
+    CamaAnterior: string | null
+    IdServicio: number | null
+    Servicio: string | null
+    IdUsuario: number | null
+    Usuario: string | null
+    Detalle: string | null
+}
+
+export interface FiltrosAuditoriaCamas {
+    fechaDesde?: string
+    fechaHasta?: string
+    servicioId?: string | number
+    accion?: string
+    usuario?: string
+    limit?: number
+}
+
+export const auditoriaCamasService = {
+    getRegistros(filtros: FiltrosAuditoriaCamas = {}): Promise<RegistroAuditoriaCama[]> {
+        const params = new URLSearchParams()
+        if (filtros.fechaDesde) params.set('fechaDesde', filtros.fechaDesde)
+        if (filtros.fechaHasta) params.set('fechaHasta', filtros.fechaHasta)
+        if (filtros.servicioId) params.set('servicioId', String(filtros.servicioId))
+        if (filtros.accion) params.set('accion', filtros.accion)
+        if (filtros.usuario) params.set('usuario', filtros.usuario)
+        if (filtros.limit) params.set('limit', String(filtros.limit))
+        const query = params.toString()
+        return request<RegistroAuditoriaCama[]>(`/auditoria-camas${query ? `?${query}` : ''}`)
+    },
+}
+
+// ==========================================
 // 4. NOTAS DE ENFERMERÍA Y SIGNOS VITALES
 // ==========================================
 export const notasService = {
@@ -201,8 +248,8 @@ export const notasService = {
         return request<NotaEnfermeria[]>('/notas')
     },
 
-    guardarNota(nota: Partial<NotaEnfermeria>): Promise<{ success: boolean; id: string | number }> {
-        return request<{ success: boolean; id: string | number }>('/notas', {
+    guardarNota(nota: Partial<NotaEnfermeria>): Promise<{ success: boolean; id: string | number; turno?: 'dia' | 'noche' }> {
+        return request<{ success: boolean; id: string | number; turno?: 'dia' | 'noche' }>('/notas', {
             method: 'POST',
             body: JSON.stringify(nota),
         })

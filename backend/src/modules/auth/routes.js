@@ -4,6 +4,7 @@
 const express = require('express');
 const { firmarToken } = require('../../../auth');
 const validarEmpleado = require('../../../login');
+const { turnoDesdeHora } = require('../../core/utils/turno');
 
 const router = express.Router();
 
@@ -12,10 +13,15 @@ router.post('/login', async (req, res) => {
     try {
         const empleado = await validarEmpleado(usuario, Password);
         if (empleado) {
+            // Turno derivado de la hora del servidor (día/noche) para el
+            // personal que inicia sesión. No depende de datos del empleado.
+            const turno = turnoDesdeHora(new Date());
+
             // Token firmado para proteger el resto de la API
             const token = firmarToken({
                 usuario: empleado.Usuario,
                 idEmpleado: empleado.IdEmpleado,
+                turno,
             });
 
             // Si lo encuentra, enviamos éxito y datos del usuario
@@ -26,6 +32,7 @@ router.post('/login', async (req, res) => {
                 usuario: empleado.Usuario,
                 empleado: empleado.Empledo || '',
                 idEmpleado: empleado.IdEmpleado,
+                turno,
             });
         } else {
             // Si no coincide, enviamos error 401 (No autorizado)

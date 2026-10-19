@@ -1,37 +1,45 @@
 <template>
   <div class="flex items-center justify-between border-b border-sky-700 bg-sky-800 px-6 py-2.5">
     <div class="flex items-center gap-3">
-      <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 text-white">
-        <List class="h-4 w-4" />
-      </div>
-      <div>
-        <h3 class="text-[13px] font-bold text-white uppercase tracking-wide">{{ title || 'Lista de Pacientes' }}</h3>
-      </div>
+      <h3 class="text-[13px] font-bold text-white uppercase tracking-wide">{{ title || 'Lista de Pacientes' }}</h3>
     </div>
 
-    <div class="flex items-center gap-2">
-      <div class="min-w-[78px] rounded-md bg-sky-700 px-2 pt-1 pb-0 text-center">
-        <p class="text-[8px] font-bold uppercase tracking-wide leading-none text-sky-100">Disponibles</p>
-        <p class="text-sm font-bold leading-none text-white">{{ disponibles }}</p>
-      </div>
-      <div class="min-w-[78px] rounded-md bg-sky-700 px-2 pt-1 pb-0 text-center">
-        <p class="text-[8px] font-bold uppercase tracking-wide leading-none text-sky-100">Ocupadas</p>
-        <p class="text-sm font-bold leading-none text-white">{{ ocupadas }}</p>
-      </div>
-      <button
-        @click="$emit('view-total')"
-        class="min-w-[78px] rounded-md bg-sky-700 px-2 pt-1 pb-0 text-center hover:bg-sky-600 transition-colors"
-        title="Ver resumen total de camas"
-      >
-        <p class="text-[8px] font-bold uppercase tracking-wide leading-none text-sky-100">Total</p>
-        <p class="text-sm font-bold leading-none text-white">{{ total }}</p>
-      </button>
-    </div>
+    <!-- Un solo rectángulo con Total / Ocupadas / Disponibles: al dar clic abre el resumen de camas -->
+    <button
+      type="button"
+      @click="$emit('view-total')"
+      class="group flex items-center gap-3 rounded-lg bg-sky-700 px-3 py-1.5 text-left transition-colors hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-300"
+      title="Ver resumen total de camas"
+    >
+      <span class="flex items-center gap-1.5">
+        <BedDouble class="h-4 w-4 text-sky-100" />
+        <span class="text-[8px] font-bold uppercase tracking-wide text-sky-100">Total</span>
+        <span class="text-sm font-black text-white">{{ total }}</span>
+      </span>
+
+      <span class="h-4 w-px bg-white/20"></span>
+
+      <span class="flex items-center gap-1.5">
+        <span class="h-2 w-2 rounded-full bg-red-400"></span>
+        <span class="text-[8px] font-bold uppercase tracking-wide text-sky-100">Ocupadas</span>
+        <span class="text-sm font-black text-white">{{ ocupadas }}</span>
+      </span>
+
+      <span class="h-4 w-px bg-white/20"></span>
+
+      <span class="flex items-center gap-1.5">
+        <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+        <span class="text-[8px] font-bold uppercase tracking-wide text-sky-100">Disponibles</span>
+        <span class="text-sm font-black text-white">{{ disponibles }}</span>
+      </span>
+
+      <ChevronRight class="h-4 w-4 text-sky-200 transition-transform group-hover:translate-x-0.5" />
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { List } from 'lucide-vue-next'
+import { BedDouble, ChevronRight } from 'lucide-vue-next'
 
 defineProps<{
   title?: string

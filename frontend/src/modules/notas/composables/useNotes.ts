@@ -73,6 +73,19 @@ export function useNotes(pacientes: Ref<Patient[]>) {
     handleViewNote(nota, fallbackPatient)
   }
 
+  // Nota más reciente de un paciente (mismo id o número de cuenta). Se usa para
+  // heredar el plan de cuidados NANDA/NOC/NIC al crear una nota nueva.
+  function ultimaNotaDePaciente(patient: Patient | null): NotaEnfermeria | null {
+    if (!patient) return null
+    const propias = notas.value.filter(nota =>
+      String(nota.pacienteId) === String(patient.id) ||
+      (patient.numCuenta && String(patient.numCuenta) === String(nota.pacienteId)) ||
+      (patient.numCuenta && String(patient.numCuenta) === String(nota.idCuenta))
+    )
+    if (!propias.length) return null
+    return [...propias].sort((a, b) => `${b.fecha}T${b.hora}`.localeCompare(`${a.fecha}T${a.hora}`))[0]
+  }
+
   function handleCloseModal() {
     isNewNoteModalOpen.value = false
     selectedNoteForModal.value = null
@@ -104,6 +117,8 @@ export function useNotes(pacientes: Ref<Patient[]>) {
         || []
       const notaGuardada = {
         ...nota,
+        // El servidor decide el turno según la hora; se refleja lo que guardó.
+        turno: data.turno || nota.turno,
         id: String(data.id),
         estadoGuardado: historialTemporal.length ? 'cambios-pendientes' as const : 'guardada' as const,
         historialTemporalSignosVitales: historialTemporal,
@@ -164,6 +179,7 @@ export function useNotes(pacientes: Ref<Patient[]>) {
     handleNewNoteFromList,
     handleEditDraft,
     handleCloseModal,
+    ultimaNotaDePaciente,
     guardarNota,
     firmarNota,
   }

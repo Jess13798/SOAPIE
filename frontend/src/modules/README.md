@@ -34,6 +34,8 @@ src/
       notaForm.ts             # tipo compartido NotaFormState
     vitales/
       components/             # VitalsOverview, VitalsHistoryModal
+    auditoria/
+      components/             # AuditoriaCamasView (rastro de asignación de camas)
 ```
 
 `Dashboard.vue` sigue siendo el orquestador: importa los componentes de cada
@@ -44,7 +46,7 @@ módulo y los composables, sin lógica de negocio de cada dominio.
 `NewNoteForm.vue` se partió en tres subcomponentes de presentación que comparten
 el mismo objeto reactivo `form` (mantenido en el padre, junto a la validación):
 
-- `NoteShiftBar.vue` — selector de turno y autoría
+- `NoteShiftBar.vue` — turno automático (solo lectura) y autoría
 - `VitalsGrid.vue` — grilla de signos vitales (incluye SIS/DIA)
 - `SoapieEditor.vue` — pestañas y textarea SOAPIE
 

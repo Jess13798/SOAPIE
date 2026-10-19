@@ -26,13 +26,15 @@ test('obtenerPacientesSinCama delega el filtro por servicio', async (t) => {
     assert.equal(repo.mock.calls[0].arguments[0], 'HOSPITALIZACION');
 });
 
-test('asignarCama pasa el payload completo al repositorio', async (t) => {
+test('asignarCama pasa el payload completo (incluido el usuario del token) al repositorio', async (t) => {
     silenciarErrores(t);
     const payload = {
         IdPaciente: 10,
         IdCuentaAtencion: 20,
         IdCama: 30,
         IdMedicoOrdena: 40,
+        idUsuario: 7,
+        usuario: 'jperez',
     };
     const repo = t.mock.method(pacientesSinCamaRepository, 'asignarCama', async () => ({
         success: true,
@@ -48,7 +50,7 @@ test('asignarCama pasa el payload completo al repositorio', async (t) => {
 
 test('moverPacienteDeCama pasa el payload completo al repositorio', async (t) => {
     silenciarErrores(t);
-    const payload = { IdPaciente: 10, IdCama: 31, IdCuentaAtencion: 20 };
+    const payload = { IdPaciente: 10, IdCama: 31, IdCuentaAtencion: 20, idUsuario: 7, usuario: 'jperez' };
     const repo = t.mock.method(pacientesSinCamaRepository, 'moverPacienteDeCama', async () => ({
         success: true,
         mensaje: 'Cama reasignada correctamente',
@@ -58,6 +60,20 @@ test('moverPacienteDeCama pasa el payload completo al repositorio', async (t) =>
 
     assert.equal(resultado.success, true);
     assert.deepEqual(repo.mock.calls[0].arguments[0], payload);
+});
+
+test('obtenerAuditoriaCamas delega los filtros al repositorio', async (t) => {
+    silenciarErrores(t);
+    const filtros = { fechaDesde: '2026-10-01', accion: 'ASIGNAR', limit: 50 };
+    const repo = t.mock.method(pacientesSinCamaRepository, 'getAuditoriaCamas', async () => ([
+        { IdAuditoria: 1, Accion: 'ASIGNAR', Usuario: 'jperez' },
+    ]));
+
+    const datos = await pacientesSinCamaService.obtenerAuditoriaCamas(filtros);
+
+    assert.equal(datos.length, 1);
+    assert.equal(datos[0].Accion, 'ASIGNAR');
+    assert.deepEqual(repo.mock.calls[0].arguments[0], filtros);
 });
 
 test('registrarTransferenciaEstancia delega y propaga el resultado', async (t) => {

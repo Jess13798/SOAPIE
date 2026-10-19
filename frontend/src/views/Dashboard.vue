@@ -89,6 +89,7 @@
           v-if="activeView === 'nueva-nota'"
           :pacientes="pacientes"
           :selected-patient="selectedPatient"
+          :nota-anterior="notaAnteriorSeleccionada"
           @save="onSaveNote"
         />
 
@@ -100,6 +101,11 @@
         />
 
         <NandaNocNicView v-if="activeView === 'catalogos-nanda'" />
+
+        <AuditoriaCamasView
+          v-if="activeView === 'auditoria-camas'"
+          :servicios="servicios"
+        />
       </div>
     </main>
 
@@ -109,6 +115,7 @@
       :is-open="isNewNoteModalOpen"
       :patient="patientForNewNote"
       :nota="selectedNoteForModal || undefined"
+      :nota-anterior="notaAnteriorPacienteSeleccionado"
       :note-number="modalNoteNumber"
       @save="onSaveNote"
       @sign="onSignNote"
@@ -165,6 +172,7 @@ import type { Patient, NotaEnfermeria } from '@/types'
 import type { PacienteBusqueda } from '@/services/api'
 import AppSidebar from '@/components/AppSidebar.vue'
 import NandaNocNicView from '@/components/NandaNocNicView.vue'
+import AuditoriaCamasView from '@/modules/auditoria/components/AuditoriaCamasView.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
 import PatientListView from '@/modules/pacientes/components/PatientListView.vue'
 import BedModal from '@/modules/pacientes/components/BedModal.vue'
@@ -204,9 +212,20 @@ const {
   handleNewNoteFromList,
   handleEditDraft,
   handleCloseModal,
+  ultimaNotaDePaciente,
   guardarNota,
   firmarNota,
 } = useNotes(pacientes)
+
+// Plan de cuidados heredado: al crear una nota nueva se precargan los
+// diagnósticos NOC/NIC de la última nota del paciente (el formulario lo ignora
+// cuando se está editando una nota existente).
+const notaAnteriorPacienteSeleccionado = computed(() =>
+  selectedNoteForModal.value ? null : ultimaNotaDePaciente(patientForNewNote.value),
+)
+const notaAnteriorSeleccionada = computed(() =>
+  selectedPatient.value ? ultimaNotaDePaciente(selectedPatient.value) : null,
+)
 
 // 3. Modales de Camas y Transferencias
 const {

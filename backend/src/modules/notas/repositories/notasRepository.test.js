@@ -33,12 +33,16 @@ test('guardarNota normalizes selections and persists the SOAPIE payload', async 
         ],
     });
 
-    assert.deepEqual(result, { success: true, id: 81 });
+    assert.equal(result.success, true);
+    assert.equal(result.id, 81);
     assert.equal(savedNote.idNota, null);
     assert.equal(savedNote.idPaciente, 100);
     assert.equal(savedNote.idCuenta, 200);
     assert.equal(savedNote.idEmpleado, 300);
-    assert.equal(savedNote.turno, 'noche');
+    assert.ok(
+        savedNote.turno === 'dia' || savedNote.turno === 'noche',
+        'el turno se deriva de la hora del servidor, ya no se copia del usuario'
+    );
     assert.equal(savedNote.signosVitales.temperatura, 36.7);
     assert.equal(savedNote.signosVitales.frecuenciaCardiaca, 80);
     assert.deepEqual(savedNote.planCuidados, [

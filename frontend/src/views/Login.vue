@@ -134,6 +134,9 @@ const iniciarSesion = async () => {
       if (data.idEmpleado) {
         sessionStorage.setItem('idEmpleado', String(data.idEmpleado));
       }
+      if (data.turno) {
+        sessionStorage.setItem('turno', data.turno);
+      }
       router.push('/dashboard'); 
     } else {
       error.value = data.mensaje || "El sistema se esta actualizando, por favor espere unos minutos e intente nuevamente.";

@@ -63,9 +63,16 @@ export interface PlanCuidadoNota {
   comentario?: string
   nocIds: number[]
   nicIds: number[]
+  // Estado de ejecución de cada NIC planificada.
+  //   nicRealizadasIds  → NIC ejecutadas.
+  //   nicNoRealizadas   → NIC no ejecutadas, con el motivo (puede ir vacío).
+  // Un NIC planificado que no aparezca en ninguna de las dos queda "sin registrar".
+  // El backend no persiste estos campos: viajan dentro del texto de la nota.
   nicRealizadasIds?: number[]
+  nicNoRealizadas?: Record<number, string>
   nocMetas?: Record<number, string>
   nocEvaluaciones?: Record<number, string>
+
   noc?: Array<{
     id: number
     codigo: string
@@ -103,7 +110,7 @@ export interface NotaEnfermeria {
   idCuenta?: string
   fecha: string
   hora: string
-  turno: 'dia' | 'noche' | 'manana' | 'tarde' // <-- Cambiar esta línea
+  turno: 'dia' | 'noche'
   tipo: 'valoracion' | 'evolucion' | 'medicacion' | 'procedimiento' | 'incidencia'
   signosVitales?: SignosVitales
   planCuidados?: PlanCuidadoNota[]

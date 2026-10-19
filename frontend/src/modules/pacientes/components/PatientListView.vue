@@ -34,77 +34,68 @@
         <div class="min-w-0 self-start w-full">
           <!-- Table -->
           <div class="overflow-x-auto">
-            <table class="w-full table-fixed text-left border-collapse">
-              <colgroup>
-                <col class="w-[16%]" />
-                <col class="w-[29%]" />
-                <col class="w-[13%]" />
-                <col class="w-[24%]" />
-                <col class="w-[9%]" />
-                <col class="w-[9%]" />
-              </colgroup>
-              <thead>
-                <tr class="bg-sky-700 border-b border-sky-700">
-                  <th class="bg-sky-700 px-6 py-2 text-[10px] font-bold text-white uppercase tracking-wider">
-                    <div class="flex items-center gap-1 cursor-pointer hover:text-white/90">
-                      Cama / Cuenta <ChevronDown class="h-3 w-3" />
-                    </div>
-                  </th>
-                  <th class="bg-sky-700 px-6 py-2 text-[10px] font-bold text-white uppercase tracking-wider">
-                    <div class="flex items-center gap-1 cursor-pointer hover:text-white/90">
-                      <User class="h-3.5 w-3.5" />
-                      Paciente <ChevronDown class="h-3 w-3" />
-                    </div>
-                  </th>
-                  <th class="bg-sky-700 px-6 py-2 text-[10px] font-bold text-white uppercase tracking-wider text-center">
-                    <div class="flex items-center justify-center gap-1">
-                      <FileText class="h-3.5 w-3.5" />
-                      <span>Historia</span>
-                    </div>
-                  </th>
-                  <th class="bg-sky-700 px-6 py-2 text-[10px] font-bold text-white uppercase tracking-wider text-center">
-                    <div class="flex items-center justify-center gap-1">
-                      <BriefcaseMedical class="h-3.5 w-3.5" />
-                      <span>Servicio</span>
-                    </div>
-                  </th>
-                  <th class="bg-sky-700 px-6 py-2 text-[10px] font-bold text-white uppercase tracking-wider text-center">
-                    <div class="flex items-center justify-center gap-1">
-                      <HeartPulse class="h-3.5 w-3.5" />
-                      <span>Estado</span>
-                    </div>
-                  </th>
-                  <th class="bg-sky-700 px-6 py-2 text-[10px] font-bold text-white uppercase tracking-wider text-right">
-                    <div class="flex items-center justify-end gap-1">
-                      <Settings2 class="h-3.5 w-3.5" />
-                      <span>Acciones</span>
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-            </table>
-
             <div :class="filteredPatients.length > 8 ? 'max-h-[560px] overflow-y-auto' : ''">
-              <table class="w-full table-fixed text-left border-collapse">
+              <table class="w-full min-w-[900px] table-fixed text-left border-collapse">
                 <colgroup>
-                  <col class="w-[16%]" />
-                  <col class="w-[29%]" />
-                  <col class="w-[13%]" />
-                  <col class="w-[24%]" />
-                  <col class="w-[9%]" />
-                  <col class="w-[9%]" />
+                  <col class="w-[17%]" />
+                  <col class="w-[22%]" />
+                  <col class="w-[11%]" />
+                  <col class="w-[14%]" />
+                  <col class="w-[14%]" />
+                  <col class="w-[22%]" />
                 </colgroup>
+                <thead :class="filteredPatients.length > 8 ? 'sticky top-0 z-10' : ''">
+                  <tr class="bg-sky-700 border-b border-sky-700">
+                    <th class="bg-sky-700 px-3 py-2 text-left text-[10px] font-bold text-white uppercase tracking-wider">
+                      <div class="flex items-center gap-1 cursor-pointer hover:text-white/90">
+                        Cama / Cuenta <ChevronDown class="h-3 w-3" />
+                      </div>
+                    </th>
+                    <th class="bg-sky-700 px-3 py-2 text-left text-[10px] font-bold text-white uppercase tracking-wider">
+                      <div class="flex items-center gap-1 cursor-pointer hover:text-white/90">
+                        <User class="h-3.5 w-3.5" />
+                        Paciente <ChevronDown class="h-3 w-3" />
+                      </div>
+                    </th>
+                    <th class="bg-sky-700 px-3 py-2 text-center text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                      <div class="flex items-center justify-center gap-1">
+                        <FileText class="h-3.5 w-3.5" />
+                        <span>Historia</span>
+                      </div>
+                    </th>
+                    <th class="bg-sky-700 px-3 py-2 text-center text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                      <div class="flex items-center justify-center gap-1">
+                        <BriefcaseMedical class="h-3.5 w-3.5" />
+                        <span>Servicio</span>
+                      </div>
+                    </th>
+                    <th class="bg-sky-700 px-3 py-2 text-center text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                      <div class="flex items-center justify-center gap-1">
+                        <HeartPulse class="h-3.5 w-3.5" />
+                        <span>Estado</span>
+                      </div>
+                    </th>
+                    <th class="bg-sky-700 px-3 py-2 text-center text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">
+                      <div class="flex items-center justify-center gap-1">
+                        <Settings2 class="h-3.5 w-3.5" />
+                        <span>Acciones</span>
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
                 <tbody class="divide-y divide-slate-50">
                   <tr
                     v-for="(patient, index) in filteredPatients"
                     :key="patient.id || `patient-${index}`"
                     @click="$emit('select', patient)"
                     :class="[
-                      'group border-transparent transition-all cursor-pointer hover:bg-blue-50/30',
-                      selectedId === patient.id ? 'bg-blue-50/50 border-l-4 border-l-blue-500' : 'border-l-4 border-l-transparent'
+                      'group transition-all cursor-pointer border-l-4',
+                      selectedId === patient.id
+                        ? 'bg-sky-100 border-l-sky-600 ring-2 ring-inset ring-sky-400/60'
+                        : 'border-transparent hover:bg-blue-50/30'
                     ]"
                   >
-                    <td class="px-6 py-2.5">
+                    <td class="px-3 py-2.5">
                       <div class="flex items-center gap-3">
                         <div
                           :class="[
@@ -121,21 +112,21 @@
                         </div>
                       </div>
                     </td>
-                    <td class="px-6 py-2.5">
+                    <td class="px-3 py-2.5">
                       <div class="flex flex-col">
-                        <span class="text-sm font-bold text-slate-800 tracking-tight">{{ patient.apellido }}</span>
+                        <span class="text-sm font-bold text-slate-800 tracking-tight break-words">{{ patient.apellido }}</span>
                       </div>
                     </td>
-                    <td class="px-6 py-2.5 text-center">
-                      <span class="text-sm font-bold text-slate-800">{{ patient.historiaClinica }}</span>
+                    <td class="px-3 py-2.5 text-center">
+                      <span class="text-sm font-bold text-slate-800 break-words">{{ patient.historiaClinica }}</span>
                     </td>
-                    <td class="px-6 py-2.5 text-center">
-                      <span class="text-sm font-bold text-slate-700">{{ patient.servicio }}</span>
+                    <td class="px-3 py-2.5 text-center">
+                      <span class="text-sm font-bold text-slate-700 break-words">{{ patient.servicio }}</span>
                     </td>
-                    <td class="px-6 py-2.5 text-center">
+                    <td class="px-3 py-2.5 text-center">
                       <span
                         :class="[
-                          'inline-flex items-center gap-1.5 rounded bg-yellow-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-tight',
+                          'inline-flex items-center gap-1.5 whitespace-nowrap rounded bg-yellow-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-tight',
                           patient.estado === 'estable' ? 'bg-green-100 text-green-700 border border-green-200' :
                           patient.estado === 'critico' ? 'bg-red-100 text-red-700 border border-red-200' :
                           'bg-yellow-100 text-yellow-700 border border-yellow-200'
@@ -145,7 +136,7 @@
                         {{ patient.estado }}
                       </span>
                     </td>
-                    <td class="px-6 py-2.5 text-center">
+                    <td class="px-3 py-2.5 text-center">
                       <div class="flex items-center justify-center gap-2">
                         <template v-if="patient.numCuenta">
                           <!-- Menú de Cama extraído -->
@@ -156,27 +147,27 @@
                           />
                           <button
                             type="button"
-                            class="flex items-center gap-1.5 rounded-full bg-sky-600 p-1.5 text-white shadow-sm transition-all hover:bg-sky-700"
+                            class="flex items-center justify-center rounded-full bg-sky-600 p-2 text-white shadow-sm transition-all hover:bg-sky-700"
                             title="Historial de signos vitales de esta atención"
                             @click.stop="$emit('view-vitals-history', patient)"
                           >
-                            <Book class="h-4 w-4" />
+                            <Book class="h-5 w-5" />
                           </button>
                           <button
                             v-if="draftNoteForPatient(patient.id)"
                             @click.stop="$emit('edit-draft', draftNoteForPatient(patient.id)!)"
-                            class="flex items-center gap-1.5 rounded-full bg-orange-500 p-1.5 text-white hover:bg-orange-600 focus:ring-2 focus:ring-orange-400/50 transition-all shadow-sm shadow-orange-200/50"
+                            class="flex items-center justify-center rounded-full bg-orange-500 p-2 text-white hover:bg-orange-600 focus:ring-2 focus:ring-orange-400/50 transition-all shadow-sm shadow-orange-200/50"
                             title="Modificar nota borrador"
                           >
-                            <Pencil class="h-4 w-4" />
+                            <Pencil class="h-5 w-5" />
                           </button>
                           <button
                             v-if="!draftNoteForPatient(patient.id)"
                             @click.stop="$emit('new-note', patient)"
-                            class="flex items-center gap-1.5 rounded-full bg-emerald-500 p-1.5 text-white hover:bg-emerald-600 focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm shadow-emerald-200/50"
+                            class="flex items-center justify-center rounded-full bg-emerald-500 p-2 text-white hover:bg-emerald-600 focus:ring-2 focus:ring-emerald-500/50 transition-all shadow-sm shadow-emerald-200/50"
                             title="Nueva Nota"
                           >
-                            <Plus class="h-4 w-4" />
+                            <Plus class="h-5 w-5" />
                           </button>
                         </template>
                       </div>
@@ -244,8 +235,18 @@ const servicioNombreSeleccionado = computed(() => {
 })
 
 async function cargarPacientesSinCama() {
-  if (!servicioNombreSeleccionado.value) {
+  // Sin servicio seleccionado no se consulta todavía. Con 'todos' o un
+  // servicio concreto se pide la lista; el backend devuelve todos si no
+  // recibe el nombre del servicio.
+  if (!props.servicioSeleccionado) {
     pacientesSinCama.value = []
+    loadingPacientesSinCama.value = false
+    return
+  }
+
+  // Servicio concreto cuyo nombre aún no está resuelto (esperando la lista de
+  // servicios): se reintentará cuando llegue la lista.
+  if (props.servicioSeleccionado !== 'todos' && !servicioNombreSeleccionado.value) {
     loadingPacientesSinCama.value = false
     return
   }

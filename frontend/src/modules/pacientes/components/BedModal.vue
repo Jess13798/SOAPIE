@@ -51,7 +51,10 @@
                 <span class="w-full text-center text-[15px] font-bold leading-none">{{ paciente.cama }}</span>
                 <span
                   v-if="paciente.tipoCama"
-                  class="w-full truncate text-center text-[10px] leading-none opacity-75"
+                  :class="[
+                    'w-full truncate rounded py-px text-center text-[11px] font-bold leading-tight',
+                    colorTipoCama(paciente.tipoCama)
+                  ]"
                 >{{ paciente.tipoCama }}</span>
               </button>
             </div>
@@ -83,7 +86,6 @@
                     @mousedown.prevent="selectMedico(med)"
                   >
                     <span class="block text-[13px] font-semibold text-slate-800">{{ med.Medico }}</span>
-                    <span v-if="med.Especialidad" class="block text-[11px] text-slate-400">{{ med.Especialidad }}</span>
                   </button>
                 <div v-if="filteredMedicos.length === 0" class="px-3 py-2 text-xs text-slate-400">Sin resultados</div>
                 </template>
@@ -180,6 +182,25 @@ const filteredMedicos = computed(() => {
   if (!q) return medicos.value
   return medicos.value.filter(m => m.Medico.toLowerCase().includes(q))
 })
+
+// Cada tipo de cama tiene su propio color para identificarlo a simple vista.
+// Se compara por el nombre del tipo (es lo que devuelve la BD, vía TiposCama.Descripcion).
+// El orden importa: los nombres compuestos se evalúan antes que los simples.
+function colorTipoCama(tipoCama: string): string {
+  const t = (tipoCama || '').toLowerCase()
+  if (t.includes('cuna aislado')) return 'bg-red-400 text-white'
+  if (t.includes('aislado')) return 'bg-red-600 text-white'
+  if (t.includes('cuidados intensivos')) return 'bg-orange-600 text-white'
+  if (t.includes('cardiac') || t.includes('cardíac')) return 'bg-pink-600 text-white'
+  if (t.includes('psiquiatric') || t.includes('psiquiátric')) return 'bg-violet-600 text-white'
+  if (t.includes('seguridad')) return 'bg-blue-600 text-white'
+  if (t.includes('incubadora')) return 'bg-cyan-600 text-white'
+  if (t.includes('cama cuna')) return 'bg-indigo-600 text-white'
+  if (t.includes('cuna')) return 'bg-teal-600 text-white'
+  if (t.includes('camilla')) return 'bg-amber-400 text-slate-900'
+  if (t.includes('cama')) return 'bg-slate-500 text-white'
+  return 'bg-slate-400 text-white'
+}
 
 async function fetchPacientes() {
   loading.value = true

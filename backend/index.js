@@ -14,6 +14,8 @@ const diagnosticosRoutes = require('./src/modules/diagnosticos/routes');
 const medicosRoutes = require('./src/modules/medicos/routes');
 const catalogosRoutes = require('./src/modules/catalogos/routes');
 
+const { ejecutarMigracionesAlArrancar } = require('./src/core/db/migraciones');
+
 const app = express();
 
 // --- MIDDLEWARES ---
@@ -57,4 +59,8 @@ app.use('/api', catalogosRoutes);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en http://localhost:${PORT}`);
+
+    // Aplica al vuelo las migraciones pendientes de `backend/sql`.
+    // No bloquea el arranque ni tumba el servidor si la BD no responde.
+    ejecutarMigracionesAlArrancar();
 });

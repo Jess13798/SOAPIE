@@ -1,4 +1,5 @@
 const notasRepository = require('../repositories/notasRepository');
+const { turnoDesdeHora } = require('../../../core/utils/turno');
 
 function inputError(message) {
     const error = new Error(message);
@@ -119,11 +120,10 @@ function normalizePlanCuidados(planCuidados = []) {
     }));
 }
 
+// La fecha y hora de firma las pone el SERVIDOR (no el reloj del equipo del
+// usuario). Así el registro no depende de que la PC tenga la hora correcta.
 function getSignedDateTime(nota) {
     if (!nota.isFirmada) return null;
-    if (nota.fechaFirmada && nota.horaFirmada) {
-        return sqlDateTime(nota.fechaFirmada, nota.horaFirmada, 'fecha y hora de firma');
-    }
     return new Date();
 }
 
@@ -141,13 +141,22 @@ async function guardarNota(nota) {
         ? idNotaParsed
         : null;
 
+    // La hora la pone el SERVIDOR, no el reloj de la PC del usuario.
+    // Al crear la nota, el inicio es el momento del guardado; al editarla se
+    // conserva la hora original (el repositorio no modifica Fecha_Hora_Inicio).
+    const ahora = new Date();
+    const fechaInicio = idNota === null
+        ? ahora
+        : sqlDateTime(nota.fecha, nota.hora, 'fecha y hora de inicio');
+
     const valores = {
         idNota,
         idCuenta,
         idPaciente,
         idEmpleado,
-        turno: nota.turno === 'noche' ? 'noche' : 'dia',
-        fechaInicio: sqlDateTime(nota.fecha, nota.hora, 'fecha y hora de inicio'),
+        // El turno se DERIVA de la hora de la nota; el usuario ya no lo elige.
+        turno: turnoDesdeHora(fechaInicio),
+        fechaInicio,
         fechaFin: getSignedDateTime(nota),
         subjetivo: nota.subjetivo ?? '',
         objetivo: nota.objetivo ?? '',
@@ -168,12 +177,14 @@ async function guardarNota(nota) {
             saturacionOxigeno: nullablePositiveNumber(signos.saturacionOxigeno, 'saturación de oxígeno'),
         },
         planCuidados: normalizePlanCuidados(nota.planCuidados || []),
-        fechaHora: new Date(),
+        fechaHora: ahora,
     };
 
     try {
         const id = await notasRepository.guardarNotaCompleta(valores);
-        return { success: true, id };
+        // Se devuelve el turno calculado para que el frontend muestre el mismo
+        // valor que quedó guardado en la base de datos.
+        return { success: true, id, turno: valores.turno };
     } catch (error) {
         console.error('Error al guardar nota:', error.message);
         throw error;
@@ -209,7 +220,7 @@ async function obtenerNotas() {
                     pacienteId: String(row.IdPaciente ?? ''),
                     idCuenta: String(row.IdCuenta ?? ''),
                     idEmpleado: String(row.IdEmpleado ?? ''),
-                    turno: row.Turno || 'dia',
+                    turno: row.Turno === 'noche' ? 'noche' : 'dia',
                     enfermera: row.Enfermera || '',
                     fecha: datePart(row.Fecha_Hora_Inicio),
                     hora: timePart(row.Fecha_Hora_Inicio),

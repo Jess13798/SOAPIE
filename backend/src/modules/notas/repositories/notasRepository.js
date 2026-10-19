@@ -54,12 +54,13 @@ async function guardarNotaCompleta(nota) {
 
         if (idNota) {
             notaRequest.input('idNota', sql.Int, idNota);
+            // El turno y la hora de inicio se fijan al crear la nota y NO se
+            // tocan al editarla: el turno depende de cuándo se hizo la hoja.
             const updateResult = await notaRequest.query(`
                 UPDATE dbo.NotaEnfermeria
                 SET IdCuenta = @idCuenta,
                     IdPaciente = @idPaciente,
                     IdEmpleado = @idEmpleado,
-                    Turno = @turno,
                     Fecha_Hora_Fin = @fechaFin,
                     Subjetivo = @subjetivo,
                     Objetivo = @objetivo,

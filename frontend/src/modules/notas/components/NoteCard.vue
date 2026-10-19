@@ -135,8 +135,7 @@ const tipoLabels: Record<string, string> = {
 }
 
 const turnoLabels: Record<string, string> = {
-  manana: 'Turno Manana',
-  tarde: 'Turno Tarde',
+  dia: 'Turno Día',
   noche: 'Turno Noche',
 }
 

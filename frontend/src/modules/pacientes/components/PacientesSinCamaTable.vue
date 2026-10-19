@@ -3,10 +3,7 @@
     <!-- Header bar -->
     <div class="flex flex-col gap-2 bg-sky-800 px-4 py-2.5 text-white sm:flex-row sm:items-center sm:justify-between sm:px-6">
       <div class="flex items-center gap-3">
-        <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 text-white">
-          <List class="h-4 w-4" />
-        </div>
-        <h4 class="text-[13px] font-bold">Pacientes Sin Cama</h4>
+        <h4 class="text-[13px] font-bold uppercase tracking-wide">Pacientes Sin Cama</h4>
       </div>
       <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
         <!-- Selector/Buscador de Servicio -->
@@ -31,46 +28,55 @@
 
     <!-- Tabla -->
     <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
+      <table class="w-full min-w-[920px] table-fixed text-left border-collapse">
+        <colgroup>
+          <col class="w-[12%]" />
+          <col class="w-[21%]" />
+          <col class="w-[12%]" />
+          <col class="w-[8%]" />
+          <col class="w-[12%]" />
+          <col class="w-[20%]" />
+          <col class="w-[15%]" />
+        </colgroup>
         <thead>
           <tr class="bg-sky-700 text-white">
-            <th class="px-4 py-2 text-xs font-bold">
+            <th class="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
               <div class="flex items-center gap-1">
                 <Hash class="h-3.5 w-3.5" />
                 <span>Cuenta</span>
               </div>
             </th>
-            <th class="px-4 py-2 text-xs font-bold">
+            <th class="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
               <div class="flex items-center gap-1">
                 <User class="h-3.5 w-3.5" />
                 <span>Paciente</span>
               </div>
             </th>
-            <th class="px-4 py-2 text-xs font-bold">
+            <th class="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
               <div class="flex items-center gap-1">
                 <CalendarDays class="h-3.5 w-3.5" />
                 <span>Fecha</span>
               </div>
             </th>
-            <th class="px-4 py-2 text-xs font-bold">
+            <th class="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
               <div class="flex items-center gap-1">
                 <Clock3 class="h-3.5 w-3.5" />
                 <span>Hora</span>
               </div>
             </th>
-            <th class="px-4 py-2 text-xs font-bold">
+            <th class="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
               <div class="flex items-center gap-1">
                 <Timer class="h-3.5 w-3.5" />
                 <span>Tiempo</span>
               </div>
             </th>
-            <th class="px-4 py-2 text-xs font-bold">
+            <th class="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
               <div class="flex items-center gap-1">
                 <BriefcaseMedical class="h-3.5 w-3.5" />
                 <span>Servicio</span>
               </div>
             </th>
-            <th class="px-4 py-2 text-xs font-bold text-center">
+            <th class="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
               <div class="flex items-center justify-center gap-1">
                 <Settings2 class="h-3.5 w-3.5" />
                 <span>Acciones</span>
@@ -78,7 +84,7 @@
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-slate-100">
           <tr v-if="loading">
             <td colspan="7" class="px-4 py-6 text-center text-sm text-slate-500">
               Cargando pacientes sin cama...
@@ -92,30 +98,30 @@
           <tr
             v-for="pacienteSinCama in pacientesSinCama"
             :key="pacienteSinCama.IdCuentaAtencion || ''"
-            class="border-t border-slate-100"
+            class="transition-colors hover:bg-blue-50/30"
           >
-            <td class="px-4 py-1 text-xs font-bold text-slate-800">
+            <td class="px-4 py-2 text-xs font-bold text-slate-800 whitespace-nowrap align-top">
               {{ pacienteSinCama.IdCuentaAtencion || '-' }}
             </td>
-            <td class="px-4 py-1 text-xs font-bold text-slate-800">
+            <td class="px-4 py-2 text-xs font-bold text-slate-800 break-words align-top">
               {{ pacienteSinCama.PACIENTE || '-' }}
             </td>
-            <td class="px-4 py-1 text-xs font-bold text-slate-800">
+            <td class="px-4 py-2 text-xs font-bold text-slate-800 whitespace-nowrap align-top">
               {{ formatFecha(pacienteSinCama.FECHA_ENVIO) }}
             </td>
-            <td class="px-4 py-1 text-xs font-bold text-slate-800">
+            <td class="px-4 py-2 text-xs font-bold text-slate-800 whitespace-nowrap align-top">
               {{ pacienteSinCama.HORA_ENVIO || '-' }}
             </td>
-            <td class="px-4 py-1 text-xs font-bold text-slate-800">
+            <td class="px-4 py-2 text-xs font-bold text-slate-800 break-words align-top">
               {{ pacienteSinCama.INTERVALO_TIEMPO || '-' }}
             </td>
-            <td class="px-4 py-1 text-xs font-bold text-slate-800 uppercase">
+            <td class="px-4 py-2 text-xs font-bold text-slate-800 break-words align-top">
               {{ pacienteSinCama.SERVICIOFINAL || '-' }}
             </td>
-            <td class="px-4 py-1 text-center">
+            <td class="px-4 py-2 text-center align-middle">
               <button
                 @click="$emit('assign-bed', pacienteSinCama)"
-                class="rounded-md bg-sky-600 px-2 py-0 text-[9px] font-bold text-white hover:bg-sky-700 transition-colors"
+                class="rounded-md bg-sky-600 px-3 py-1.5 text-[11px] font-bold leading-none text-white whitespace-nowrap shadow-sm hover:bg-sky-700 transition-colors"
               >
                 Asignar Cama
               </button>
@@ -129,7 +135,7 @@
 
 <script setup lang="ts">
 import {
-  List, Hash, User, CalendarDays, Clock3, Timer, BriefcaseMedical, Settings2
+  Hash, User, CalendarDays, Clock3, Timer, BriefcaseMedical, Settings2
 } from 'lucide-vue-next'
 import type { PacienteBusqueda, PacienteSinCama, Servicio } from '@/services/api'
 import ServiceCombobox from '@/modules/pacientes/components/ServiceCombobox.vue'
@@ -150,7 +156,14 @@ const emit = defineEmits<{
 
 function formatFecha(fecha?: string | null) {
   if (!fecha) return '-'
-  const date = new Date(fecha)
+
+  const clean = String(fecha).trim()
+
+  // Fechas sin hora (YYYY-MM-DD) se leen tal cual para no desfasar por zona horaria
+  const dateOnly = clean.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (dateOnly) return `${dateOnly[3]}-${dateOnly[2]}-${dateOnly[1]}`
+
+  const date = new Date(clean)
   if (Number.isNaN(date.getTime())) return '-'
 
   const day = String(date.getDate()).padStart(2, '0')

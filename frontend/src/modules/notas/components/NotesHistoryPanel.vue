@@ -18,38 +18,38 @@
       </div>
     </div>
 
-    <div class="min-h-0 flex-1 overflow-y-auto px-0.5 py-0.5 custom-scrollbar">
-      <div v-if="selectedPatientNotas.length > 0" class="flex flex-col gap-0.5">
+    <div class="min-h-0 flex-1 overflow-y-auto px-2 py-2 custom-scrollbar">
+      <div v-if="selectedPatientNotas.length > 0" class="flex flex-col gap-1.5">
         <div
           v-for="nota in selectedPatientNotas"
           :key="nota.id"
           @click="$emit('view-note', nota)"
-          class="group relative min-h-[76px] cursor-pointer rounded-md border border-slate-200 bg-slate-50 px-0.5 py-0.5 transition-all hover:border-sky-300 hover:bg-sky-50"
+          class="group relative cursor-pointer rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2 transition-colors hover:border-sky-300 hover:bg-sky-50"
         >
-          <div class="flex h-full w-full items-center gap-0.5">
-            <div class="self-center flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] leading-none font-bold tabular-nums text-white">
+          <div class="flex items-start gap-2">
+            <div class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-slate-700 text-[10px] leading-none font-bold tabular-nums text-white">
               {{ (nota as any).absoluteIndex }}
             </div>
-            <div class="min-w-0 flex-1 self-center flex flex-col justify-center gap-0.5">
-              <p class="truncate text-[11px] font-bold uppercase tracking-tight leading-[1.05] text-slate-800">{{ nota.enfermera }}</p>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-[11px] font-bold uppercase tracking-tight leading-tight text-slate-800">{{ nota.enfermera }}</p>
               <span
                 v-if="nota.estadoGuardado && nota.estadoGuardado !== 'guardada'"
-                class="w-fit rounded bg-amber-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-amber-900"
+                class="mt-1 inline-block w-fit rounded bg-amber-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-amber-900"
                 :title="nota.estadoGuardado === 'temporal' ? 'Esta nota solo existe en la sesión actual.' : 'Hay cambios o signos vitales temporales no guardados en la base de datos.'"
               >
                 {{ nota.estadoGuardado === 'temporal' ? 'Solo en esta sesión' : 'Cambios temporales' }}
               </span>
-              <div class="flex flex-col gap-0.5 leading-none">
-                <p class="flex items-center gap-1 text-[10px] tracking-tight leading-[1.05] font-bold text-slate-600">
-                                    <span class="w-7 shrink-0 font-semibold uppercase text-sky-700">Inicio</span>
+              <div class="mt-1 flex flex-col gap-0.5">
+                <p class="flex items-baseline gap-1.5 text-[10px] tracking-tight leading-tight font-bold text-slate-600">
+                  <span class="shrink-0 font-semibold uppercase text-sky-700">Inicio</span>
                   <span class="tabular-nums">{{ nota.fecha }}</span>
                   <span class="tabular-nums">{{ formatHoraAmPm(nota.hora) }}</span>
                 </p>
                 <p
-                  class="flex items-center gap-1 text-[10px] tracking-tight leading-[1.05] font-bold"
+                  class="flex items-baseline gap-1.5 text-[10px] tracking-tight leading-tight font-bold"
                   :class="(nota.isFirmada || nota.fechaFirmada) ? 'text-emerald-600' : 'text-slate-400 italic'"
                 >
-                  <span class="w-7 shrink-0 font-bold uppercase" :class="(nota.isFirmada || nota.fechaFirmada) ? 'text-emerald-700' : 'text-slate-400'">Fin</span>
+                  <span class="shrink-0 font-bold uppercase" :class="(nota.isFirmada || nota.fechaFirmada) ? 'text-emerald-700' : 'text-slate-400'">Fin</span>
                   <template v-if="nota.isFirmada || nota.fechaFirmada">
                     <span class="tabular-nums">{{ nota.fechaFirmada || nota.fecha }}</span>
                     <span class="tabular-nums">{{ formatHoraAmPm(nota.horaFirmada || nota.hora) }}</span>
@@ -60,7 +60,7 @@
                 </p>
               </div>
             </div>
-            <div class="self-center h-1.5 w-1.5 rounded-full shrink-0" :class="getNotaTypeColor(nota.tipo)" :title="nota.tipo"></div>
+            <div class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" :class="getNotaTypeColor(nota.tipo)" :title="nota.tipo"></div>
           </div>
         </div>
       </div>

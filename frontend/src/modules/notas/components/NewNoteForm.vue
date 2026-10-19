@@ -1,5 +1,8 @@
 <template>
-  <div class="flex flex-col gap-0 bg-white">
+  <!-- min-h-full: el formulario ocupa al menos toda la altura del modal, así el
+       pie con Firmar/Guardar queda siempre abajo (mt-auto) y el contenido no
+       "salta" al cambiar de pestaña SOAPIE. -->
+  <div class="flex min-h-full flex-col gap-0 bg-white">
     <!-- Toast notification -->
     <Transition name="toast">
       <div
@@ -15,12 +18,10 @@
       </div>
     </Transition>
 
-    <!-- Selector de 2 Turnos (12 Horas) y Autoría -->
+    <!-- Turno (automático) y Autoría -->
     <NoteShiftBar
-      :turno="selectedTurno"
+      :turno="turnoMostrado"
       :enfermera="nombreEnfermeraActual"
-      :read-only="isReadOnly"
-      @update:turno="selectedTurno = $event"
     />
 
     <!-- Fila de Signos Vitales -->
@@ -34,6 +35,13 @@
       :permite-editar-analisis="permiteEditarAnalisisAnterior"
     />
 
+    <p
+      v-if="planFueHeredado && ['a', 'p', 'i', 'e'].includes(activeTab)"
+      class="border-b border-sky-100 bg-sky-50 px-4 py-1.5 text-[11px] font-semibold text-sky-800"
+    >
+      Plan heredado de la nota anterior: revise los diagnósticos y marque en Intervención lo que se ejecutó.
+    </p>
+
     <SoapieCarePlanSelector
       v-if="['a', 'p', 'i', 'e'].includes(activeTab)"
       v-model="planCuidados"
@@ -42,7 +50,9 @@
     />
 
     <!-- Pie del Formulario / Botones de Acción -->
-    <footer class="modal-footer py-2 px-4 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-3 rounded-b-xl">
+    <!-- `sticky bottom-0` mantiene los botones pegados al borde inferior visible
+         del modal sin importar la pestaña SOAPIE ni el largo del contenido. -->
+    <footer class="modal-footer sticky bottom-0 z-10 mt-auto py-2 px-4 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-3 rounded-b-xl">
       <template v-if="!isReadOnly">
         <button 
           @click="() => handleSubmit(true)"
@@ -75,12 +85,25 @@ import NoteShiftBar from './NoteShiftBar.vue'
 import VitalsGrid from './VitalsGrid.vue'
 import SoapieEditor from './SoapieEditor.vue'
 import SoapieCarePlanSelector from './SoapieCarePlanSelector.vue'
+import {
+  NIC_BLOQUE_TITULO,
+  NOC_BLOQUE_TITULO,
+  NOC_EVALUACION_BLOQUE_TITULO,
+  NOC_META_MARCADOR,
+  NOC_RESULTADO_MARCADOR,
+  heredarPlanCuidados,
+  hidratarPlanCuidados,
+  lineasIntervenciones,
+} from '../planCuidados'
 
 const props = defineProps<{
   pacientes: Patient[]
   selectedPatient: Patient | null
   enfermeraProp?: string
   initialNota?: NotaEnfermeria
+  // Nota más reciente del paciente. Solo se usa al crear una nota NUEVA, para
+  // precargar el plan de cuidados (NANDA/NOC/NIC) del turno anterior.
+  notaAnterior?: NotaEnfermeria | null
   isReadOnly?: boolean
 }>()
 
@@ -110,9 +133,9 @@ const defaultForm = () => ({
   s: props.initialNota?.subjetivo || "", 
   o: props.initialNota?.objetivo || "", 
   a: textoLibre(props.initialNota?.analisis || "", 'DIAGNOSTICOS NANDA'),
-  p: textoLibre(props.initialNota?.plan || "", 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS'),
-  i: textoLibre(props.initialNota?.intervencion || "", 'INTERVENCIONES NIC REALIZADAS'),
-  e: textoLibre(props.initialNota?.evaluacion || "", 'EVALUACION DE RESULTADOS NOC'),
+  p: textoLibre(props.initialNota?.plan || "", NOC_BLOQUE_TITULO),
+  i: textoLibre(props.initialNota?.intervencion || "", NIC_BLOQUE_TITULO),
+  e: textoLibre(props.initialNota?.evaluacion || "", NOC_EVALUACION_BLOQUE_TITULO),
   antecedentes: props.initialNota?.antecedentes || "", 
   diagnosticos: props.initialNota?.diagnosticos || "", 
   farmacia: props.initialNota?.farmacia || "", 
@@ -129,15 +152,28 @@ const activeTab = ref<'s' | 'o' | 'a' | 'p' | 'i' | 'e'>('s')
 const permiteEditarAnalisisAnterior = ref(
   Boolean(textoLibre(props.initialNota?.analisis || '', 'DIAGNOSTICOS NANDA')),
 )
+const planFueHeredado = ref(!props.initialNota && Boolean(props.notaAnterior?.planCuidados?.length))
 const planCuidados = ref<PlanCuidadoNota[]>(
-  props.initialNota ? hidratarPlanCuidados(props.initialNota) : [],
+  props.initialNota ? hidratarPlanCuidados(props.initialNota) : heredarPlanCuidados(props.notaAnterior),
 )
 const draftId = ref(props.initialNota?.id || `n${Date.now()}`)
 
-// Selector de turno (Día / Noche) conservado del trabajo local.
-const selectedTurno = ref<'dia' | 'noche'>(
-  (props.initialNota?.turno as 'dia' | 'noche') || 'dia'
-)
+// El turno ya no se elige: el servidor lo deriva de la hora al guardar la
+// nota. Aquí solo se muestra. Para una nota ya guardada se usa su turno; para
+// una nueva, el de la sesión (que el backend derivó al iniciar sesión) o la
+// hora local como respaldo.
+function turnoDesdeSesion(): 'dia' | 'noche' {
+  const guardado = sessionStorage.getItem('turno')
+  if (guardado === 'dia' || guardado === 'noche') return guardado
+  const hora = new Date().getHours()
+  return hora >= 7 && hora < 19 ? 'dia' : 'noche'
+}
+
+const turnoMostrado = computed<'dia' | 'noche'>(() => {
+  if (props.initialNota?.turno === 'noche') return 'noche'
+  if (props.initialNota?.turno === 'dia') return 'dia'
+  return turnoDesdeSesion()
+})
 
 const nombreEnfermeraActual = computed(() => {
   return props.enfermeraProp || sessionStorage.getItem('empleadoLogueado') || sessionStorage.getItem('usuarioLogueado') || 'Enfermero/a en turno'
@@ -155,36 +191,13 @@ function bloqueEstructurado(texto: string, titulo: string, lineas: string[]) {
   return `${base}${marker}\n${lineas.join('\n')}`
 }
 
-function hidratarPlanCuidados(nota: NotaEnfermeria) {
-  const lineasPlan = nota.plan.split('\n')
-  const lineasIntervencion = nota.intervencion.split('\n')
-  const lineasEvaluacion = nota.evaluacion.split('\n')
-  return (nota.planCuidados || []).map(item => {
-    const metas = { ...(item.nocMetas || {}) }
-    const evaluaciones = { ...(item.nocEvaluaciones || {}) }
-    const descripcion = nota.plan.split('\n')
-    return {
-      ...item,
-      nocMetas: metas,
-      nocEvaluaciones: evaluaciones,
-      nicRealizadasIds: Array.from(new Set([...(item.nicRealizadasIds || []), ...hidratarNicRealizadas(item, lineasIntervencion)])),
-    }
-  })
-}
-
-function hidratarNicRealizadas(item: PlanCuidadoNota, lineasIntervencion: string[]) {
-  return (item.nic || [])
-    .filter(nic => lineasIntervencion.some(linea => linea.includes(nic.intervencion)))
-    .map(nic => nic.id)
-}
-
 function lineasPlan() {
   const lineas: string[] = []
   for (const item of planCuidados.value) {
     for (const noc of item.noc || []) {
       if (!item.nocIds.includes(noc.id)) continue
       const meta = item.nocMetas?.[noc.id]?.trim()
-      lineas.push(`NOC ${noc.codigo}: ${noc.resultado}${meta ? ` | Meta: ${meta}` : ''}`)
+      lineas.push(`NOC ${noc.codigo}: ${noc.resultado}${meta ? `${NOC_META_MARCADOR} ${meta}` : ''}`)
     }
     for (const nic of item.nic || []) {
       if (item.nicIds.includes(nic.id)) {
@@ -195,21 +208,13 @@ function lineasPlan() {
   return lineas
 }
 
-function lineasIntervencionesRealizadas() {
-  return planCuidados.value.flatMap(item =>
-    (item.nic || [])
-      .filter(nic => (item.nicRealizadasIds || []).includes(nic.id))
-      .map(nic => `NIC ${nic.codigo}: ${nic.intervencion}`),
-  )
-}
-
 function lineasEvaluacion() {
   const lineas: string[] = []
   for (const item of planCuidados.value) {
     for (const noc of item.noc || []) {
       if (!item.nocIds.includes(noc.id)) continue
       const resultado = item.nocEvaluaciones?.[noc.id]?.trim()
-      if (resultado) lineas.push(`NOC ${noc.codigo}: ${noc.resultado} | Resultado observado: ${resultado}`)
+      if (resultado) lineas.push(`NOC ${noc.codigo}: ${noc.resultado}${NOC_RESULTADO_MARCADOR} ${resultado}`)
     }
   }
   return lineas
@@ -233,9 +238,9 @@ watch(() => props.initialNota, (newNote) => {
     form.o = newNote.objetivo || ""
     form.a = textoLibre(newNote.analisis || "", 'DIAGNOSTICOS NANDA')
     permiteEditarAnalisisAnterior.value = Boolean(form.a)
-    form.p = textoLibre(newNote.plan || "", 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS')
-    form.i = textoLibre(newNote.intervencion || "", 'INTERVENCIONES NIC REALIZADAS')
-    form.e = textoLibre(newNote.evaluacion || "", 'EVALUACION DE RESULTADOS NOC')
+    form.p = textoLibre(newNote.plan || "", NOC_BLOQUE_TITULO)
+    form.i = textoLibre(newNote.intervencion || "", NIC_BLOQUE_TITULO)
+    form.e = textoLibre(newNote.evaluacion || "", NOC_EVALUACION_BLOQUE_TITULO)
     form.antecedentes = newNote.antecedentes || ""
     form.diagnosticos = newNote.diagnosticos || ""
     form.farmacia = newNote.farmacia || ""
@@ -245,6 +250,8 @@ watch(() => props.initialNota, (newNote) => {
   }
   else {
     draftId.value = `n${Date.now()}`
+    planCuidados.value = heredarPlanCuidados(props.notaAnterior)
+    planFueHeredado.value = Boolean(props.notaAnterior?.planCuidados?.length)
   }
   
 }, { deep: true })
@@ -279,6 +286,19 @@ function handleSubmit(shouldSign = false) {
     return
   }
 
+  // Las intervenciones marcadas como "no realizada" deben explicar el motivo:
+  // es justamente el dato que permite ver por qué no se cumplió el plan.
+  const nicSinMotivo = planCuidados.value.some(item =>
+    (item.nic || []).some(nic =>
+      (item.nicNoRealizadas && Object.prototype.hasOwnProperty.call(item.nicNoRealizadas, nic.id))
+      && !(item.nicNoRealizadas?.[nic.id] || '').trim(),
+    ),
+  )
+  if (nicSinMotivo) {
+    showToast('Indique el motivo de cada intervención marcada como "No realizada".', 'error')
+    return
+  }
+
   const now = new Date()
 
   let pacienteIdValue = ''
@@ -295,7 +315,7 @@ function handleSubmit(shouldSign = false) {
     pacienteId: pacienteIdValue,
     fecha: props.initialNota?.fecha || now.toISOString().split('T')[0],
     hora: props.initialNota?.hora || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-    turno: selectedTurno.value,
+    turno: turnoMostrado.value,
     tipo: props.initialNota?.tipo || 'valoracion',
     signosVitales: {
       temperatura: form.temp,
@@ -312,9 +332,9 @@ function handleSubmit(shouldSign = false) {
     subjetivo: form.s,
     objetivo: form.o,
     analisis: bloqueEstructurado(form.a, 'DIAGNOSTICOS NANDA', []),
-    plan: bloqueEstructurado(form.p, 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS', lineasPlan()),
-    intervencion: bloqueEstructurado(form.i, 'INTERVENCIONES NIC REALIZADAS', lineasIntervencionesRealizadas()),
-    evaluacion: bloqueEstructurado(form.e, 'EVALUACION DE RESULTADOS NOC', lineasEvaluacion()),
+    plan: bloqueEstructurado(form.p, NOC_BLOQUE_TITULO, lineasPlan()),
+    intervencion: bloqueEstructurado(form.i, NIC_BLOQUE_TITULO, lineasIntervenciones(planCuidados.value)),
+    evaluacion: bloqueEstructurado(form.e, NOC_EVALUACION_BLOQUE_TITULO, lineasEvaluacion()),
     antecedentes: form.antecedentes,
     diagnosticos: form.diagnosticos,
     farmacia: form.farmacia,
