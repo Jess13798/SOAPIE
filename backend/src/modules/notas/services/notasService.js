@@ -82,6 +82,23 @@ function normalizeComentarioDiagnostico(value) {
     return value.trim() || null;
 }
 
+function normalizeTextMap(value, fieldName, maximumLength) {
+    if (value === undefined || value === null) return {};
+    if (typeof value !== 'object' || Array.isArray(value)) {
+        throw inputError(`${fieldName} debe ser un objeto de textos.`);
+    }
+
+    const normalized = {};
+    for (const [key, text] of Object.entries(value)) {
+        const id = nullableInteger(key, `${fieldName} Id`, true);
+        if (typeof text !== 'string' || text.length > maximumLength) {
+            throw inputError(`${fieldName} debe contener textos de hasta ${maximumLength} caracteres.`);
+        }
+        if (text.trim()) normalized[id] = text.trim();
+    }
+    return normalized;
+}
+
 function requiredClinicalText(value, fieldName) {
     if (typeof value !== 'string' || !value.trim()) {
         throw inputError(`La sección ${fieldName} es obligatoria.`);
@@ -128,6 +145,9 @@ function normalizePlanCuidados(planCuidados = []) {
             comentario: null,
             nocIds: new Set(),
             nicIds: new Set(),
+            nicRealizadasIds: new Set(),
+            nocMetas: {},
+            nocEvaluaciones: {},
         };
         if (item.comentario !== undefined) {
             diagnosis.comentario = normalizeComentarioDiagnostico(item.comentario);
@@ -138,21 +158,48 @@ function normalizePlanCuidados(planCuidados = []) {
         if (item.nicIds !== undefined && !Array.isArray(item.nicIds)) {
             throw inputError('nicIds debe ser una lista.');
         }
+        if (item.nicRealizadasIds !== undefined && !Array.isArray(item.nicRealizadasIds)) {
+            throw inputError('nicRealizadasIds debe ser una lista.');
+        }
         for (const id of item.nocIds || []) {
             diagnosis.nocIds.add(nullableInteger(id, 'IdNOC', true));
         }
         for (const id of item.nicIds || []) {
             diagnosis.nicIds.add(nullableInteger(id, 'IdNIC', true));
         }
+        for (const id of item.nicRealizadasIds || []) {
+            diagnosis.nicRealizadasIds.add(nullableInteger(id, 'IdNIC realizada', true));
+        }
+        Object.assign(diagnosis.nocMetas, normalizeTextMap(item.nocMetas, 'nocMetas', 250));
+        Object.assign(
+            diagnosis.nocEvaluaciones,
+            normalizeTextMap(item.nocEvaluaciones, 'nocEvaluaciones', 500),
+        );
         diagnoses.set(idNANDA, diagnosis);
     }
 
-    return Array.from(diagnoses.values(), item => ({
-        idNANDA: item.idNANDA,
-        comentario: item.comentario,
-        nocIds: Array.from(item.nocIds),
-        nicIds: Array.from(item.nicIds),
-    }));
+    return Array.from(diagnoses.values(), item => {
+        const nicRealizadasIds = Array.from(item.nicRealizadasIds);
+        if (nicRealizadasIds.some(id => !item.nicIds.has(id))) {
+            throw inputError('Toda NIC realizada debe estar seleccionada como intervención planificada.');
+        }
+        const nocIds = Array.from(item.nocIds);
+        const nocIdSet = new Set(nocIds);
+
+        return {
+            idNANDA: item.idNANDA,
+            comentario: item.comentario,
+            nocIds,
+            nicIds: Array.from(item.nicIds),
+            nicRealizadasIds,
+            nocMetas: Object.fromEntries(
+                Object.entries(item.nocMetas).filter(([id]) => nocIdSet.has(Number(id))),
+            ),
+            nocEvaluaciones: Object.fromEntries(
+                Object.entries(item.nocEvaluaciones).filter(([id]) => nocIdSet.has(Number(id))),
+            ),
+        };
+    });
 }
 
 function getSignedDateTime(nota) {
@@ -314,6 +361,9 @@ async function obtenerNotas() {
                     comentario: row.PlanComentarioNANDA || '',
                     nocIds: [],
                     nicIds: [],
+                    nicRealizadasIds: [],
+                    nocMetas: {},
+                    nocEvaluaciones: {},
                     noc: [],
                     nic: [],
                 };
@@ -321,6 +371,10 @@ async function obtenerNotas() {
             }
             if (row.PlanIdNOC != null) {
                 if (!plan.nocIds.includes(row.PlanIdNOC)) plan.nocIds.push(row.PlanIdNOC);
+                if (row.PlanMetaNOC != null) plan.nocMetas[row.PlanIdNOC] = row.PlanMetaNOC;
+                if (row.PlanResultadoObservadoNOC != null) {
+                    plan.nocEvaluaciones[row.PlanIdNOC] = row.PlanResultadoObservadoNOC;
+                }
                 addUnique(plan.noc, {
                     id: row.PlanIdNOC,
                     codigo: row.PlanCodigoNOC,
@@ -330,6 +384,9 @@ async function obtenerNotas() {
             }
             if (row.PlanIdNIC != null) {
                 if (!plan.nicIds.includes(row.PlanIdNIC)) plan.nicIds.push(row.PlanIdNIC);
+                if (row.PlanNICRealizada && !plan.nicRealizadasIds.includes(row.PlanIdNIC)) {
+                    plan.nicRealizadasIds.push(row.PlanIdNIC);
+                }
                 addUnique(plan.nic, {
                     id: row.PlanIdNIC,
                     codigo: row.PlanCodigoNIC,

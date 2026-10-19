@@ -140,7 +140,10 @@ async function guardarNotaCompleta(nota) {
         const carePlanRequest = transaction.request();
         carePlanRequest.input('idNotaCarePlan', sql.Int, idNota);
         await carePlanRequest.query(`
-            DELETE FROM dbo.NotaEnfermeriaPlanCuidado
+            DELETE FROM dbo.NotaEnfermeriaPlanNOC
+            WHERE IdNotaEnfermeria = @idNotaCarePlan;
+
+            DELETE FROM dbo.NotaEnfermeriaPlanNIC
             WHERE IdNotaEnfermeria = @idNotaCarePlan;
 
             DELETE FROM dbo.NotaEnfermeriaDiagnostico
@@ -148,18 +151,26 @@ async function guardarNotaCompleta(nota) {
         `);
 
         for (const diagnosis of nota.planCuidados) {
-            const diagnosisOnly = diagnosis.nocIds.length === 0 && diagnosis.nicIds.length === 0;
-            if (diagnosisOnly) {
-                await insertCarePlanSelection(transaction, idNota, diagnosis.idNANDA, null, null);
-            }
+            await saveDiagnosis(transaction, idNota, diagnosis.idNANDA, diagnosis.comentario);
+
             for (const idNOC of diagnosis.nocIds) {
-                await insertCarePlanSelection(transaction, idNota, diagnosis.idNANDA, idNOC, null);
+                await insertCarePlanNoc(
+                    transaction,
+                    idNota,
+                    diagnosis.idNANDA,
+                    idNOC,
+                    diagnosis.nocMetas[idNOC] || null,
+                    diagnosis.nocEvaluaciones[idNOC] || null,
+                );
             }
             for (const idNIC of diagnosis.nicIds) {
-                await insertCarePlanSelection(transaction, idNota, diagnosis.idNANDA, null, idNIC);
-            }
-            if (diagnosis.comentario) {
-                await insertDiagnosisComment(transaction, idNota, diagnosis.idNANDA, diagnosis.comentario);
+                await insertCarePlanNic(
+                    transaction,
+                    idNota,
+                    diagnosis.idNANDA,
+                    idNIC,
+                    diagnosis.nicRealizadasIds.includes(idNIC),
+                );
             }
         }
 
@@ -199,33 +210,34 @@ function hasVitalValues(vitals) {
     return Object.values(vitals).some(value => value !== null && value !== undefined && value !== '');
 }
 
-async function insertDiagnosisComment(transaction, idNota, idNANDA, comentario) {
+async function saveDiagnosis(transaction, idNota, idNANDA, comentario) {
     const request = transaction.request();
     request.input('idNotaComentario', sql.Int, idNota);
     request.input('idNANDAComentario', sql.Int, idNANDA);
     request.input('comentarioNANDA', sql.NVarChar(1000), comentario);
     await request.query(`
-        INSERT INTO dbo.NotaEnfermeriaDiagnostico (
-            IdNotaEnfermeria, IdNANDA, Comentario
-        )
-        VALUES (@idNotaComentario, @idNANDAComentario, @comentarioNANDA);
+        UPDATE dbo.NotaEnfermeriaDiagnostico
+        SET Comentario = @comentarioNANDA
+        WHERE IdNotaEnfermeria = @idNotaComentario
+          AND IdNANDA = @idNANDAComentario;
+
+        IF @@ROWCOUNT = 0
+        BEGIN
+            INSERT INTO dbo.NotaEnfermeriaDiagnostico (
+                IdNotaEnfermeria, IdNANDA, Comentario
+            )
+            VALUES (@idNotaComentario, @idNANDAComentario, @comentarioNANDA);
+        END;
     `);
 }
 
-async function insertCarePlanSelection(transaction, idNota, idNANDA, idNOC, idNIC) {
+async function insertCarePlanNoc(transaction, idNota, idNANDA, idNOC, meta, resultadoObservado) {
     const request = transaction.request();
     request.input('idNotaCarePlan', sql.Int, idNota);
     request.input('idNANDA', sql.Int, idNANDA);
     request.input('idNOC', sql.Int, idNOC);
-    request.input('idNIC', sql.Int, idNIC);
-
-    const relationColumn = idNOC !== null ? 'IdNOC' : idNIC !== null ? 'IdNIC' : null;
-    const relatedCatalog = idNOC !== null
-        ? 'INNER JOIN dbo.Catalogo_NOC AS c ON c.IdNOC = r.IdNOC AND c.EsActivo = 1'
-        : idNIC !== null
-            ? 'INNER JOIN dbo.Catalogo_NIC AS c ON c.IdNIC = r.IdNIC AND c.EsActivo = 1'
-            : '';
-    const selectedRelation = relationColumn ? `AND r.${relationColumn} = @${relationColumn === 'IdNOC' ? 'idNOC' : 'idNIC'}` : '';
+    request.input('metaNOC', sql.NVarChar(250), meta);
+    request.input('resultadoObservadoNOC', sql.NVarChar(500), resultadoObservado);
 
     const result = await request.query(`
         IF EXISTS (
@@ -233,16 +245,61 @@ async function insertCarePlanSelection(transaction, idNota, idNANDA, idNOC, idNI
             FROM dbo.Catalogo_NANDA AS n
             INNER JOIN dbo.NANDA_Interrelacion AS r
                 ON r.IdNANDA = n.IdNANDA
-            ${relatedCatalog}
+            INNER JOIN dbo.Catalogo_NOC AS c
+                ON c.IdNOC = r.IdNOC
+               AND c.EsActivo = 1
             WHERE n.IdNANDA = @idNANDA
               AND n.EsActivo = 1
-              ${selectedRelation}
+              AND r.IdNOC = @idNOC
         )
         BEGIN
-            INSERT INTO dbo.NotaEnfermeriaPlanCuidado (
-                IdNotaEnfermeria, IdNANDA, IdNOC, IdNIC
+            INSERT INTO dbo.NotaEnfermeriaPlanNOC (
+                IdNotaEnfermeria, IdNANDA, IdNOC, Meta, ResultadoObservado
             )
-            VALUES (@idNotaCarePlan, @idNANDA, @idNOC, @idNIC);
+            VALUES (
+                @idNotaCarePlan, @idNANDA, @idNOC, @metaNOC, @resultadoObservadoNOC
+            );
+            SELECT CAST(1 AS bit) AS Guardado;
+        END
+        ELSE
+        BEGIN
+            SELECT CAST(0 AS bit) AS Guardado;
+        END;
+    `);
+
+    if (!result.recordset[0].Guardado) {
+        throw createRepositoryError(
+            CARE_PLAN_RELATION_INVALID,
+            'Una selección NANDA, NOC o NIC ya no está activa o no corresponde a la interrelación del catálogo.'
+        );
+    }
+}
+
+async function insertCarePlanNic(transaction, idNota, idNANDA, idNIC, realizada) {
+    const request = transaction.request();
+    request.input('idNotaCarePlan', sql.Int, idNota);
+    request.input('idNANDA', sql.Int, idNANDA);
+    request.input('idNIC', sql.Int, idNIC);
+    request.input('nicRealizada', sql.Bit, realizada);
+
+    const result = await request.query(`
+        IF EXISTS (
+            SELECT 1
+            FROM dbo.Catalogo_NANDA AS n
+            INNER JOIN dbo.NANDA_Interrelacion AS r
+                ON r.IdNANDA = n.IdNANDA
+            INNER JOIN dbo.Catalogo_NIC AS c
+                ON c.IdNIC = r.IdNIC
+               AND c.EsActivo = 1
+            WHERE n.IdNANDA = @idNANDA
+              AND n.EsActivo = 1
+              AND r.IdNIC = @idNIC
+        )
+        BEGIN
+            INSERT INTO dbo.NotaEnfermeriaPlanNIC (
+                IdNotaEnfermeria, IdNANDA, IdNIC, Realizada
+            )
+            VALUES (@idNotaCarePlan, @idNANDA, @idNIC, @nicRealizada);
             SELECT CAST(1 AS bit) AS Guardado;
         END
         ELSE
@@ -260,6 +317,29 @@ async function insertCarePlanSelection(transaction, idNota, idNANDA, idNOC, idNI
 }
 
 const NOTAS_QUERY = `
+    ;WITH PlanRows AS (
+        SELECT
+            IdNotaEnfermeria,
+            IdNANDA,
+            IdNOC,
+            Meta,
+            ResultadoObservado,
+            CAST(NULL AS INT) AS IdNIC,
+            CAST(NULL AS BIT) AS NICRealizada
+        FROM dbo.NotaEnfermeriaPlanNOC
+
+        UNION ALL
+
+        SELECT
+            IdNotaEnfermeria,
+            IdNANDA,
+            CAST(NULL AS INT) AS IdNOC,
+            CAST(NULL AS NVARCHAR(250)) AS Meta,
+            CAST(NULL AS NVARCHAR(500)) AS ResultadoObservado,
+            IdNIC,
+            Realizada AS NICRealizada
+        FROM dbo.NotaEnfermeriaPlanNIC
+    )
     SELECT
         n.IdNotaEnfermeria,
         n.IdCuenta,
@@ -285,7 +365,7 @@ const NOTAS_QUERY = `
         vital.Frec_Respiratoria,
         vital.Temperatura,
         vital.Saturacion,
-        cuidado.IdNANDA AS PlanIdNANDA,
+        diagnosticoNota.IdNANDA AS PlanIdNANDA,
         nanda.Codigo AS PlanCodigoNANDA,
         nanda.Diagnostico AS PlanDiagnosticoNANDA,
         diagnosticoNota.Comentario AS PlanComentarioNANDA,
@@ -293,9 +373,12 @@ const NOTAS_QUERY = `
         noc.Codigo AS PlanCodigoNOC,
         noc.Resultado AS PlanResultadoNOC,
         noc.EscalaLikert AS PlanEscalaLikertNOC,
+        cuidado.Meta AS PlanMetaNOC,
+        cuidado.ResultadoObservado AS PlanResultadoObservadoNOC,
         cuidado.IdNIC AS PlanIdNIC,
         nic.Codigo AS PlanCodigoNIC,
-        nic.Intervencion AS PlanIntervencionNIC
+        nic.Intervencion AS PlanIntervencionNIC,
+        cuidado.NICRealizada AS PlanNICRealizada
     FROM dbo.NotaEnfermeria AS n
     OUTER APPLY (
         SELECT TOP (1) sv.*
@@ -303,13 +386,13 @@ const NOTAS_QUERY = `
         WHERE sv.IdNotaEnfermeria = n.IdNotaEnfermeria
         ORDER BY sv.Fecha_Hora DESC, sv.IdSignoVital DESC
     ) AS vital
-    LEFT JOIN dbo.NotaEnfermeriaPlanCuidado AS cuidado
-        ON cuidado.IdNotaEnfermeria = n.IdNotaEnfermeria
-    LEFT JOIN dbo.Catalogo_NANDA AS nanda
-        ON nanda.IdNANDA = cuidado.IdNANDA
     LEFT JOIN dbo.NotaEnfermeriaDiagnostico AS diagnosticoNota
-        ON diagnosticoNota.IdNotaEnfermeria = cuidado.IdNotaEnfermeria
-       AND diagnosticoNota.IdNANDA = cuidado.IdNANDA
+        ON diagnosticoNota.IdNotaEnfermeria = n.IdNotaEnfermeria
+    LEFT JOIN dbo.Catalogo_NANDA AS nanda
+        ON nanda.IdNANDA = diagnosticoNota.IdNANDA
+    LEFT JOIN PlanRows AS cuidado
+        ON cuidado.IdNotaEnfermeria = diagnosticoNota.IdNotaEnfermeria
+       AND cuidado.IdNANDA = diagnosticoNota.IdNANDA
     LEFT JOIN dbo.Catalogo_NOC AS noc
         ON noc.IdNOC = cuidado.IdNOC
     LEFT JOIN dbo.Catalogo_NIC AS nic
@@ -409,7 +492,10 @@ async function deleteNotaById(idNota) {
             DELETE FROM dbo.NotaEnfermeriaSignosVitales
             WHERE IdNotaEnfermeria = @idNota;
 
-            DELETE FROM dbo.NotaEnfermeriaPlanCuidado
+            DELETE FROM dbo.NotaEnfermeriaPlanNOC
+            WHERE IdNotaEnfermeria = @idNota;
+
+            DELETE FROM dbo.NotaEnfermeriaPlanNIC
             WHERE IdNotaEnfermeria = @idNota;
 
             DELETE FROM dbo.NotaEnfermeriaDiagnostico
