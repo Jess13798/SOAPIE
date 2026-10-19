@@ -107,10 +107,11 @@
 
 <script setup>
 import { ref } from "vue";
-import { useRouter } from "vue-router"; // 1. Importamos el router
+import { useRouter } from "vue-router";
 import { Eye, EyeOff } from "lucide-vue-next";
+import { authService } from "@/services/api";
 
-const router = useRouter(); // 2. Inicializamos la herramienta de navegación
+const router = useRouter();
 const credentials = ref({ usuario: '', contrasena: '' });
 const isLoading = ref(false);
 const error = ref(null);
@@ -121,20 +122,13 @@ const iniciarSesion = async () => {
   error.value = null;
   
   try {
-    const response = await fetch('http://localhost:3000/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        usuario: credentials.value.usuario,
-        // CAMBIO AQUÍ: Ahora enviamos 'Password' en lugar de 'dni'
-        Password: credentials.value.contrasena 
-      })
+    const data = await authService.login({
+      usuario: credentials.value.usuario,
+      Password: credentials.value.contrasena 
     });
     
-    const data = await response.json();
-    
     if (data.success) {
-      sessionStorage.setItem('usuarioLogueado', data.usuario);
+      sessionStorage.setItem('usuarioLogueado', data.usuario || '');
       sessionStorage.setItem('empleadoLogueado', data.empleado || '');
       if (data.idEmpleado) {
         sessionStorage.setItem('idEmpleado', String(data.idEmpleado));
@@ -144,12 +138,11 @@ const iniciarSesion = async () => {
       error.value = data.mensaje || "El sistema se esta actualizando, por favor espere unos minutos e intente nuevamente.";
     }
   } catch (e) {
-    error.value = "El sistema se esta actualizando, por favor espere unos minutos e intente nuevamente.";
+    error.value = e?.message || "El sistema se esta actualizando, por favor espere unos minutos e intente nuevamente.";
   } finally {
     isLoading.value = false;
   }
 };
-
 </script>
 
 

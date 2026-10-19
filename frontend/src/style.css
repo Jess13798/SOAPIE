@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme inline {
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+}
+
 :root {
   --background: #f0f7f7;
   --foreground: #0f1d2e;
@@ -14,7 +19,7 @@
   --accent: #16a085;
   --accent-foreground: #fafcfc;
   --destructive: #dc3545;
-  --destructive-foreground: #dc3545;
+  --destructive-foreground: #ffffff;
   --border: #d0e0e0;
   --input: #d0e0e0;
   --ring: #0e7c86;

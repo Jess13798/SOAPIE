@@ -183,6 +183,7 @@
 import { ref, watch, computed, onBeforeUnmount } from 'vue'
 import { ArrowLeftRight, X, Clock3 } from 'lucide-vue-next'
 import type { Patient } from '@/types'
+import { catalogosService } from '@/services/api'
 
 const props = defineProps<{
   isOpen: boolean
@@ -380,13 +381,11 @@ async function fetchMedicos() {
   try {
     loadingMedicos.value = true
     medicosError.value = ''
-    const resp = await fetch(`http://localhost:3000/api/medicos?especialidadId=${encodeURIComponent(props.patient.idEspecialidad)}`)
-    const data = await resp.json()
-    if (!resp.ok) throw new Error(data?.mensaje || 'Error al cargar médicos')
+    const data = await catalogosService.getMedicosPorEspecialidad(props.patient.idEspecialidad)
     medicos.value = Array.isArray(data) ? data : []
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error cargando medicos', err)
-    medicosError.value = 'No se pudieron cargar los médicos'
+    medicosError.value = err?.message || 'No se pudieron cargar los médicos'
     medicos.value = []
   } finally {
     loadingMedicos.value = false
@@ -452,13 +451,11 @@ async function fetchDiagnosticos() {
   try {
     loadingDiagnosticos.value = true
     diagnosticosError.value = ''
-    const resp = await fetch(`http://localhost:3000/api/diagnosticos?idCuentaAtencion=${encodeURIComponent(props.patient.numCuenta)}`)
-    const data = await resp.json()
-    if (!resp.ok) throw new Error(data?.mensaje || 'Error al cargar diagnósticos')
+    const data = await catalogosService.getDiagnosticosPorCuenta(props.patient.numCuenta)
     diagnosticos.value = Array.isArray(data) ? data : []
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error cargando diagnósticos', err)
-    diagnosticosError.value = 'No se pudieron cargar los diagnósticos'
+    diagnosticosError.value = err?.message || 'No se pudieron cargar los diagnósticos'
     diagnosticos.value = []
   } finally {
     loadingDiagnosticos.value = false

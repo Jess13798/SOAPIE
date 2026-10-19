@@ -1,13 +1,15 @@
 const express = require('express');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const cors = require('cors'); // <--- 1. AGREGAR ESTO
 
-const { obtenerPacientes, obtenerServicios } = require('./pacientes');
+const pacientesModule = require('./src/modules/pacientes');
 const validarEmpleado = require('./login');
 const notasModule = require('./notas');
-const pacienteSinCamaModule = require('./pacienteSinCama');
-const diagnosticosModule = require('./diagnosticos');
-const medicosModule = require('./medicos');
+const pacienteSinCamaModule = require('./src/modules/pacientes-sin-cama');
+const diagnosticosModule = require('./src/modules/diagnosticos');
+const medicosModule = require('./src/modules/medicos');
+const catalogosModule = require('./src/modules/catalogos');
 
 const app = express();
 
@@ -18,6 +20,19 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 // --- RUTAS DE LA API ---
+
+function sendNotasError(res, err, message) {
+    console.error(message, err);
+    if (err?.code === 'NOTAS_INVALID_INPUT' || err?.code === 'CARE_PLAN_RELATION_INVALID') {
+        return res.status(400).json({ success: false, mensaje: err.message });
+    }
+    if (err?.code === 'NOTA_NOT_FOUND') {
+        return res.status(404).json({ success: false, mensaje: err.message });
+    }
+
+    const detalle = err?.code ? `${err.code}: ${err.message}` : err.message;
+    return res.status(500).json({ success: false, mensaje: message, detalle });
+}
 
 // Ruta para el Login (POST)
 app.post('/api/login', async (req, res) => {
@@ -52,7 +67,7 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/pacientes', async (req, res) => {
     try {
         const servicioId = req.query.servicioId;
-        const datos = await obtenerPacientes(servicioId);
+        const datos = await pacientesModule.obtenerPacientes(servicioId);
         res.json(datos);
     } catch (err) {
         console.error('Error en /api/pacientes:', err);
@@ -64,10 +79,38 @@ app.get('/api/pacientes', async (req, res) => {
 // Ruta para obtener lista de servicios
 app.get('/api/servicios', async (req, res) => {
     try {
-        const datos = await obtenerServicios();
+        const datos = await pacientesModule.obtenerServicios();
         res.json(datos);
     } catch (err) {
         res.status(500).send('Error: ' + err.message);
+    }
+});
+
+// NANDA/NOC/NIC academic sample catalog; requires its SQL Server tables.
+app.get('/api/catalogos/nanda-noc-nic', async (req, res) => {
+    const buscar = typeof req.query.buscar === 'string' ? req.query.buscar.trim() : '';
+    if (buscar.length > 100) {
+        return res.status(400).json({
+            success: false,
+            mensaje: 'El texto de búsqueda no puede superar 100 caracteres.',
+        });
+    }
+
+    try {
+        const datos = await catalogosModule.buscarNandaNocNic(buscar);
+        res.json(datos);
+    } catch (err) {
+        console.error('Error en /api/catalogos/nanda-noc-nic:', err);
+        if (err?.number === 208) {
+            return res.status(503).json({
+                success: false,
+                mensaje: 'No están instaladas las tablas del catálogo NANDA/NOC/NIC en la base de datos.',
+            });
+        }
+        res.status(500).json({
+            success: false,
+            mensaje: 'No se pudo consultar el catálogo NANDA/NOC/NIC. Revisa el registro del servidor.',
+        });
     }
 });
 
@@ -78,9 +121,7 @@ app.get('/api/notas', async (req, res) => {
         const datos = await notasModule.obtenerNotas();
         res.json(datos);
     } catch (err) {
-        console.error('Error en /api/notas:', err);
-        const detalle = err?.code ? `${err.code}: ${err.message}` : err.message;
-        res.status(500).json({ success: false, mensaje: 'Error al cargar notas', detalle });
+        sendNotasError(res, err, 'Error al cargar notas');
     }
 });
 
@@ -207,7 +248,7 @@ app.post('/api/notas', async (req, res) => {
         const resultado = await notasModule.guardarNota(nota);
         res.json(resultado);
     } catch (err) {
-        res.status(500).json({ success: false, mensaje: 'Error: ' + err.message });
+        sendNotasError(res, err, 'Error al guardar nota');
     }
 });
 
@@ -218,7 +259,7 @@ app.delete('/api/notas/:id', async (req, res) => {
         const resultado = await notasModule.eliminarNota(id);
         res.json(resultado);
     } catch (err) {
-        res.status(500).json({ success: false, mensaje: 'Error: ' + err.message });
+        sendNotasError(res, err, 'Error al eliminar nota');
     }
 });
 
@@ -233,8 +274,22 @@ app.get('/api/notas/:id/vitals', async (req, res) => {
         const datos = await notasModule.obtenerHistorialVitals(id, limit, offset);
         res.json(datos);
     } catch (err) {
-        console.error('Error en /api/notas/:id/vitals:', err);
-        res.status(500).json({ success: false, mensaje: 'Error al cargar historial de vitales' });
+        sendNotasError(res, err, 'Error al cargar historial de vitales');
+    }
+});
+
+// Obtener historial de signos vitales de una atención con paginación
+app.get('/api/atenciones/:idCuenta/vitals', async (req, res) => {
+    try {
+        const { idCuenta } = req.params;
+        const limit = parseInt(req.query.limit) || 10;
+        const page = parseInt(req.query.page) || 1;
+        const offset = (page - 1) * limit;
+
+        const datos = await notasModule.obtenerHistorialVitalsPorAtencion(idCuenta, limit, offset);
+        res.json(datos);
+    } catch (err) {
+        sendNotasError(res, err, 'Error al cargar historial de vitales');
     }
 });
 

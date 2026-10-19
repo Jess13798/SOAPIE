@@ -13,7 +13,7 @@
           </div>
           <div>
             <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Historial de Signos Vitales</h3>
-            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">Registros capturados para esta nota</p>
+            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">Registros capturados durante esta atención</p>
           </div>
         </div>
         
@@ -32,19 +32,23 @@
           class="flex-1 overflow-auto custom-scrollbar border border-slate-200 rounded-lg shadow-sm" 
           @scroll="handleScroll"
         >
+          <p v-if="historyError" role="alert" class="m-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            {{ historyError }}
+            <button type="button" class="ml-2 font-bold underline" @click="fetchHistory()">Reintentar</button>
+          </p>
           <div v-if="loading && history.length === 0" class="flex flex-col items-center justify-center py-20 gap-4 bg-white">
           <div class="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
           <span class="text-sm font-bold text-slate-500 uppercase tracking-widest animate-pulse">Cargando Historial...</span>
         </div>
         
-          <div v-else-if="history.length === 0" class="flex flex-col items-center justify-center py-20 text-slate-400 gap-3 bg-white">
+          <div v-else-if="history.length === 0 && !historyError" class="flex flex-col items-center justify-center py-20 text-slate-400 gap-3 bg-white">
           <div class="bg-slate-100 p-4 rounded-full">
             <Database class="h-10 w-10 opacity-20" />
           </div>
           <p class="text-sm font-bold uppercase tracking-tight">No se encontraron registros de signos vitales</p>
         </div>
 
-          <table v-else class="w-full text-left border-collapse bg-white">
+          <table v-else-if="history.length > 0" class="w-full text-left border-collapse bg-white">
             <thead class="sticky top-0 z-20">
               <tr class="bg-blue-900 text-white font-bold">
                 <th v-for="col in headers" :key="col" class="px-4 py-3 text-[10px] font-black uppercase tracking-wider border-r border-blue-800 last:border-0 leading-tight">
@@ -69,7 +73,7 @@
                 <td class="px-4 py-2.5 text-[11px] font-black text-slate-700 border-r border-slate-100">{{ row.Frec_Respiratoria }}</td>
                 <td class="px-4 py-2.5 text-[11px] font-black text-orange-600 border-r border-slate-100">{{ row.Temperatura }}</td>
                 <td class="px-4 py-2.5 text-[11px] font-black text-emerald-600 border-r border-slate-100">{{ row.Saturacion }}</td>
-                <td class="px-4 py-2.5 text-[10px] font-bold text-slate-500 lowercase first-letter:uppercase">{{ row.NombreUsuario || 'Sin usuario' }}</td>
+                <td class="px-4 py-2.5 text-[10px] font-bold text-slate-500">{{ row.NombreEmpleado || 'Sin usuario' }}</td>
               </tr>
             </tbody>
           </table>
@@ -98,10 +102,13 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { Book, X, Database } from 'lucide-vue-next'
+import { notasService } from '@/services/api'
+import type { SignoVitalHistorial } from '@/types'
 
 const props = defineProps<{
   isOpen: boolean
-  idNota: string | number
+  idCuenta: string | number
+  registrosTemporales?: SignoVitalHistorial[]
 }>()
 
 const scrollContainer = ref<HTMLElement | null>(null)
@@ -110,21 +117,27 @@ defineEmits<{
   close: []
 }>()
 
-const history = ref<any[]>([])
+const history = ref<SignoVitalHistorial[]>([])
 const loading = ref(false)
 const loadingMore = ref(false)
+const historyError = ref('')
 const page = ref(1)
 const hasMore = ref(true)
 const LIMIT = 10
 
+function registrosLocales() {
+  return props.registrosTemporales || []
+}
+
 const headers = [
   'ID', 'FECHA / HORA', 'PESO', 'TALLA', 'P.CEF', 'P.ABD', 
-  'HEMOG', 'P. ART', 'F.CARD', 'F.RESP', 'TEMP', 'SAT', 'USUARIO'
+  'HEMOG', 'P. ART', 'F.CARD', 'F.RESP', 'TEMP', 'SAT', 'ENFERMERA'
 ]
 
 const fetchHistory = async (isLoadMore = false) => {
-  if (!props.idNota || isNaN(Number(props.idNota))) {
-    history.value = []
+  historyError.value = ''
+  if (!props.idCuenta || isNaN(Number(props.idCuenta))) {
+    history.value = [...registrosLocales()].reverse()
     hasMore.value = false
     return
   }
@@ -137,20 +150,20 @@ const fetchHistory = async (isLoadMore = false) => {
     history.value = []
     hasMore.value = true
   }
+  historyError.value = ''
 
   try {
-    const response = await fetch(`http://localhost:3000/api/notas/${props.idNota}/vitals?page=${page.value}&limit=${LIMIT}`)
-    const data = await response.json()
+    const data = await notasService.getHistorialVitalsPorAtencion(props.idCuenta, LIMIT, page.value)
     
     if (data.length > 0) {
       if (isLoadMore) {
         history.value = [...history.value, ...data]
       } else {
-        history.value = data
+        history.value = [...registrosLocales()].reverse().concat(data)
       }
 
       const totalCount = data[0].TotalCount || 0
-      if (history.value.length >= totalCount) {
+      if (history.value.length >= totalCount + registrosLocales().length) {
         hasMore.value = false
       }
 
@@ -158,13 +171,18 @@ const fetchHistory = async (isLoadMore = false) => {
       await nextTick()
       if (hasMore.value && scrollContainer.value && scrollContainer.value.scrollHeight <= scrollContainer.value.clientHeight) {
         page.value++
-        fetchHistory(true)
+        await fetchHistory(true)
       }
     } else {
+      if (!isLoadMore) history.value = [...registrosLocales()].reverse()
       hasMore.value = false
     }
   } catch (err) {
     console.error('Error fetching vitals history:', err)
+    if (!isLoadMore && registrosLocales().length) {
+      history.value = [...registrosLocales()].reverse()
+    }
+    historyError.value = err instanceof Error ? err.message : 'No se pudo cargar el historial de signos vitales.'
   } finally {
     loading.value = false
     loadingMore.value = false
@@ -190,7 +208,7 @@ const formatFecha = (dateStr: string) => {
   })
 }
 
-watch(() => props.isOpen, (newVal) => {
+watch([() => props.isOpen, () => props.idCuenta, () => props.registrosTemporales], ([newVal]) => {
   if (newVal) fetchHistory()
 })
 </script>

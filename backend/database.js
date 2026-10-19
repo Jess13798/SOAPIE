@@ -1,4 +1,5 @@
-﻿require('dotenv').config();
+﻿const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const sql = require('mssql');
 
 const dbConfig = {
@@ -16,4 +17,4 @@ const dbConfig = {
 };
 
 // Solo exportamos la configuracion para que otros archivos la usen
-module.exports = { sql, dbConfig };
+module.exports = { sql, dbConfig };                                         
