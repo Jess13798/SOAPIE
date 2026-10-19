@@ -215,6 +215,16 @@ export interface RegistroAuditoriaCama {
     IdUsuario: number | null
     Usuario: string | null
     Detalle: string | null
+    // Nombre completo del enfermero/a que hizo el movimiento (resuelto en el
+    // backend desde Empleados). Cae al usuario de login si no se encuentra.
+    NombreEnfermero?: string | null
+    // Detalle clínico del movimiento (tabla EnfermeriaAuditoriaDetalle).
+    // Vacío en los cambios de cama, que no llevan médico ni diagnóstico.
+    IdEspecialidad?: number | null
+    Especialidad?: string | null
+    IdMedicoOrdena?: number | null
+    MedicoOrdena?: string | null
+    Diagnostico?: string | null
 }
 
 export interface FiltrosAuditoriaCamas {

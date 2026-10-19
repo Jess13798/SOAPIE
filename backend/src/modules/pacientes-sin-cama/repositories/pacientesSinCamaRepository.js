@@ -128,6 +128,44 @@ async function asegurarTablaAuditoria(pool) {
     return promesaTablaAuditoria;
 }
 
+// Detalle clínico de cada movimiento (especialidad destino, médico que ordena,
+// diagnóstico). Va en su propia tabla porque no aplica a todos los casos:
+// un cambio de cama no tiene médico ni diagnóstico.
+let promesaTablaDetalle = null;
+
+async function asegurarTablaDetalle(pool) {
+    if (!promesaTablaDetalle) {
+        promesaTablaDetalle = pool.request().query(`
+            IF OBJECT_ID(N'dbo.EnfermeriaAuditoriaDetalle', N'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.EnfermeriaAuditoriaDetalle (
+                    IdDetalle       INT IDENTITY(1,1) NOT NULL,
+                    IdAuditoria     INT NOT NULL,
+                    IdEspecialidad  INT NULL,
+                    Especialidad    NVARCHAR(300) NULL,
+                    IdMedicoOrdena  INT NULL,
+                    MedicoOrdena    NVARCHAR(300) NULL,
+                    Diagnostico     NVARCHAR(500) NULL,
+                    CONSTRAINT PK_EnfermeriaAuditoriaDetalle PRIMARY KEY (IdDetalle),
+                    CONSTRAINT FK_EnfermeriaAuditoriaDetalle_Auditoria
+                        FOREIGN KEY (IdAuditoria)
+                        REFERENCES dbo.EnfermeriaAuditoriaCamas (IdAuditoria)
+                );
+
+                CREATE UNIQUE INDEX UX_EnfermeriaAuditoriaDetalle_IdAuditoria
+                    ON dbo.EnfermeriaAuditoriaDetalle (IdAuditoria);
+            END
+        `).catch((error) => {
+            // Igual que la tabla principal: si no se puede crear, la operación
+            // de cama sigue funcionando y se reintenta en la próxima.
+            promesaTablaDetalle = null;
+            console.error('No se pudo asegurar dbo.EnfermeriaAuditoriaDetalle:', error.message);
+            throw error;
+        });
+    }
+    return promesaTablaDetalle;
+}
+
 // Enriquece el registro de auditoría con datos reales de la base (no del
 // cliente): paciente, cama y servicio.
 async function obtenerContextoAuditoria(transaction, idCuentaAtencion, idCama) {
@@ -160,6 +198,58 @@ async function obtenerContextoAuditoria(transaction, idCuentaAtencion, idCama) {
     return resultado.recordset?.[0] || {};
 }
 
+// Resuelve el contexto clínico del movimiento a partir del servicio destino:
+// su especialidad. Sirve para ASIGNAR y TRANSFERIR, que sí apuntan a un servicio.
+async function obtenerEspecialidadDeServicio(transaction, idServicio) {
+    if (idServicio == null) return {};
+    const req = new sql.Request(transaction);
+    req.input('IdServicio', sql.Int, Number(idServicio));
+    const resultado = await req.query(`
+        SELECT TOP 1
+            s.IdEspecialidad,
+            esp.Nombre AS Especialidad
+        FROM Servicios s
+        LEFT JOIN Especialidades esp ON esp.IdEspecialidad = s.IdEspecialidad
+        WHERE s.IdServicio = @IdServicio;
+    `);
+    return resultado.recordset?.[0] || {};
+}
+
+// Nombre completo del médico que ordena, para no guardar solo el id.
+async function obtenerNombreMedico(transaction, idMedico) {
+    if (idMedico == null) return {};
+    const req = new sql.Request(transaction);
+    req.input('IdMedico', sql.Int, Number(idMedico));
+    const resultado = await req.query(`
+        SELECT TOP 1
+            UPPER(LTRIM(RTRIM(
+                ISNULL(e.ApellidoPaterno, '') + ' ' + ISNULL(e.ApellidoMaterno, '') + ' ' + ISNULL(e.Nombres, '')
+            ))) AS MedicoOrdena
+        FROM Medicos m
+        LEFT JOIN Empleados e ON e.IdEmpleado = m.IdEmpleado
+        WHERE m.IdMedico = @IdMedico;
+    `);
+    return resultado.recordset?.[0] || {};
+}
+
+// Descripción legible de un diagnóstico a partir de su id, para el detalle.
+// OJO: en Diagnosticos, CodigoCIE10 y Descripcion tienen collations distintas
+// (Modern_Spanish vs SQL_Latin1), así que concatenarlas directo da error. Se
+// fuerza la collation de la base en ambas.
+async function obtenerDescripcionDiagnostico(transaction, idDiagnostico) {
+    if (idDiagnostico == null) return null;
+    const req = new sql.Request(transaction);
+    req.input('IdDiagnostico', sql.Int, Number(idDiagnostico));
+    const resultado = await req.query(`
+        SELECT TOP 1
+            LTRIM(RTRIM(ISNULL(d.CodigoCIE10, '') COLLATE Modern_Spanish_CI_AS)) + ' ' +
+            ISNULL(d.Descripcion, '') COLLATE Modern_Spanish_CI_AS AS Diagnostico
+        FROM Diagnosticos d
+        WHERE d.IdDiagnostico = @IdDiagnostico;
+    `);
+    return resultado.recordset?.[0]?.Diagnostico?.trim() || null;
+}
+
 // Cama que ocupa hoy el paciente (para registrar de dónde salió).
 async function obtenerCamaActual(transaction, idPaciente, idCamaExcluir) {
     const req = new sql.Request(transaction);
@@ -189,6 +279,11 @@ async function registrarAuditoria(transaction, {
     idUsuario,
     usuario,
     detalle,
+    idEspecialidad,
+    especialidad,
+    idMedicoOrdena,
+    medicoOrdena,
+    diagnostico,
 }) {
     const req = new sql.Request(transaction);
     req.input('Accion', sql.VarChar(20), accion);
@@ -204,24 +299,59 @@ async function registrarAuditoria(transaction, {
     req.input('Usuario', sql.NVarChar(100), usuario || null);
     req.input('Detalle', sql.NVarChar(500), detalle || null);
 
-    await req.query(`
+    const insertado = await req.query(`
         IF OBJECT_ID(N'dbo.EnfermeriaAuditoriaCamas', N'U') IS NOT NULL
         BEGIN
             INSERT INTO dbo.EnfermeriaAuditoriaCamas
                 (Accion, IdCuentaAtencion, IdPaciente, Paciente, IdCama, Cama, CamaAnterior,
                  IdServicio, Servicio, IdUsuario, Usuario, Detalle)
+            OUTPUT INSERTED.IdAuditoria
             VALUES
                 (@Accion, @IdCuentaAtencion, @IdPaciente, @Paciente, @IdCama, @Cama, @CamaAnterior,
                  @IdServicio, @Servicio, @IdUsuario, @Usuario, @Detalle);
         END
     `);
+
+    const idAuditoria = insertado.recordset?.[0]?.IdAuditoria ?? null;
+
+    // El detalle clínico solo se guarda si hay algo que guardar y si la fila
+    // principal se insertó. Así un MOVER (sin médico ni diagnóstico) no deja
+    // una fila vacía.
+    const hayDetalle =
+        (idEspecialidad != null || (especialidad && String(especialidad).trim())) ||
+        (idMedicoOrdena != null || (medicoOrdena && String(medicoOrdena).trim())) ||
+        (diagnostico && String(diagnostico).trim());
+
+    if (idAuditoria != null && hayDetalle) {
+        const reqDetalle = new sql.Request(transaction);
+        reqDetalle.input('IdAuditoria', sql.Int, idAuditoria);
+        reqDetalle.input('IdEspecialidad', sql.Int, idEspecialidad != null ? Number(idEspecialidad) : null);
+        reqDetalle.input('Especialidad', sql.NVarChar(300), especialidad || null);
+        reqDetalle.input('IdMedicoOrdena', sql.Int, idMedicoOrdena != null ? Number(idMedicoOrdena) : null);
+        reqDetalle.input('MedicoOrdena', sql.NVarChar(300), medicoOrdena || null);
+        reqDetalle.input('Diagnostico', sql.NVarChar(500), diagnostico || null);
+
+        await reqDetalle.query(`
+            IF OBJECT_ID(N'dbo.EnfermeriaAuditoriaDetalle', N'U') IS NOT NULL
+            BEGIN
+                INSERT INTO dbo.EnfermeriaAuditoriaDetalle
+                    (IdAuditoria, IdEspecialidad, Especialidad, IdMedicoOrdena, MedicoOrdena, Diagnostico)
+                VALUES
+                    (@IdAuditoria, @IdEspecialidad, @Especialidad, @IdMedicoOrdena, @MedicoOrdena, @Diagnostico);
+            END
+        `);
+    }
 }
 
 // Devuelve el rastro de auditoría filtrado, más reciente primero.
+// El nombre del enfermero se resuelve con JOIN a Empleados: IdUsuario guarda el
+// IdEmpleado, así que el nombre completo sale aunque el registro sea antiguo.
+// Si el empleado ya no existe, se cae al usuario de login para no dejar la celda vacía.
 async function getAuditoriaCamas({ fechaDesde, fechaHasta, servicioId, accion, usuario, limit } = {}) {
     try {
         const pool = await getPool();
         await asegurarTablaAuditoria(pool).catch(() => {});
+        await asegurarTablaDetalle(pool).catch(() => {});
 
         const request = pool.request();
         request.input('FechaDesde', sql.VarChar(10), fechaDesde || null);
@@ -233,15 +363,24 @@ async function getAuditoriaCamas({ fechaDesde, fechaHasta, servicioId, accion, u
 
         const resultado = await request.query(`
             SELECT TOP (@Limit)
-                IdAuditoria, FechaHora, Accion, IdCuentaAtencion, IdPaciente, Paciente,
-                IdCama, Cama, CamaAnterior, IdServicio, Servicio, IdUsuario, Usuario, Detalle
-            FROM dbo.EnfermeriaAuditoriaCamas
-            WHERE (@FechaDesde IS NULL OR FechaHora >= CAST(@FechaDesde AS DATE))
-              AND (@FechaHasta IS NULL OR FechaHora < DATEADD(DAY, 1, CAST(@FechaHasta AS DATE)))
-              AND (@ServicioId IS NULL OR IdServicio = @ServicioId)
-              AND (@Accion IS NULL OR Accion = @Accion)
-              AND (@Usuario IS NULL OR Usuario = @Usuario)
-            ORDER BY FechaHora DESC, IdAuditoria DESC;
+                aud.IdAuditoria, aud.FechaHora, aud.Accion, aud.IdCuentaAtencion, aud.IdPaciente, aud.Paciente,
+                aud.IdCama, aud.Cama, aud.CamaAnterior, aud.IdServicio, aud.Servicio,
+                aud.IdUsuario, aud.Usuario, aud.Detalle,
+                UPPER(LTRIM(RTRIM(
+                    ISNULL(emp.ApellidoPaterno, '') + ' ' + ISNULL(emp.ApellidoMaterno, '') + ' ' +
+                    ISNULL(emp.Nombres, '')
+                ))) AS NombreEnfermero,
+                det.IdEspecialidad, det.Especialidad,
+                det.IdMedicoOrdena, det.MedicoOrdena, det.Diagnostico
+            FROM dbo.EnfermeriaAuditoriaCamas AS aud
+            LEFT JOIN dbo.Empleados AS emp ON emp.IdEmpleado = aud.IdUsuario
+            LEFT JOIN dbo.EnfermeriaAuditoriaDetalle AS det ON det.IdAuditoria = aud.IdAuditoria
+            WHERE (@FechaDesde IS NULL OR aud.FechaHora >= CAST(@FechaDesde AS DATE))
+              AND (@FechaHasta IS NULL OR aud.FechaHora < DATEADD(DAY, 1, CAST(@FechaHasta AS DATE)))
+              AND (@ServicioId IS NULL OR aud.IdServicio = @ServicioId)
+              AND (@Accion IS NULL OR aud.Accion = @Accion)
+              AND (@Usuario IS NULL OR aud.Usuario = @Usuario)
+            ORDER BY aud.FechaHora DESC, aud.IdAuditoria DESC;
         `);
         return resultado.recordset || [];
     } catch (error) {
@@ -292,6 +431,9 @@ async function asignarCama({ IdPaciente, IdCuentaAtencion, IdCama, IdMedicoOrden
         `);
 
         const contexto = await obtenerContextoAuditoria(transaction, IdCuentaAtencion, IdCama);
+        const idServicioAsignado = contexto.IdServicioEstancia || contexto.IdServicioCama;
+        const especialidadServicio = await obtenerEspecialidadDeServicio(transaction, idServicioAsignado);
+        const medico = await obtenerNombreMedico(transaction, IdMedicoOrdena);
         await registrarAuditoria(transaction, {
             accion: 'ASIGNAR',
             idCuentaAtencion: IdCuentaAtencion,
@@ -300,11 +442,15 @@ async function asignarCama({ IdPaciente, IdCuentaAtencion, IdCama, IdMedicoOrden
             idCama: IdCama,
             cama: contexto.Cama,
             camaAnterior: null,
-            idServicio: contexto.IdServicioEstancia || contexto.IdServicioCama,
+            idServicio: idServicioAsignado,
             servicio: contexto.Servicio,
             idUsuario,
             usuario,
             detalle: 'Asignación de cama',
+            idEspecialidad: especialidadServicio.IdEspecialidad ?? null,
+            especialidad: especialidadServicio.Especialidad ?? null,
+            idMedicoOrdena: IdMedicoOrdena ?? null,
+            medicoOrdena: medico.MedicoOrdena ?? null,
         });
 
         await transaction.commit();
@@ -502,6 +648,9 @@ async function registrarTransferenciaEstancia({
         `);
 
         const contexto = await obtenerContextoAuditoria(transaction, idAtencion, null);
+        const especialidadDestino = await obtenerEspecialidadDeServicio(transaction, idServicio);
+        const medico = await obtenerNombreMedico(transaction, idMedicoOrdena);
+        const diagnosticoTexto = await obtenerDescripcionDiagnostico(transaction, idDiagnostico);
         await registrarAuditoria(transaction, {
             accion: 'TRANSFERIR',
             idCuentaAtencion: idAtencion,
@@ -515,6 +664,11 @@ async function registrarTransferenciaEstancia({
             idUsuario: idUsuario || idEmpleado,
             usuario,
             detalle: 'Transferencia de servicio (queda sin cama)',
+            idEspecialidad: especialidadDestino.IdEspecialidad ?? null,
+            especialidad: especialidadDestino.Especialidad ?? null,
+            idMedicoOrdena: idMedicoOrdena ?? null,
+            medicoOrdena: medico.MedicoOrdena ?? null,
+            diagnostico: diagnosticoTexto,
         });
 
         await transaction.commit();

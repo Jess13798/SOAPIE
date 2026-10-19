@@ -75,7 +75,7 @@
             v-model="filtros.usuario"
             type="search"
             maxlength="100"
-            placeholder="usuario de login"
+            placeholder="usuario de login (ej. FPAUCAR)"
             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
           />
         </label>
@@ -167,8 +167,10 @@
               <th class="px-4 py-3 text-left">Cuenta</th>
               <th class="px-4 py-3 text-left">Paciente</th>
               <th class="px-4 py-3 text-left">Cama</th>
-              <th class="px-4 py-3 text-left">Servicio</th>
-              <th class="px-4 py-3 text-left">Usuario</th>
+              <th class="px-4 py-3 text-left">Servicio / Especialidad</th>
+              <th class="px-4 py-3 text-left">Médico que ordena</th>
+              <th class="px-4 py-3 text-left">Diagnóstico</th>
+              <th class="px-4 py-3 text-left">Enfermero(a)</th>
               <th class="px-4 py-3 text-left">Detalle</th>
             </tr>
           </thead>
@@ -188,8 +190,16 @@
                 </span>
                 {{ registro.Cama || '—' }}
               </td>
-              <td class="px-4 py-3 text-slate-700">{{ registro.Servicio || '—' }}</td>
-              <td class="px-4 py-3 text-slate-700">{{ registro.Usuario || '—' }}</td>
+              <td class="px-4 py-3 text-slate-700">
+                <span class="block">{{ registro.Servicio || '—' }}</span>
+                <span v-if="registro.Especialidad" class="block text-[11px] text-slate-500">{{ registro.Especialidad }}</span>
+              </td>
+              <td class="px-4 py-3 text-slate-700">{{ registro.MedicoOrdena || '—' }}</td>
+              <td class="max-w-[220px] px-4 py-3 text-slate-600">{{ registro.Diagnostico || '—' }}</td>
+              <td class="px-4 py-3">
+                <span class="block font-medium text-slate-800">{{ registro.NombreEnfermero || registro.Usuario || '—' }}</span>
+                <span v-if="registro.NombreEnfermero && registro.Usuario" class="block text-[11px] text-slate-400">{{ registro.Usuario }}</span>
+              </td>
               <td class="px-4 py-3 text-slate-600">{{ registro.Detalle || '—' }}</td>
             </tr>
           </tbody>
