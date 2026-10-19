@@ -58,7 +58,15 @@ test('guardarNota normalizes selections and persists the SOAPIE payload', async 
         subjetivo: 'Refiere dolor',
         signosVitales: { temperatura: '36.7', frecuenciaCardiaca: '80' },
         planCuidados: [
-            { idNANDA: 1, comentario: '  Dolor referido en hipogastrio  ', nocIds: [10, 10], nicIds: [20] },
+            {
+                idNANDA: 1,
+                comentario: '  Dolor referido en hipogastrio  ',
+                nocIds: [10, 10],
+                nicIds: [20],
+                nicRealizadasIds: [20],
+                nocMetas: { 10: '  Meta inicial  ' },
+                nocEvaluaciones: { 10: '  Evolución favorable  ' },
+            },
             { idNANDA: 1, nocIds: [11], nicIds: [] },
         ],
     }));
@@ -72,8 +80,43 @@ test('guardarNota normalizes selections and persists the SOAPIE payload', async 
     assert.equal(savedNote.signosVitales.temperatura, 36.7);
     assert.equal(savedNote.signosVitales.frecuenciaCardiaca, 80);
     assert.deepEqual(savedNote.planCuidados, [
-        { idNANDA: 1, comentario: 'Dolor referido en hipogastrio', nocIds: [10, 11], nicIds: [20] },
+        {
+            idNANDA: 1,
+            comentario: 'Dolor referido en hipogastrio',
+            nocIds: [10, 11],
+            nicIds: [20],
+            nicRealizadasIds: [20],
+            nocMetas: { 10: 'Meta inicial' },
+            nocEvaluaciones: { 10: 'Evolución favorable' },
+        },
     ]);
+});
+
+test('guardarNota rejects a performed NIC that was not planned', async () => {
+    await assert.rejects(notasService.guardarNota(notePayload({
+        planCuidados: [{ idNANDA: 1, nocIds: [], nicIds: [20], nicRealizadasIds: [21] }],
+    })), { code: 'NOTAS_INVALID_INPUT' });
+});
+
+test('guardarNota drops NOC values that do not belong to selected NOC ids', async (context) => {
+    let savedNote;
+    context.mock.method(notasRepository, 'guardarNotaCompleta', async (note) => {
+        savedNote = note;
+        return { id: 81, vitalesRegistrados: true };
+    });
+
+    await notasService.guardarNota(notePayload({
+        planCuidados: [{
+            idNANDA: 1,
+            nocIds: [10],
+            nicIds: [],
+            nocMetas: { 10: 'Meta', 11: 'No seleccionada' },
+            nocEvaluaciones: { 10: 'Observado', 11: 'Sin selección' },
+        }],
+    }));
+
+    assert.deepEqual(savedNote.planCuidados[0].nocMetas, { 10: 'Meta' });
+    assert.deepEqual(savedNote.planCuidados[0].nocEvaluaciones, { 10: 'Observado' });
 });
 
 test('guardarNota rejects oxygen saturation above 100 percent', async (context) => {
@@ -168,6 +211,8 @@ test('obtenerNotas groups selected NOC and NIC under each note diagnosis', async
                 PlanIdNOC: 10,
                 PlanCodigoNOC: 'R1',
                 PlanResultadoNOC: 'Resultado',
+                PlanMetaNOC: 'Meta esperada',
+                PlanResultadoObservadoNOC: 'Resultado observado',
             },
             {
                 IdNotaEnfermeria: 81,
@@ -182,6 +227,7 @@ test('obtenerNotas groups selected NOC and NIC under each note diagnosis', async
                 PlanIdNIC: 20,
                 PlanCodigoNIC: 'I1',
                 PlanIntervencionNIC: 'Intervención',
+                PlanNICRealizada: true,
             },
         ],
     }));
@@ -194,6 +240,9 @@ test('obtenerNotas groups selected NOC and NIC under each note diagnosis', async
     assert.equal(nota.planCuidados[0].comentario, 'Hallazgo asociado al diagnóstico');
     assert.deepEqual(nota.planCuidados[0].nocIds, [10]);
     assert.deepEqual(nota.planCuidados[0].nicIds, [20]);
+    assert.deepEqual(nota.planCuidados[0].nocMetas, { 10: 'Meta esperada' });
+    assert.deepEqual(nota.planCuidados[0].nocEvaluaciones, { 10: 'Resultado observado' });
+    assert.deepEqual(nota.planCuidados[0].nicRealizadasIds, [20]);
 });
 
 test('obtenerHistorialVitalsPorAtencion filters and paginates by account id', async (context) => {

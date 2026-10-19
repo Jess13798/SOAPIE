@@ -8,7 +8,7 @@ BEGIN TRY
         CREATE TABLE dbo.NotaEnfermeriaDiagnostico (
             IdNotaEnfermeria INT NOT NULL,
             IdNANDA INT NOT NULL,
-            Comentario NVARCHAR(1000) NOT NULL,
+            Comentario NVARCHAR(1000) NULL,
             CONSTRAINT PK_NotaEnfermeriaDiagnostico
                 PRIMARY KEY (IdNotaEnfermeria, IdNANDA),
             CONSTRAINT FK_NotaEnfermeriaDiagnostico_Nota
@@ -18,6 +18,18 @@ BEGIN TRY
                 FOREIGN KEY (IdNANDA)
                 REFERENCES dbo.Catalogo_NANDA (IdNANDA)
         );
+    END;
+
+    IF EXISTS (
+        SELECT 1
+        FROM sys.columns
+        WHERE object_id = OBJECT_ID(N'dbo.NotaEnfermeriaDiagnostico')
+          AND name = N'Comentario'
+          AND is_nullable = 0
+    )
+    BEGIN
+        ALTER TABLE dbo.NotaEnfermeriaDiagnostico
+            ALTER COLUMN Comentario NVARCHAR(1000) NULL;
     END;
 
     COMMIT TRANSACTION;

@@ -286,11 +286,11 @@ function hidratarPlanCuidados(nota: NotaEnfermeria) {
     for (const noc of item.noc || []) {
       const planLine = lineasPlan.find(line => line.startsWith(`NOC ${noc.codigo}:`))
       const meta = planLine?.match(/\|\s*Meta:\s*(.+)$/)
-      if (meta?.[1]) metas[noc.id] = meta[1]
+      if (!metas[noc.id] && meta?.[1]) metas[noc.id] = meta[1]
 
       const evaluationLine = lineasEvaluacion.find(line => line.startsWith(`NOC ${noc.codigo}:`))
       const evaluation = evaluationLine?.match(/\|\s*Resultado observado:\s*(.+)$/)
-      if (evaluation?.[1]) evaluaciones[noc.id] = evaluation[1]
+      if (!evaluaciones[noc.id] && evaluation?.[1]) evaluaciones[noc.id] = evaluation[1]
     }
 
     const realizadas = (item.nic || [])
@@ -303,6 +303,13 @@ function hidratarPlanCuidados(nota: NotaEnfermeria) {
       nocEvaluaciones: evaluaciones,
       nicRealizadasIds: Array.from(new Set([...(item.nicRealizadasIds || []), ...realizadas])),
     }
+  })
+}
+
+function lineasDiagnosticosNanda() {
+  return planCuidados.value.map(item => {
+    const comentario = item.comentario?.trim()
+    return `NANDA ${item.codigoNANDA}: ${item.diagnostico}${comentario ? ` | Comentario: ${comentario}` : ''}`
   })
 }
 
@@ -644,7 +651,7 @@ function handleSubmit(shouldSign = false) {
     },
     subjetivo: form.s,
     objetivo: form.o,
-    analisis: bloqueEstructurado(form.a, 'DIAGNOSTICOS NANDA', []),
+    analisis: bloqueEstructurado(form.a, 'DIAGNOSTICOS NANDA', lineasDiagnosticosNanda()),
     plan: bloqueEstructurado(form.p, 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS', lineasPlan()),
     intervencion: bloqueEstructurado(form.i, 'INTERVENCIONES NIC REALIZADAS', lineasIntervencionesRealizadas()),
     evaluacion: bloqueEstructurado(form.e, 'EVALUACION DE RESULTADOS NOC', lineasEvaluacion()),
