@@ -43,8 +43,7 @@ export function usePatients() {
 
   async function cargarPacientes(servicioId: string = '') {
     // Sin servicio seleccionado: lista vacía (el usuario elige desde el buscador).
-    // Con 'todos' o un servicio concreto se consulta al backend, que devuelve
-    // todos los servicios cuando no recibe filtro.
+    // Con un servicio concreto se consulta al backend.
     if (!servicioId) {
       pacientes.value = []
       selectedPatient.value = null

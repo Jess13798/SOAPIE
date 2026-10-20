@@ -229,15 +229,13 @@ const pacientesSinCama = ref<PacienteSinCama[]>([])
 const loadingPacientesSinCama = ref(false)
 
 const servicioNombreSeleccionado = computed(() => {
-  if (!props.servicioSeleccionado || props.servicioSeleccionado === 'todos') return ''
+  if (!props.servicioSeleccionado) return ''
   const servicio = props.servicios?.find(s => String(s.IdServicio) === String(props.servicioSeleccionado))
   return servicio?.Nombre || ''
 })
 
 async function cargarPacientesSinCama() {
-  // Sin servicio seleccionado no se consulta todavía. Con 'todos' o un
-  // servicio concreto se pide la lista; el backend devuelve todos si no
-  // recibe el nombre del servicio.
+  // Sin servicio seleccionado no se consulta todavía.
   if (!props.servicioSeleccionado) {
     pacientesSinCama.value = []
     loadingPacientesSinCama.value = false
@@ -246,7 +244,7 @@ async function cargarPacientesSinCama() {
 
   // Servicio concreto cuyo nombre aún no está resuelto (esperando la lista de
   // servicios): se reintentará cuando llegue la lista.
-  if (props.servicioSeleccionado !== 'todos' && !servicioNombreSeleccionado.value) {
+  if (!servicioNombreSeleccionado.value) {
     loadingPacientesSinCama.value = false
     return
   }

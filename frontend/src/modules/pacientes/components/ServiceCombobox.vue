@@ -34,14 +34,6 @@
         :style="estiloDropdown"
         class="fixed z-50 max-h-64 overflow-auto rounded-lg border border-slate-200 bg-white py-1 text-xs shadow-lg"
       >
-        <li
-          class="cursor-pointer px-3 py-1.5 font-semibold text-slate-500 hover:bg-sky-50"
-          @mousedown.prevent
-          @click="seleccionar(null)"
-        >
-          Todos los servicios
-        </li>
-
         <li v-if="filtrados.length === 0" class="px-3 py-2 italic text-slate-400">
           Sin resultados
         </li>
@@ -149,14 +141,9 @@ function onInput() {
   nextTick(actualizarPosicion)
 }
 
-function seleccionar(servicio: Servicio | null) {
-  if (servicio) {
-    emit('update:modelValue', String(servicio.IdServicio))
-    query.value = servicio.Nombre
-  } else {
-    emit('update:modelValue', 'todos')
-    query.value = ''
-  }
+function seleccionar(servicio: Servicio) {
+  emit('update:modelValue', String(servicio.IdServicio))
+  query.value = servicio.Nombre
   abierto.value = false
   indiceResaltado.value = -1
 }

@@ -152,8 +152,8 @@ async function fetchMedicos() {
   try {
     loadingMedicos.value = true
     medicosError.value = ''
-    // Sin especialidad (filtro "Todos los servicios") se cargan todos los
-    // médicos del hospital, para que el desplegable no quede vacío.
+    // Si el paciente no trae especialidad, se cargan todos los médicos del
+    // hospital para que el desplegable no quede vacío.
     const data = especialidadId
       ? await catalogosService.getMedicosPorEspecialidad(String(especialidadId))
       : await catalogosService.getTodosLosMedicos()
@@ -172,7 +172,7 @@ const servicioActual = computed(() => {
   if (pacientes.value.length > 0 && pacientes.value[0].servicio) {
     return pacientes.value[0].servicio
   }
-  return 'Todos los servicios'
+  return 'Sin servicio seleccionado'
 })
 
 const filteredMedicos = computed(() => {

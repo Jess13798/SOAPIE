@@ -125,7 +125,7 @@ export interface PacienteBusqueda {
 
 export const pacientesService = {
     getPacientes(servicioId?: string): Promise<PacienteBD[]> {
-        const query = servicioId && servicioId !== 'todos' ? `?servicioId=${encodeURIComponent(servicioId)}` : ''
+        const query = servicioId ? `?servicioId=${encodeURIComponent(servicioId)}` : ''
         return request<PacienteBD[]>(`/pacientes${query}`)
     },
 
@@ -329,8 +329,8 @@ export const catalogosService = {
         return request<Medico[]>(`/medicos?especialidadId=${encodeURIComponent(especialidadId)}`)
     },
 
-    // Sin especialidad devuelve todos los médicos del hospital (para el filtro
-    // "Todos los servicios", donde no hay una especialidad concreta).
+    // Devuelve todos los médicos del hospital cuando el paciente no trae
+    // especialidad (así el desplegable de médico no queda vacío).
     getTodosLosMedicos(): Promise<Medico[]> {
         return request<Medico[]>('/medicos')
     },
