@@ -84,6 +84,7 @@ export function useDashboard({
     if (successModalType.value === 'transferencia') return 'TRANSFERENCIA GUARDADA'
     if (successModalType.value === 'nota-temporal') return 'NOTA VISIBLE SOLO EN ESTA SESIÓN'
     if (successModalType.value === 'nota-pendiente') return 'CAMBIOS NO GUARDADOS EN SQL SERVER'
+    if (successModalType.value === 'nota-editada-sin-toma') return 'SOAPIE ACTUALIZADO'
     return 'SE REGISTRO'
   })
 

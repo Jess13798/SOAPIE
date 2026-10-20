@@ -1,11 +1,13 @@
 // Lógica pura del plan de cuidados (NANDA / NOC / NIC) de una nota SOAPIE.
 // Vive aparte de los componentes para poder probarse sin montar Vue.
 //
-// Persistencia: el backend solo guarda `idNANDA`, `comentario`, `nocIds` y
-// `nicIds` (columnas de dbo.NotaEnfermeriaPlanCuidado). El estado de ejecución
-// de cada NIC y las metas/evaluaciones de cada NOC viajan dentro del TEXTO de la
-// nota, en los bloques `[...]` de las secciones P / I / E, y se reconstruyen al
-// reabrir la nota.
+// Persistencia: el backend guarda el plan en las tablas normalizadas
+// `dbo.NotaEnfermeriaPlanNOC` (meta y resultado observado por NOC) y
+// `dbo.NotaEnfermeriaPlanNIC` (realizada + motivo por NIC), además de
+// `dbo.NotaEnfermeriaDiagnostico`. La meta/evaluación y el estado de cada NIC
+// TAMBIÉN viajan dentro del TEXTO de la nota (bloques `[...]` de P / I / E):
+// el texto es el respaldo legible y permite recuperar los datos cuando una
+// nota vieja no tiene filas en las tablas.
 
 import type { NotaEnfermeria, PlanCuidadoNota } from '@/types'
 

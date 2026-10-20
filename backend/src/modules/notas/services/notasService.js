@@ -22,15 +22,40 @@ function nullableInteger(value, fieldName, required = false) {
 
 function nullableDecimal(value, fieldName, maximum = 999.99) {
     if (value === undefined || value === null || value === '') return null;
+    if (typeof value === 'string') {
+        value = value.trim();
+        if (!value) return null;
+        if (!/^\d+(\.\d{1,2})?$/.test(value)) {
+            throw inputError(`${fieldName} debe ser numérico y tener hasta dos decimales.`);
+        }
+    } else if (typeof value !== 'number') {
+        throw inputError(`${fieldName} debe ser numérico.`);
+    }
+
     const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 0 || parsed > maximum) {
-        throw inputError(`${fieldName} debe ser un valor numérico entre 0 y ${maximum}.`);
+    if (
+        !Number.isFinite(parsed)
+        || parsed < 0
+        || parsed > maximum
+        || Number(parsed.toFixed(2)) !== parsed
+    ) {
+        throw inputError(`${fieldName} debe ser un valor entre 0 y ${maximum}, con hasta dos decimales.`);
     }
     return parsed;
 }
 
 function nullablePositiveNumber(value, fieldName) {
     if (value === undefined || value === null || value === '') return null;
+    if (typeof value === 'string') {
+        value = value.trim();
+        if (!value) return null;
+        if (!/^\d+$/.test(value)) {
+            throw inputError(`${fieldName} debe ser un número entero no negativo.`);
+        }
+    } else if (typeof value !== 'number') {
+        throw inputError(`${fieldName} debe ser un número entero no negativo.`);
+    }
+
     const parsed = Number(value);
     if (!Number.isInteger(parsed) || parsed < 0 || parsed > 2147483647) {
         throw inputError(`${fieldName} debe ser un número entero válido.`);
@@ -43,6 +68,10 @@ function normalizeBloodPressure(value) {
     if (typeof value !== 'string' || value.length > 10 || !/^\d{1,3}\/\d{1,3}$/.test(value)) {
         throw inputError('La presión arterial debe tener el formato sistólica/diastólica.');
     }
+    const [systolic, diastolic] = value.split('/').map(Number);
+    if (systolic <= diastolic || diastolic === 0) {
+        throw inputError('La presión arterial debe tener la sistólica mayor que la diastólica.');
+    }
     return value;
 }
 
@@ -52,6 +81,30 @@ function normalizeComentarioDiagnostico(value) {
         throw inputError('El comentario del diagnóstico debe ser texto de hasta 1000 caracteres.');
     }
     return value.trim() || null;
+}
+
+function normalizeTextMap(value, fieldName, maximumLength) {
+    if (value === undefined || value === null) return {};
+    if (typeof value !== 'object' || Array.isArray(value)) {
+        throw inputError(`${fieldName} debe ser un objeto de textos.`);
+    }
+
+    const normalized = {};
+    for (const [key, text] of Object.entries(value)) {
+        const id = nullableInteger(key, `${fieldName} Id`, true);
+        if (typeof text !== 'string' || text.length > maximumLength) {
+            throw inputError(`${fieldName} debe contener textos de hasta ${maximumLength} caracteres.`);
+        }
+        if (text.trim()) normalized[id] = text.trim();
+    }
+    return normalized;
+}
+
+function requiredClinicalText(value, fieldName) {
+    if (typeof value !== 'string' || !value.trim()) {
+        throw inputError(`La sección ${fieldName} es obligatoria.`);
+    }
+    return value;
 }
 
 function sqlDateTime(fecha, hora, fieldName) {
@@ -93,6 +146,10 @@ function normalizePlanCuidados(planCuidados = []) {
             comentario: null,
             nocIds: new Set(),
             nicIds: new Set(),
+            nicRealizadasIds: new Set(),
+            nicNoRealizadas: {},
+            nocMetas: {},
+            nocEvaluaciones: {},
         };
         if (item.comentario !== undefined) {
             diagnosis.comentario = normalizeComentarioDiagnostico(item.comentario);
@@ -103,21 +160,64 @@ function normalizePlanCuidados(planCuidados = []) {
         if (item.nicIds !== undefined && !Array.isArray(item.nicIds)) {
             throw inputError('nicIds debe ser una lista.');
         }
+        if (item.nicRealizadasIds !== undefined && !Array.isArray(item.nicRealizadasIds)) {
+            throw inputError('nicRealizadasIds debe ser una lista.');
+        }
         for (const id of item.nocIds || []) {
             diagnosis.nocIds.add(nullableInteger(id, 'IdNOC', true));
         }
         for (const id of item.nicIds || []) {
             diagnosis.nicIds.add(nullableInteger(id, 'IdNIC', true));
         }
+        for (const id of item.nicRealizadasIds || []) {
+            diagnosis.nicRealizadasIds.add(nullableInteger(id, 'IdNIC realizada', true));
+        }
+        // Motivo por el que una NIC planificada no se realizó. Viaja como mapa
+        // { idNIC: motivo }; solo se aceptan motivos de NIC planificadas.
+        if (item.nicNoRealizadas !== undefined && (typeof item.nicNoRealizadas !== 'object' || item.nicNoRealizadas === null || Array.isArray(item.nicNoRealizadas))) {
+            throw inputError('nicNoRealizadas debe ser un objeto { idNIC: motivo }.');
+        }
+        Object.assign(diagnosis.nicNoRealizadas, normalizeTextMap(item.nicNoRealizadas, 'nicNoRealizadas', 500));
+        Object.assign(diagnosis.nocMetas, normalizeTextMap(item.nocMetas, 'nocMetas', 250));
+        Object.assign(
+            diagnosis.nocEvaluaciones,
+            normalizeTextMap(item.nocEvaluaciones, 'nocEvaluaciones', 500),
+        );
         diagnoses.set(idNANDA, diagnosis);
     }
 
-    return Array.from(diagnoses.values(), item => ({
-        idNANDA: item.idNANDA,
-        comentario: item.comentario,
-        nocIds: Array.from(item.nocIds),
-        nicIds: Array.from(item.nicIds),
-    }));
+    return Array.from(diagnoses.values(), item => {
+        const nicRealizadasIds = Array.from(item.nicRealizadasIds);
+        if (nicRealizadasIds.some(id => !item.nicIds.has(id))) {
+            throw inputError('Toda NIC realizada debe estar seleccionada como intervención planificada.');
+        }
+        const nocIds = Array.from(item.nocIds);
+        const nocIdSet = new Set(nocIds);
+
+        // Solo tiene sentido el motivo de una NIC planificada y NO realizada.
+        const nicNoRealizadas = Object.fromEntries(
+            Object.entries(item.nicNoRealizadas).filter(([id, motivo]) => (
+                item.nicIds.has(Number(id))
+                && !item.nicRealizadasIds.has(Number(id))
+                && String(motivo || '').trim()
+            )),
+        );
+
+        return {
+            idNANDA: item.idNANDA,
+            comentario: item.comentario,
+            nocIds,
+            nicIds: Array.from(item.nicIds),
+            nicRealizadasIds,
+            nicNoRealizadas,
+            nocMetas: Object.fromEntries(
+                Object.entries(item.nocMetas).filter(([id]) => nocIdSet.has(Number(id))),
+            ),
+            nocEvaluaciones: Object.fromEntries(
+                Object.entries(item.nocEvaluaciones).filter(([id]) => nocIdSet.has(Number(id))),
+            ),
+        };
+    });
 }
 
 // La fecha y hora de firma las pone el SERVIDOR (no el reloj del equipo del
@@ -158,12 +258,12 @@ async function guardarNota(nota) {
         turno: turnoDesdeHora(fechaInicio),
         fechaInicio,
         fechaFin: getSignedDateTime(nota),
-        subjetivo: nota.subjetivo ?? '',
-        objetivo: nota.objetivo ?? '',
-        analisis: nota.analisis ?? '',
-        plan: nota.plan ?? '',
-        intervencion: nota.intervencion ?? '',
-        evaluacion: nota.evaluacion ?? '',
+        subjetivo: requiredClinicalText(nota.subjetivo, 'Subjetivo'),
+        objetivo: requiredClinicalText(nota.objetivo, 'Objetivo'),
+        analisis: typeof nota.analisis === 'string' ? nota.analisis : '',
+        plan: requiredClinicalText(nota.plan, 'Plan'),
+        intervencion: requiredClinicalText(nota.intervencion, 'Intervención'),
+        evaluacion: requiredClinicalText(nota.evaluacion, 'Evaluación'),
         signosVitales: {
             peso: nullableDecimal(signos.peso, 'peso'),
             talla: nullableDecimal(signos.talla, 'talla'),
@@ -180,11 +280,40 @@ async function guardarNota(nota) {
         fechaHora: ahora,
     };
 
+    if (!valores.analisis.trim() && valores.planCuidados.length === 0) {
+        throw inputError('La sección Análisis requiere texto o al menos un diagnóstico NANDA.');
+    }
+
+    if (idNota === null) {
+        const requiredVitales = [
+            ['peso', valores.signosVitales.peso],
+            ['talla', valores.signosVitales.talla],
+            ['perímetro cefálico', valores.signosVitales.pCefalico],
+            ['perímetro abdominal', valores.signosVitales.pAbdominal],
+            ['hemoglucotest', valores.signosVitales.hemoglucotest],
+            ['presión arterial', valores.signosVitales.presionArterial],
+            ['frecuencia cardiaca', valores.signosVitales.frecuenciaCardiaca],
+            ['frecuencia respiratoria', valores.signosVitales.frecuenciaRespiratoria],
+            ['temperatura', valores.signosVitales.temperatura],
+            ['saturación de oxígeno', valores.signosVitales.saturacionOxigeno],
+        ];
+        const missingVital = requiredVitales.find(([, value]) => value === null);
+        if (missingVital) {
+            throw inputError(`El signo vital ${missingVital[0]} es obligatorio al crear una nota.`);
+        }
+    }
+
+    if (valores.signosVitales.saturacionOxigeno !== null && valores.signosVitales.saturacionOxigeno > 100) {
+        throw inputError('La saturación de oxígeno debe estar entre 0 y 100%.');
+    }
+
     try {
-        const id = await notasRepository.guardarNotaCompleta(valores);
+        const result = await notasRepository.guardarNotaCompleta(valores);
+        const id = typeof result === 'object' && result !== null ? result.id : result;
+        const vitalesRegistrados = typeof result === 'object' && result !== null ? result.vitalesRegistrados : undefined;
         // Se devuelve el turno calculado para que el frontend muestre el mismo
         // valor que quedó guardado en la base de datos.
-        return { success: true, id, turno: valores.turno };
+        return { success: true, id, turno: valores.turno, vitalesRegistrados };
     } catch (error) {
         console.error('Error al guardar nota:', error.message);
         throw error;
@@ -260,6 +389,10 @@ async function obtenerNotas() {
                     comentario: row.PlanComentarioNANDA || '',
                     nocIds: [],
                     nicIds: [],
+                    nicRealizadasIds: [],
+                    nicNoRealizadas: {},
+                    nocMetas: {},
+                    nocEvaluaciones: {},
                     noc: [],
                     nic: [],
                 };
@@ -267,6 +400,10 @@ async function obtenerNotas() {
             }
             if (row.PlanIdNOC != null) {
                 if (!plan.nocIds.includes(row.PlanIdNOC)) plan.nocIds.push(row.PlanIdNOC);
+                if (row.PlanMetaNOC != null) plan.nocMetas[row.PlanIdNOC] = row.PlanMetaNOC;
+                if (row.PlanResultadoObservadoNOC != null) {
+                    plan.nocEvaluaciones[row.PlanIdNOC] = row.PlanResultadoObservadoNOC;
+                }
                 addUnique(plan.noc, {
                     id: row.PlanIdNOC,
                     codigo: row.PlanCodigoNOC,
@@ -276,6 +413,12 @@ async function obtenerNotas() {
             }
             if (row.PlanIdNIC != null) {
                 if (!plan.nicIds.includes(row.PlanIdNIC)) plan.nicIds.push(row.PlanIdNIC);
+                if (row.PlanNICRealizada && !plan.nicRealizadasIds.includes(row.PlanIdNIC)) {
+                    plan.nicRealizadasIds.push(row.PlanIdNIC);
+                }
+                if (!row.PlanNICRealizada && row.PlanNICMotivo) {
+                    plan.nicNoRealizadas[row.PlanIdNIC] = row.PlanNICMotivo;
+                }
                 addUnique(plan.nic, {
                     id: row.PlanIdNIC,
                     codigo: row.PlanCodigoNIC,

@@ -136,6 +136,7 @@
           :initial-nota="nota"
           :nota-anterior="notaAnterior"
           :is-read-only="!!nota?.isFirmada"
+          :is-submitting="isSubmitting"
           @save="handleSave"
           @sign="handleSign"
         />
@@ -168,6 +169,7 @@ const props = defineProps<{
   // Nota más reciente del paciente, para heredar el plan de cuidados al crear
   // una nota nueva (el formulario la ignora cuando se está editando `nota`).
   notaAnterior?: NotaEnfermeria | null
+  isSubmitting?: boolean
 }>()
 
 const emit = defineEmits<{

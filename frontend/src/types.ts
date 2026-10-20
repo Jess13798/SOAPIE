@@ -67,7 +67,8 @@ export interface PlanCuidadoNota {
   //   nicRealizadasIds  → NIC ejecutadas.
   //   nicNoRealizadas   → NIC no ejecutadas, con el motivo (puede ir vacío).
   // Un NIC planificado que no aparezca en ninguna de las dos queda "sin registrar".
-  // El backend no persiste estos campos: viajan dentro del texto de la nota.
+  // El backend los persiste en dbo.NotaEnfermeriaPlanNIC (Realizada / Motivo) y
+  // también viajan dentro del texto de la nota como respaldo legible.
   nicRealizadasIds?: number[]
   nicNoRealizadas?: Record<number, string>
   nocMetas?: Record<number, string>
