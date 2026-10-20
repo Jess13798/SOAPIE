@@ -13,7 +13,7 @@ async function getPacientesSinCama(nombreServicio = null) {
         request.input(
             'NombreServicio',
             sql.NVarChar,
-            nombreServicio && nombreServicio !== 'todos' && nombreServicio !== '' ? nombreServicio : null
+            nombreServicio && nombreServicio !== '' ? nombreServicio : null
         );
 
         const query = `

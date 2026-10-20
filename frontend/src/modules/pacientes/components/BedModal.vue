@@ -149,14 +149,15 @@ const editandoMedico = ref(false)
 
 async function fetchMedicos() {
   const especialidadId = props.idEspecialidad
+  if (!especialidadId) {
+    medicos.value = []
+    medicosError.value = 'El servicio no tiene especialidad asociada'
+    return
+  }
   try {
     loadingMedicos.value = true
     medicosError.value = ''
-    // Si el paciente no trae especialidad, se cargan todos los médicos del
-    // hospital para que el desplegable no quede vacío.
-    const data = especialidadId
-      ? await catalogosService.getMedicosPorEspecialidad(String(especialidadId))
-      : await catalogosService.getTodosLosMedicos()
+    const data = await catalogosService.getMedicosPorEspecialidad(String(especialidadId))
     medicos.value = Array.isArray(data) ? data : []
   } catch (err: any) {
     console.error('Error cargando medicos', err)

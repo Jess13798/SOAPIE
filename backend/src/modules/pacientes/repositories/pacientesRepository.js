@@ -70,7 +70,7 @@ async function getPacientesByServicio(servicioId = null) {
 
         const params = [];
 
-        if (servicioId && servicioId !== 'todos') {
+        if (servicioId) {
             params.push({
                 name: 'ServicioId',
                 type: sql.Int,
