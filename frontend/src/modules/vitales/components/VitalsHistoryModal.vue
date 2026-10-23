@@ -12,8 +12,8 @@
             <Book class="h-5 w-5" />
           </div>
           <div>
-            <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Historial de Signos Vitales</h3>
-            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">Registros capturados durante esta atención</p>
+            <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">{{ soloBasicos ? "Vitales Básicos" : "Historial de Signos Vitales" }}</h3>
+            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">{{ soloBasicos ? "SpO₂, P.A., Temp y Pulso" : "Registros capturados durante esta atención" }}</p>
           </div>
         </div>
         
@@ -61,16 +61,16 @@
                 class="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0"
                 :class="idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'"
               >
-                <td class="px-4 py-2.5 text-[11px] font-bold text-slate-700 border-r border-slate-100">{{ (row.TotalCount || history.length) - idx }}</td>
+                <td v-if="!soloBasicos" class="px-4 py-2.5 text-[11px] font-bold text-slate-700 border-r border-slate-100">{{ (row.TotalCount || history.length) - idx }}</td>
                 <td class="px-4 py-2.5 text-[11px] font-black text-slate-700 border-r border-slate-100 tabular-nums">{{ formatFecha(row.Fecha_Hora) }}</td>
-                <td class="px-4 py-2.5 text-[11px] font-bold text-blue-600 border-r border-slate-100">{{ row.Peso }}</td>
-                <td class="px-4 py-2.5 text-[11px] font-bold text-slate-700 border-r border-slate-100">{{ row.Talla }}</td>
-                <td class="px-4 py-2.5 text-[11px] font-bold text-slate-700 border-r border-slate-100">{{ row.P_Cefalico }}</td>
-                <td class="px-4 py-2.5 text-[11px] font-bold text-slate-700 border-r border-slate-100">{{ row.P_Abdominal }}</td>
-                <td class="px-4 py-2.5 text-[11px] font-bold text-slate-700 border-r border-slate-100">{{ row.Hemoglucotest }}</td>
+                <td v-if="!soloBasicos" class="px-4 py-2.5 text-[11px] font-bold text-blue-600 border-r border-slate-100">{{ row.Peso }}</td>
+                <td v-if="!soloBasicos" class="px-4 py-2.5 text-[11px] font-bold text-slate-700 border-r border-slate-100">{{ row.Talla }}</td>
+                <td v-if="!soloBasicos" class="px-4 py-2.5 text-[11px] font-bold text-slate-700 border-r border-slate-100">{{ row.P_Cefalico }}</td>
+                <td v-if="!soloBasicos" class="px-4 py-2.5 text-[11px] font-bold text-slate-700 border-r border-slate-100">{{ row.P_Abdominal }}</td>
+                <td v-if="!soloBasicos" class="px-4 py-2.5 text-[11px] font-bold text-slate-700 border-r border-slate-100">{{ row.Hemoglucotest }}</td>
                 <td class="px-4 py-2.5 text-[11px] font-black text-rose-600 border-r border-slate-100 whitespace-nowrap">{{ row.Presion_Arterial }}</td>
                 <td class="px-4 py-2.5 text-[11px] font-black text-slate-700 border-r border-slate-100">{{ row.Frec_Cardiaca }}</td>
-                <td class="px-4 py-2.5 text-[11px] font-black text-slate-700 border-r border-slate-100">{{ row.Frec_Respiratoria }}</td>
+                <td v-if="!soloBasicos" class="px-4 py-2.5 text-[11px] font-black text-slate-700 border-r border-slate-100">{{ row.Frec_Respiratoria }}</td>
                 <td class="px-4 py-2.5 text-[11px] font-black text-orange-600 border-r border-slate-100">{{ row.Temperatura }}</td>
                 <td class="px-4 py-2.5 text-[11px] font-black text-emerald-600 border-r border-slate-100">{{ row.Saturacion }}</td>
                 <td class="px-4 py-2.5 text-[10px] font-bold text-slate-500">{{ row.NombreEmpleado || 'Sin usuario' }}</td>
@@ -100,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 import { Book, X, Database } from 'lucide-vue-next'
 import { notasService } from '@/services/api'
 import type { SignoVitalHistorial } from '@/types'
@@ -109,6 +109,8 @@ const props = defineProps<{
   isOpen: boolean
   idCuenta: string | number
   registrosTemporales?: SignoVitalHistorial[]
+  // Si es true, muestra solo SpO2, PA, Temp y Pulso (vitales básicos).
+  soloBasicos?: boolean
 }>()
 
 const scrollContainer = ref<HTMLElement | null>(null)
@@ -129,10 +131,11 @@ function registrosLocales() {
   return props.registrosTemporales || []
 }
 
-const headers = [
-  'ID', 'FECHA / HORA', 'PESO', 'TALLA', 'P.CEF', 'P.ABD', 
-  'HEMOG', 'P. ART', 'F.CARD', 'F.RESP', 'TEMP', 'SAT', 'ENFERMERA'
-]
+const headers = computed(() =>
+  props.soloBasicos
+    ? ['FECHA / HORA', 'P. ART', 'F.CARD', 'TEMP', 'SAT', 'ENFERMERA']
+    : ['ID', 'FECHA / HORA', 'PESO', 'TALLA', 'P.CEF', 'P.ABD', 'HEMOG', 'P. ART', 'F.CARD', 'F.RESP', 'TEMP', 'SAT', 'ENFERMERA']
+)
 
 const fetchHistory = async (isLoadMore = false) => {
   historyError.value = ''

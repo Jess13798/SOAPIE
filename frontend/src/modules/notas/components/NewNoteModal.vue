@@ -74,6 +74,16 @@
               <Book class="h-4 w-4" />
             </button>
 
+            <!-- Vitales básicos: disponible siempre, incluso en nota nueva -->
+            <button
+              type="button"
+              @click="showBasicVitals = true"
+              class="flex items-center justify-center w-8 h-8 rounded-md bg-teal-600 text-white hover:bg-teal-700 transition-colors shadow-sm active:scale-95 border border-teal-700"
+              title="Vitales básicos (SpO₂, P.A., Temp, Pulso)"
+            >
+              <Activity class="h-4 w-4" />
+            </button>
+
             <button 
               @click="$emit('close')"
               class="rounded-md p-1 bg-red-500 text-white hover:bg-red-600 transition-colors shadow-sm"
@@ -135,17 +145,25 @@
     :registros-temporales="nota?.historialTemporalSignosVitales || []"
     @close="showVitalsHistory = false"
   />
+  <VitalsHistoryModal
+    :is-open="showBasicVitals"
+    :id-cuenta="patient.numCuenta || ''"
+    :registros-temporales="nota?.historialTemporalSignosVitales || []"
+    :solo-basicos="true"
+    @close="showBasicVitals = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { PlusCircle, X, Clock, Pencil, ClipboardList, Plus, Book } from 'lucide-vue-next'
+import { PlusCircle, X, Clock, Pencil, ClipboardList, Plus, Book, Activity } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
 import NewNoteForm from './NewNoteForm.vue'
 import VitalsHistoryModal from '@/modules/vitales/components/VitalsHistoryModal.vue'
 
 const formRef = ref<InstanceType<typeof NewNoteForm> | null>(null)
 const showVitalsHistory = ref(false)
+const showBasicVitals = ref(false)
 
 const props = defineProps<{
   isOpen: boolean

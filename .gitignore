@@ -20,3 +20,9 @@ backend/out2.json
 .openchamber/
 # PDFs de referencia (hojas de funciones vitales, etc.)
 docs/*.pdf
+
+# Archivos de referencia en docs (hojas de funciones vitales, etc.)
+docs/*.xlsx
+docs/*.jpeg
+docs/*.jpg
+docs/*.png
