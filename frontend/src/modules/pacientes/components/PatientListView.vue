@@ -16,6 +16,7 @@
       <!-- Header con Estadísticas (Subcomponente extraído) -->
       <BedCountersHeader
         title="Lista de Pacientes"
+        :servicio="servicioNombreSeleccionado"
         :total="totalCamas"
         :ocupadas="camasOcupadas"
         :disponibles="camasDisponibles"
@@ -38,11 +39,11 @@
               <table class="w-full min-w-[900px] table-fixed text-left border-collapse">
                 <colgroup>
                   <col class="w-[17%]" />
-                  <col class="w-[22%]" />
-                  <col class="w-[11%]" />
-                  <col class="w-[14%]" />
-                  <col class="w-[14%]" />
-                  <col class="w-[22%]" />
+                  <col class="w-[19%]" />
+                  <col class="w-[10%]" />
+                  <col class="w-[20%]" />
+                  <col class="w-[13%]" />
+                  <col class="w-[21%]" />
                 </colgroup>
                 <thead :class="filteredPatients.length > 8 ? 'sticky top-0 z-10' : ''">
                   <tr class="bg-sky-700 border-b border-sky-700">
@@ -121,7 +122,13 @@
                       <span class="text-sm font-bold text-slate-800 break-words">{{ patient.historiaClinica }}</span>
                     </td>
                     <td class="px-3 py-2.5 text-center">
-                      <span class="text-sm font-bold text-slate-700 break-words">{{ patient.servicio }}</span>
+                      <span
+                        class="inline-flex max-w-full items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-black uppercase leading-tight tracking-tight text-sky-800"
+                        :title="patient.servicio"
+                      >
+                        <Building2 class="h-3 w-3 shrink-0 text-sky-600" />
+                        <span class="break-words">{{ patient.servicio }}</span>
+                      </span>
                     </td>
                     <td class="px-3 py-2.5 text-center">
                       <span
@@ -195,7 +202,7 @@
 import { ref, computed, watch } from 'vue'
 import {
   ChevronDown, FileText, Users, Plus, Pencil,
-  User, Settings2, HeartPulse, BriefcaseMedical, Book
+  User, Settings2, HeartPulse, BriefcaseMedical, Book, Building2
 } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
 import { pacientesService, type PacienteBusqueda, type PacienteSinCama, type Servicio } from '@/services/api'

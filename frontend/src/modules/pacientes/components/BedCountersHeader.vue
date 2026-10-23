@@ -1,7 +1,18 @@
 <template>
   <div class="flex items-center justify-between border-b border-sky-700 bg-sky-800 px-6 py-2.5">
-    <div class="flex items-center gap-3">
-      <h3 class="text-[13px] font-bold text-white uppercase tracking-wide">{{ title || 'Lista de Pacientes' }}</h3>
+    <div class="flex min-w-0 items-center gap-3">
+      <h3 class="shrink-0 text-[13px] font-bold text-white uppercase tracking-wide">{{ title || 'Lista de Pacientes' }}</h3>
+
+      <!-- Servicio seleccionado: se muestra aquí para que esté siempre a la
+           vista mientras se revisan los pacientes y sus notas. -->
+      <span
+        v-if="servicio"
+        class="flex min-w-0 items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-sky-900 shadow-sm"
+        :title="servicio"
+      >
+        <Building2 class="h-3.5 w-3.5 shrink-0 text-sky-600" />
+        <span class="truncate">{{ servicio }}</span>
+      </span>
     </div>
 
     <!-- Un solo rectángulo con Total / Ocupadas / Disponibles: al dar clic abre el resumen de camas -->
@@ -39,10 +50,11 @@
 </template>
 
 <script setup lang="ts">
-import { BedDouble, ChevronRight } from 'lucide-vue-next'
+import { BedDouble, Building2, ChevronRight } from 'lucide-vue-next'
 
 defineProps<{
   title?: string
+  servicio?: string
   total: number
   ocupadas: number
   disponibles: number
