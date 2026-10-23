@@ -145,11 +145,11 @@
     :registros-temporales="nota?.historialTemporalSignosVitales || []"
     @close="showVitalsHistory = false"
   />
-  <VitalsHistoryModal
+  <VitalsChartModal
     :is-open="showBasicVitals"
     :id-cuenta="patient.numCuenta || ''"
+    :patient="patient"
     :registros-temporales="nota?.historialTemporalSignosVitales || []"
-    :solo-basicos="true"
     @close="showBasicVitals = false"
   />
 </template>
@@ -160,6 +160,7 @@ import { PlusCircle, X, Clock, Pencil, ClipboardList, Plus, Book, Activity } fro
 import type { Patient, NotaEnfermeria } from '@/types'
 import NewNoteForm from './NewNoteForm.vue'
 import VitalsHistoryModal from '@/modules/vitales/components/VitalsHistoryModal.vue'
+import VitalsChartModal from '@/modules/vitales/components/VitalsChartModal.vue'
 
 const formRef = ref<InstanceType<typeof NewNoteForm> | null>(null)
 const showVitalsHistory = ref(false)
