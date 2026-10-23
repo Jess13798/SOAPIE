@@ -18,3 +18,5 @@ backend/out2.json
 
 # Capturas temporales de verificación (OpenChamber)
 .openchamber/
+# PDFs de referencia (hojas de funciones vitales, etc.)
+docs/*.pdf
