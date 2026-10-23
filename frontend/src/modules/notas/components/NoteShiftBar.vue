@@ -13,7 +13,6 @@
       >
         {{ turno === 'noche' ? 'Noche (19:00 - 07:00)' : 'Día (07:00 - 19:00)' }}
       </span>
-      <span class="text-[10px] italic text-slate-400">Se detecta solo por la hora</span>
     </div>
 
     <div class="text-xs font-bold text-slate-500">

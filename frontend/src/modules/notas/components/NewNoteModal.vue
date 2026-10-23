@@ -55,6 +55,25 @@
               <span class="text-[10.5px] font-black uppercase tracking-tight">{{ fechaHoraActual }}</span>
             </div>
 
+            <button
+              v-if="nota && !isNaN(Number(nota.id))"
+              @click="showVitalsHistory = true"
+              type="button"
+              class="flex items-center justify-center w-8 h-8 rounded-md bg-slate-500 text-white hover:bg-slate-600 transition-colors shadow-sm active:scale-95 border border-slate-600"
+              title="Historial de Signos Vitales"
+            >
+              <Book class="h-4 w-4" />
+            </button>
+            <button
+              v-else
+              type="button"
+              disabled
+              class="flex items-center justify-center w-8 h-8 rounded-md bg-slate-300 text-slate-400 cursor-not-allowed border border-slate-300"
+              title="Historial disponible al guardar la nota"
+            >
+              <Book class="h-4 w-4" />
+            </button>
+
             <button 
               @click="$emit('close')"
               class="rounded-md p-1 bg-red-500 text-white hover:bg-red-600 transition-colors shadow-sm"
@@ -64,66 +83,6 @@
           </div>
         </div>
 
-        <!-- Info Bar: Patient, Nurse & Clock -->
-        <div class="flex items-center justify-between px-6 py-2 bg-slate-50/30">
-          <div class="flex items-center gap-6">
-            <div class="flex flex-col">
-              <span class="text-[8px] font-bold text-slate-400 uppercase leading-none mb-1">Paciente</span>
-              <span class="text-[10.5px] font-black text-slate-700 uppercase">{{ patient.nombreCompleto || `${patient.nombre} ${patient.apellido}`.trim() }}</span>
-            </div>
-            <div class="h-6 w-[1px] bg-slate-200"></div>
-            <div class="flex flex-col">
-              <!-- Grid to sync the | separator -->
-              <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-center">
-                <span class="text-[8px] font-bold text-slate-400 uppercase leading-none text-right">Cuenta</span>
-                <span class="text-[8px] font-bold text-slate-300">|</span>
-                <span class="text-[8px] font-bold text-slate-400 uppercase leading-none text-left">Hist</span>
-              </div>
-              <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-center mt-1">
-                <span class="text-[10.5px] font-black text-slate-700 text-right">{{ patient.numCuenta }}</span>
-                <span class="text-[10.5px] font-black text-slate-400">|</span>
-                <span class="text-[10.5px] font-black text-slate-700 text-left">{{ patient.historiaClinica }}</span>
-              </div>
-            </div>
-            <div class="h-6 w-[1px] bg-slate-200"></div>
-            <div class="flex flex-col">
-              <span class="text-[8px] font-bold text-slate-400 uppercase leading-none mb-1">Edad</span>
-              <span class="text-[10.5px] font-black text-slate-700">{{ edadPacienteTexto }}</span>
-            </div>
-            <div class="h-6 w-[1px] bg-slate-200"></div>
-            
-            <!-- Enfermero/a Responsable (solo lectura, tomado del login) -->
-            <div class="flex flex-col min-w-[200px]">
-              <span class="text-[8px] font-bold text-slate-400 uppercase leading-none mb-1">Enfermero/a Responsable</span>
-              <span class="text-[10.5px] font-black text-slate-700 uppercase leading-tight">
-                {{ enfermeraMostrada }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Boton + -->
-          <div class="flex items-center gap-2">
-            <!-- Botón Historial — Solo si la nota ya existe en BD -->
-            <button 
-              v-if="nota && !isNaN(Number(nota.id))"
-              @click="showVitalsHistory = true"
-              type="button"
-              class="flex items-center justify-center w-8 h-8 rounded-md bg-slate-500 text-white hover:bg-slate-600 transition-colors shadow-sm active:scale-95 border border-slate-600"
-              title="Historial de Signos Vitales"
-            >
-              <Book class="h-4 w-4" />
-            </button>
-            <button 
-              v-else
-              type="button"
-              disabled
-              class="flex items-center justify-center w-8 h-8 rounded-md bg-slate-300 text-slate-400 cursor-not-allowed border border-slate-300"
-              title="Historial disponible al guardar la nota"
-            >
-              <Book class="h-4 w-4" />
-            </button>
-          </div>
-        </div>
       </div>
 
       <!-- Form Container (scrollable) -->
@@ -140,6 +99,32 @@
           @save="handleSave"
           @sign="handleSign"
         />
+      </div>
+
+      <!-- Pie del modal: solo información del paciente -->
+      <div class="flex shrink-0 flex-wrap items-center justify-center gap-x-6 gap-y-1 border-t border-slate-200 bg-slate-50 px-6 py-2">
+        <div class="flex flex-col">
+          <span class="text-[8px] font-bold text-slate-400 uppercase leading-none mb-1">Paciente</span>
+          <span class="text-[10.5px] font-black text-slate-700 uppercase">{{ patient.nombreCompleto || `${patient.nombre} ${patient.apellido}`.trim() }}</span>
+        </div>
+        <div class="h-6 w-[1px] bg-slate-200"></div>
+        <div class="flex flex-col">
+          <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-center">
+            <span class="text-[8px] font-bold text-slate-400 uppercase leading-none text-right">Cuenta</span>
+            <span class="text-[8px] font-bold text-slate-300">|</span>
+            <span class="text-[8px] font-bold text-slate-400 uppercase leading-none text-left">Hist</span>
+          </div>
+          <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-center mt-1">
+            <span class="text-[10.5px] font-black text-slate-700 text-right">{{ patient.numCuenta }}</span>
+            <span class="text-[10.5px] font-black text-slate-400">|</span>
+            <span class="text-[10.5px] font-black text-slate-700 text-left">{{ patient.historiaClinica }}</span>
+          </div>
+        </div>
+        <div class="h-6 w-[1px] bg-slate-200"></div>
+        <div class="flex flex-col">
+          <span class="text-[8px] font-bold text-slate-400 uppercase leading-none mb-1">Edad</span>
+          <span class="text-[10.5px] font-black text-slate-700">{{ edadPacienteTexto }}</span>
+        </div>
       </div>
     </div>
   </div>
