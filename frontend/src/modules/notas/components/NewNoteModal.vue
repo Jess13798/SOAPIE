@@ -83,6 +83,31 @@
           </div>
         </div>
 
+        <!-- Datos del paciente: siempre visibles -->
+        <div class="flex flex-wrap items-center justify-start gap-x-6 gap-y-1 border-t border-slate-100 bg-slate-50/60 px-6 py-2">
+          <div class="flex flex-col">
+            <span class="text-[8px] font-bold text-slate-400 uppercase leading-none mb-1">Paciente</span>
+            <span class="text-[10.5px] font-black text-slate-700 uppercase">{{ patient.nombreCompleto || `${patient.nombre} ${patient.apellido}`.trim() }}</span>
+          </div>
+          <div class="h-6 w-[1px] bg-slate-200"></div>
+          <div class="flex flex-col">
+            <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-center">
+              <span class="text-[8px] font-bold text-slate-400 uppercase leading-none text-right">Cuenta</span>
+              <span class="text-[8px] font-bold text-slate-300">|</span>
+              <span class="text-[8px] font-bold text-slate-400 uppercase leading-none text-left">Hist</span>
+            </div>
+            <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-center mt-1">
+              <span class="text-[10.5px] font-black text-slate-700 text-right">{{ patient.numCuenta }}</span>
+              <span class="text-[10.5px] font-black text-slate-400">|</span>
+              <span class="text-[10.5px] font-black text-slate-700 text-left">{{ patient.historiaClinica }}</span>
+            </div>
+          </div>
+          <div class="h-6 w-[1px] bg-slate-200"></div>
+          <div class="flex flex-col">
+            <span class="text-[8px] font-bold text-slate-400 uppercase leading-none mb-1">Edad</span>
+            <span class="text-[10.5px] font-black text-slate-700">{{ edadPacienteTexto }}</span>
+          </div>
+        </div>
       </div>
 
       <!-- Form Container (scrollable) -->
@@ -101,31 +126,6 @@
         />
       </div>
 
-      <!-- Pie del modal: solo información del paciente -->
-      <div class="flex shrink-0 flex-wrap items-center justify-center gap-x-6 gap-y-1 border-t border-slate-200 bg-slate-50 px-6 py-2">
-        <div class="flex flex-col">
-          <span class="text-[8px] font-bold text-slate-400 uppercase leading-none mb-1">Paciente</span>
-          <span class="text-[10.5px] font-black text-slate-700 uppercase">{{ patient.nombreCompleto || `${patient.nombre} ${patient.apellido}`.trim() }}</span>
-        </div>
-        <div class="h-6 w-[1px] bg-slate-200"></div>
-        <div class="flex flex-col">
-          <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-center">
-            <span class="text-[8px] font-bold text-slate-400 uppercase leading-none text-right">Cuenta</span>
-            <span class="text-[8px] font-bold text-slate-300">|</span>
-            <span class="text-[8px] font-bold text-slate-400 uppercase leading-none text-left">Hist</span>
-          </div>
-          <div class="grid grid-cols-[1fr_auto_1fr] gap-x-2 items-center mt-1">
-            <span class="text-[10.5px] font-black text-slate-700 text-right">{{ patient.numCuenta }}</span>
-            <span class="text-[10.5px] font-black text-slate-400">|</span>
-            <span class="text-[10.5px] font-black text-slate-700 text-left">{{ patient.historiaClinica }}</span>
-          </div>
-        </div>
-        <div class="h-6 w-[1px] bg-slate-200"></div>
-        <div class="flex flex-col">
-          <span class="text-[8px] font-bold text-slate-400 uppercase leading-none mb-1">Edad</span>
-          <span class="text-[10.5px] font-black text-slate-700">{{ edadPacienteTexto }}</span>
-        </div>
-      </div>
     </div>
   </div>
   <VitalsHistoryModal
