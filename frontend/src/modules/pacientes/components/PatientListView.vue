@@ -38,12 +38,11 @@
             <div :class="filteredPatients.length > 8 ? 'max-h-[560px] overflow-y-auto' : ''">
               <table class="w-full min-w-[900px] table-fixed text-left border-collapse">
                 <colgroup>
-                  <col class="w-[17%]" />
-                  <col class="w-[19%]" />
-                  <col class="w-[10%]" />
                   <col class="w-[20%]" />
+                  <col class="w-[24%]" />
                   <col class="w-[13%]" />
-                  <col class="w-[21%]" />
+                  <col class="w-[16%]" />
+                  <col class="w-[27%]" />
                 </colgroup>
                 <thead :class="filteredPatients.length > 8 ? 'sticky top-0 z-10' : ''">
                   <tr class="bg-sky-700 border-b border-sky-700">
@@ -62,12 +61,6 @@
                       <div class="flex items-center justify-center gap-1">
                         <FileText class="h-3.5 w-3.5" />
                         <span>Historia</span>
-                      </div>
-                    </th>
-                    <th class="bg-sky-700 px-3 py-2 text-center text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">
-                      <div class="flex items-center justify-center gap-1">
-                        <BriefcaseMedical class="h-3.5 w-3.5" />
-                        <span>Servicio</span>
                       </div>
                     </th>
                     <th class="bg-sky-700 px-3 py-2 text-center text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">
@@ -120,15 +113,6 @@
                     </td>
                     <td class="px-3 py-2.5 text-center">
                       <span class="text-sm font-bold text-slate-800 break-words">{{ patient.historiaClinica }}</span>
-                    </td>
-                    <td class="px-3 py-2.5 text-center">
-                      <span
-                        class="inline-flex max-w-full items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-black uppercase leading-tight tracking-tight text-sky-800"
-                        :title="patient.servicio"
-                      >
-                        <Building2 class="h-3 w-3 shrink-0 text-sky-600" />
-                        <span class="break-words">{{ patient.servicio }}</span>
-                      </span>
                     </td>
                     <td class="px-3 py-2.5 text-center">
                       <span
@@ -202,7 +186,7 @@
 import { ref, computed, watch } from 'vue'
 import {
   ChevronDown, FileText, Users, Plus, Pencil,
-  User, Settings2, HeartPulse, BriefcaseMedical, Book, Building2
+  User, Settings2, HeartPulse, Book
 } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
 import { pacientesService, type PacienteBusqueda, type PacienteSinCama, type Servicio } from '@/services/api'

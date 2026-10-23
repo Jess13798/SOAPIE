@@ -78,6 +78,7 @@
                 class="h-full rounded-none border-0 shadow-none"
                 :notas="notas"
                 :selected-patient="selectedPatient"
+                :servicio-id="servicioSeleccionado"
                 @view-note="handleViewNote($event, selectedPatient)"
               />
             </template>
@@ -219,7 +220,7 @@ const {
   ultimaNotaDePaciente,
   guardarNota,
   firmarNota,
-} = useNotes(pacientes)
+} = useNotes(pacientes, servicioSeleccionado)
 
 // Plan de cuidados heredado: al crear una nota nueva se precargan los
 // diagnósticos NOC/NIC de la última nota del paciente (el formulario lo ignora

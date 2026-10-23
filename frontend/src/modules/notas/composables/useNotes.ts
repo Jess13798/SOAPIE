@@ -54,7 +54,7 @@ function hasVitalChanges(next: NotaEnfermeria, previous?: NotaEnfermeria) {
   ))
 }
 
-export function useNotes(pacientes: Ref<Patient[]>) {
+export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<string>) {
   const notas = ref<NotaEnfermeria[]>([])
   const isNewNoteModalOpen = ref(false)
   const patientForNewNote = ref<Patient | null>(null)
@@ -100,11 +100,18 @@ export function useNotes(pacientes: Ref<Patient[]>) {
   // heredar el plan de cuidados NANDA/NOC/NIC al crear una nota nueva.
   function ultimaNotaDePaciente(patient: Patient | null): NotaEnfermeria | null {
     if (!patient) return null
-    const propias = notas.value.filter(nota =>
-      String(nota.pacienteId) === String(patient.id) ||
-      (patient.numCuenta && String(patient.numCuenta) === String(nota.pacienteId)) ||
-      (patient.numCuenta && String(patient.numCuenta) === String(nota.idCuenta))
-    )
+    const servicioId = servicioSeleccionado?.value || ''
+    const propias = notas.value.filter(nota => {
+      const esDelPaciente =
+        String(nota.pacienteId) === String(patient.id) ||
+        (patient.numCuenta && String(patient.numCuenta) === String(nota.pacienteId)) ||
+        (patient.numCuenta && String(patient.numCuenta) === String(nota.idCuenta))
+      if (!esDelPaciente) return false
+      // El plan se hereda solo de notas del mismo servicio: lo escrito en
+      // pediatría no debe precargarse cuando el paciente está en cirugía.
+      if (!servicioId) return true
+      return nota.servicioId != null && String(nota.servicioId) === String(servicioId)
+    })
     if (!propias.length) return null
     return [...propias].sort((a, b) => `${b.fecha}T${b.hora}`.localeCompare(`${a.fecha}T${a.hora}`))[0]
   }
@@ -122,10 +129,14 @@ export function useNotes(pacientes: Ref<Patient[]>) {
     }
 
     const patient = pacientes.value.find(p => String(p.id) === String(nota.pacienteId))
+    // La nota nace en el servicio que está viendo la enfermera. Al editar se
+    // conserva el servicio original de la nota.
+    const servicioId = nota.servicioId ?? (servicioSeleccionado?.value || '')
     const payload = {
       ...nota,
       idCuenta: nota.idCuenta || patient?.numCuenta || '',
       idEmpleado: sessionStorage.getItem('idEmpleado') || '',
+      servicioId,
     }
 
     try {
@@ -140,6 +151,7 @@ export function useNotes(pacientes: Ref<Patient[]>) {
         // El servidor decide el turno según la hora; se refleja lo que guardó.
         turno: data.turno || nota.turno,
         id: String(data.id),
+        servicioId: data.servicioId ?? (Number(servicioId) || null),
         estadoGuardado: 'guardada' as const,
         historialTemporalSignosVitales: [],
       }
@@ -171,6 +183,7 @@ export function useNotes(pacientes: Ref<Patient[]>) {
         : /^\d+$/.test(nota.id)
       const notaTemporal: NotaEnfermeria = {
         ...nota,
+        servicioId: nota.servicioId ?? (Number(servicioId) || null),
         estadoGuardado: esNotaPersistida
           ? 'cambios-pendientes'
           : 'temporal',

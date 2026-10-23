@@ -109,6 +109,8 @@ export interface NotaEnfermeria {
   id: string
   pacienteId: string
   idCuenta?: string
+  servicioId?: number | null
+  servicio?: string
   fecha: string
   hora: string
   turno: 'dia' | 'noche'

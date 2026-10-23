@@ -14,6 +14,7 @@ function bindNota(request, nota) {
     request.input('idCuenta', sql.Int, nota.idCuenta);
     request.input('idPaciente', sql.Int, nota.idPaciente);
     request.input('idEmpleado', sql.Int, nota.idEmpleado);
+    request.input('idServicio', sql.Int, nota.idServicio);
     request.input('turno', sql.VarChar(10), nota.turno);
     request.input('fechaInicio', sql.DateTime, nota.fechaInicio);
     request.input('fechaFin', sql.DateTime, nota.fechaFin);
@@ -49,6 +50,7 @@ async function guardarNotaCompleta(nota) {
 
     try {
         let idNota = nota.idNota;
+        let servicioId = null;
         const isNewNote = !idNota;
         const notaRequest = transaction.request();
         bindNota(notaRequest, nota);
@@ -69,27 +71,51 @@ async function guardarNotaCompleta(nota) {
                     Plan_ = @plan,
                     Intervencion = @intervencion,
                     Evaluacion = @evaluacion
+                OUTPUT INSERTED.IdServicio AS IdServicio
                 WHERE IdNotaEnfermeria = @idNota;
             `);
 
             if (updateResult.rowsAffected[0] === 0) {
                 throw createRepositoryError(NOTA_NOT_FOUND, 'La nota SOAPIE solicitada no existe.');
             }
+            // El servicio no se toca al editar: la nota pertenece al servicio
+            // donde se escribió, aunque el paciente ya se haya trasladado.
+            servicioId = updateResult.recordset[0]?.IdServicio ?? null;
         } else {
             const insertResult = await notaRequest.query(`
+                -- El servicio se toma de la estancia abierta del paciente.
+                -- Si no hay estancia abierta (paciente sin cama), se usa el
+                -- servicio que envía la pantalla.
+                DECLARE @servicioNota INT = NULL;
+
+                IF @idCuenta IS NOT NULL
+                BEGIN
+                    SELECT TOP (1) @servicioNota = eh.IdServicio
+                    FROM dbo.AtencionesEstanciaHospitalaria AS eh
+                    INNER JOIN dbo.Atenciones AS a
+                        ON a.IdAtencion = eh.IdAtencion
+                    WHERE a.IdCuentaAtencion = @idCuenta
+                      AND eh.FechaDesocupacion IS NULL
+                    ORDER BY eh.Secuencia DESC;
+                END
+
+                IF @servicioNota IS NULL SET @servicioNota = @idServicio;
+
                 INSERT INTO dbo.NotaEnfermeria (
-                    IdCuenta, IdPaciente, IdEmpleado, Turno,
+                    IdCuenta, IdPaciente, IdEmpleado, Turno, IdServicio,
                     Fecha_Hora_Inicio, Fecha_Hora_Fin, Subjetivo, Objetivo,
                     Analisis, Plan_, Intervencion, Evaluacion
                 )
-                OUTPUT INSERTED.IdNotaEnfermeria AS IdNotaEnfermeria
+                OUTPUT INSERTED.IdNotaEnfermeria AS IdNotaEnfermeria,
+                       INSERTED.IdServicio AS IdServicio
                 VALUES (
-                    @idCuenta, @idPaciente, @idEmpleado, @turno,
+                    @idCuenta, @idPaciente, @idEmpleado, @turno, @servicioNota,
                     @fechaInicio, @fechaFin, @subjetivo, @objetivo,
                     @analisis, @plan, @intervencion, @evaluacion
                 );
             `);
             idNota = insertResult.recordset[0].IdNotaEnfermeria;
+            servicioId = insertResult.recordset[0].IdServicio ?? null;
         }
 
         let vitalesRegistrados = isNewNote;
@@ -177,7 +203,7 @@ async function guardarNotaCompleta(nota) {
         }
 
         await transaction.commit();
-        return { id: idNota, vitalesRegistrados };
+        return { id: idNota, vitalesRegistrados, servicioId };
     } catch (error) {
         await transaction.rollback();
         throw error;
@@ -350,6 +376,8 @@ const NOTAS_QUERY = `
         n.IdCuenta,
         n.IdPaciente,
         n.IdEmpleado,
+        n.IdServicio,
+        servicio.Nombre AS Servicio,
         LTRIM(RTRIM(
             ISNULL(e.ApellidoPaterno, '') + ' ' +
             ISNULL(e.ApellidoMaterno, '') + ' ' +
@@ -393,6 +421,8 @@ const NOTAS_QUERY = `
     FROM dbo.NotaEnfermeria AS n
     LEFT JOIN dbo.Empleados AS e
         ON e.IdEmpleado = n.IdEmpleado
+    LEFT JOIN dbo.Servicios AS servicio
+        ON servicio.IdServicio = n.IdServicio
     OUTER APPLY (
         SELECT TOP (1) sv.*
         FROM dbo.NotaEnfermeriaSignosVitales AS sv

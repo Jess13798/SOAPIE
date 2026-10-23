@@ -69,7 +69,7 @@
         <div class="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
           <ClipboardList class="h-5 w-5" />
         </div>
-        <p class="text-xs font-medium text-slate-500">No hay notas para este paciente</p>
+        <p class="text-xs font-medium text-slate-500">No hay notas de este paciente en este servicio</p>
       </div>
     </div>
   </div>
@@ -83,6 +83,7 @@ import type { Patient, NotaEnfermeria } from '@/types'
 const props = defineProps<{
   notas: NotaEnfermeria[]
   selectedPatient: Patient | null
+  servicioId?: string
 }>()
 
 defineEmits<{
@@ -121,8 +122,13 @@ const getNotaTypeColor = (tipo: string) => {
 const selectedPatientNotas = computed(() => {
   if (!props.selectedPatient) return []
 
+  const servicioId = props.servicioId ? String(props.servicioId) : ''
+
   const allPatientNotas = props.notas
     .filter(n => String(n.pacienteId) === String(props.selectedPatient?.id))
+    // El panel es del servicio donde está el paciente: las notas de otro
+    // servicio (pediatría vs. cirugía, por ejemplo) no se mezclan.
+    .filter(n => !servicioId || (n.servicioId != null && String(n.servicioId) === servicioId))
     .sort((a, b) => {
       const dateA = new Date(`${a.fecha}T${a.hora}`)
       const dateB = new Date(`${b.fecha}T${b.hora}`)

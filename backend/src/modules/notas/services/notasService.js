@@ -236,6 +236,9 @@ async function guardarNota(nota) {
     const idCuenta = nullableInteger(nota.idCuenta, 'IdCuenta');
     const idPaciente = nullableInteger(nota.pacienteId, 'IdPaciente', true);
     const idEmpleado = nullableInteger(nota.idEmpleado || nota.IDEMPLEADO, 'IdEmpleado');
+    // Servicio en el que se escribe la nota. El repositorio prioriza la
+    // estancia abierta del paciente; esto queda como respaldo (sin cama).
+    const idServicio = nullableInteger(nota.servicioId, 'IdServicio');
     const idNotaParsed = Number(nota.id);
     const idNota = Number.isInteger(idNotaParsed) && idNotaParsed > 0 && idNotaParsed <= 2147483647
         ? idNotaParsed
@@ -254,6 +257,7 @@ async function guardarNota(nota) {
         idCuenta,
         idPaciente,
         idEmpleado,
+        idServicio,
         // El turno se DERIVA de la hora de la nota; el usuario ya no lo elige.
         turno: turnoDesdeHora(fechaInicio),
         fechaInicio,
@@ -311,9 +315,13 @@ async function guardarNota(nota) {
         const result = await notasRepository.guardarNotaCompleta(valores);
         const id = typeof result === 'object' && result !== null ? result.id : result;
         const vitalesRegistrados = typeof result === 'object' && result !== null ? result.vitalesRegistrados : undefined;
+        const servicioId = typeof result === 'object' && result !== null ? result.servicioId : undefined;
         // Se devuelve el turno calculado para que el frontend muestre el mismo
         // valor que quedó guardado en la base de datos.
-        return { success: true, id, turno: valores.turno, vitalesRegistrados };
+        const respuesta = { success: true, id, turno: valores.turno, vitalesRegistrados };
+        // Solo se informa el servicio cuando el repositorio lo pudo resolver.
+        if (servicioId !== undefined) respuesta.servicioId = servicioId;
+        return respuesta;
     } catch (error) {
         console.error('Error al guardar nota:', error.message);
         throw error;
@@ -349,6 +357,8 @@ async function obtenerNotas() {
                     pacienteId: String(row.IdPaciente ?? ''),
                     idCuenta: String(row.IdCuenta ?? ''),
                     idEmpleado: String(row.IdEmpleado ?? ''),
+                    servicioId: row.IdServicio == null ? null : Number(row.IdServicio),
+                    servicio: row.Servicio || '',
                     turno: row.Turno === 'noche' ? 'noche' : 'dia',
                     enfermera: row.Enfermera || '',
                     fecha: datePart(row.Fecha_Hora_Inicio),

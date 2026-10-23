@@ -258,8 +258,8 @@ export const notasService = {
         return request<NotaEnfermeria[]>('/notas')
     },
 
-    guardarNota(nota: Partial<NotaEnfermeria>): Promise<{ success: boolean; id: string | number; turno?: 'dia' | 'noche'; vitalesRegistrados?: boolean }> {
-        return request<{ success: boolean; id: string | number; turno?: 'dia' | 'noche'; vitalesRegistrados?: boolean }>('/notas', {
+    guardarNota(nota: Partial<NotaEnfermeria>): Promise<{ success: boolean; id: string | number; turno?: 'dia' | 'noche'; vitalesRegistrados?: boolean; servicioId?: number | null }> {
+        return request<{ success: boolean; id: string | number; turno?: 'dia' | 'noche'; vitalesRegistrados?: boolean; servicioId?: number | null }>('/notas', {
             method: 'POST',
             body: JSON.stringify(nota),
         })
