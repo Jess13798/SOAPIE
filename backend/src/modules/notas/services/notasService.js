@@ -1,6 +1,6 @@
 const notasRepository = require('../repositories/notasRepository');
 const { turnoDesdeHora } = require('../../../core/utils/turno');
-const { camposObligatorios } = require('../signosVitalesConfig');
+const { camposObligatorios, rangoDe } = require('../signosVitalesConfig');
 
 function inputError(message) {
     const error = new Error(message);
@@ -312,8 +312,41 @@ async function guardarNota(nota) {
         }
     }
 
-    if (valores.signosVitales.saturacionOxigeno !== null && valores.signosVitales.saturacionOxigeno > 100) {
-        throw inputError('La saturación de oxígeno debe estar entre 0 y 100%.');
+    // Rangos configurados por servicio (min/max). Si no hay configuración se
+    // usan los límites técnicos de porDefecto. Los campos opcionales vacíos
+    // (null) se omiten.
+    const etiquetasRango = {
+        peso: 'peso',
+        talla: 'talla',
+        pCefalico: 'perímetro cefálico',
+        pAbdominal: 'perímetro abdominal',
+        hemoglucotest: 'hemoglucotest',
+        frecuenciaCardiaca: 'frecuencia cardiaca',
+        frecuenciaRespiratoria: 'frecuencia respiratoria',
+        temperatura: 'temperatura',
+        saturacionOxigeno: 'saturación de oxígeno',
+    };
+    for (const campo of ['peso', 'talla', 'pCefalico', 'pAbdominal', 'hemoglucotest',
+                         'frecuenciaCardiaca', 'frecuenciaRespiratoria', 'temperatura',
+                         'saturacionOxigeno']) {
+        const valor = valores.signosVitales[campo];
+        if (valor === null) continue;
+        const r = rangoDe(valores.idServicio, campo);
+        if (!r) continue;
+        if (typeof r.min === 'number' && valor < r.min) {
+            throw inputError(`${etiquetasRango[campo]} debe estar entre ${r.min} y ${r.max}.`);
+        }
+        if (typeof r.max === 'number' && valor > r.max) {
+            throw inputError(`${etiquetasRango[campo]} debe estar entre ${r.min} y ${r.max}.`);
+        }
+    }
+    const pa = valores.signosVitales.presionArterial;
+    if (pa) {
+        const [sis, dia] = pa.split('/').map(Number);
+        const rpa = rangoDe(valores.idServicio, 'presionArterial');
+        if (rpa && (sis < rpa.sisMin || sis > rpa.sisMax || dia < rpa.diaMin || dia > rpa.diaMax)) {
+            throw inputError(`La presión arterial debe estar entre ${rpa.sisMin}/${rpa.diaMin} y ${rpa.sisMax}/${rpa.diaMax}.`);
+        }
     }
 
     try {

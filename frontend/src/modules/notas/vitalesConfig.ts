@@ -1,4 +1,4 @@
-// Configuración de signos vitales obligatorios por servicio.
+// Configuración de signos vitales obligatorios y rangos por servicio.
 //
 // Es la MISMA fuente que usa el backend
 // (backend/src/modules/notas/signosVitalesConfig.js). Al vivir también en el
@@ -9,12 +9,26 @@ import config from './signosVitales.json'
 export const CAMPOS_SIGNOS_VITALES: string[] = config.campos
 
 // Servicios sin configuración: se exigen todos (comportamiento histórico).
-export const CAMPOS_OBLIGATORIOS_POR_DEFECTO: string[] = config.porDefecto
+export const CAMPOS_OBLIGATORIOS_POR_DEFECTO: string[] = config.porDefecto.obligatorios
 
 export function camposObligatoriosDeServicio(idServicio?: string | null): string[] {
   const id = String(idServicio ?? '').trim()
-  const configurado = id ? (config.porServicio as Record<string, string[]>)[id] : undefined
-  return configurado || config.porDefecto
+  const c = id && config.porServicio ? config.porServicio[id] : undefined
+  return (c && c.obligatorios) || config.porDefecto.obligatorios
+}
+
+// Rangos (min/max) configurados para el servicio. Sirven para validar y para
+// mostrar el rango permitido en la pantalla. Si no hay configuración, se usan
+// los límites técnicos de porDefecto.
+export function rangosDeServicio(idServicio?: string | null): Record<string, any> {
+  const id = String(idServicio ?? '').trim()
+  const c = id && config.porServicio ? config.porServicio[id] : undefined
+  return (c && c.rangos) || config.porDefecto.rangos || {}
+}
+
+export function rangoDeServicio(idServicio: string | null | undefined, campo: string): any {
+  const r = rangosDeServicio(idServicio)
+  return r && r[campo] ? r[campo] : null
 }
 
 // El formulario usa claves cortas para temperatura y saturación; el resto

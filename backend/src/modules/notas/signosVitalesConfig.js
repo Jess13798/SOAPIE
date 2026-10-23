@@ -1,35 +1,57 @@
-// Obligatoriedad de los signos vitales por servicio.
+// Obligatoriedad y rangos de los signos vitales por servicio.
 //
 // La fuente única es frontend/src/modules/notas/signosVitales.json: la usan
 // tanto esta validación del servidor como la pantalla, para que nunca se
 // desincronicen.
 //
-// Al CREAR una nota, el backend exige los campos configurados para el servicio.
-// Un servicio sin configuración mantiene el comportamiento histórico: los diez
-// campos son obligatorios. Los campos que no estén en la lista se siguen
-// mostrando en la pantalla, pero se pueden dejar vacíos.
+// `porDefecto` aplica a los servicios sin configuración (comportamiento
+// histórico: los diez campos son obligatorios, con los límites técnicos).
+// `porServicio[id]` puede definir `obligatorios` (lista de campos) y `rangos`
+// (min/max por campo). Los campos que no estén en `obligatorios` son opcionales.
 //
-// Las claves son las mismas que viajan en `signosVitales` de /api/notas.
+// Las claves de los campos son las mismas que viajan en `signosVitales`
+// de /api/notas. Los rangos de pediatría se basan en la hoja de funciones
+// vitales (guías PALS) que está en docs/.
 const config = require('../../../../frontend/src/modules/notas/signosVitales.json');
 
 const CAMPOS = config.campos;
-const POR_SERVICIO = config.porServicio;
+
+function configDeServicio(idServicio) {
+    const id = String(idServicio ?? '').trim();
+    return (id && config.porServicio && config.porServicio[id]) || config.porDefecto;
+}
 
 function camposObligatorios(idServicio) {
-    const id = Number(idServicio);
-    if (Number.isInteger(id) && POR_SERVICIO[id]) return [...POR_SERVICIO[id]];
-    return [...CAMPOS];
+    return [...(configDeServicio(idServicio).obligatorios || config.porDefecto.obligatorios || CAMPOS)];
+}
+
+function rangosDe(idServicio) {
+    return configDeServicio(idServicio).rangos || config.porDefecto.rangos || {};
+}
+
+function rangoDe(idServicio, campo) {
+    const r = rangosDe(idServicio);
+    return r && r[campo] ? r[campo] : null;
 }
 
 // Configuración que expone /api/notas/configuracion-signos-vitales.
 function configuracion() {
     return {
         campos: [...config.campos],
-        porDefecto: [...config.porDefecto],
+        porDefecto: {
+            obligatorios: [...config.porDefecto.obligatorios],
+            rangos: config.porDefecto.rangos || {},
+        },
         porServicio: Object.fromEntries(
-            Object.entries(POR_SERVICIO).map(([id, campos]) => [id, [...campos]]),
+            Object.entries(config.porServicio || {}).map(([id, c]) => [
+                id,
+                {
+                    obligatorios: [...(c.obligatorios || [])],
+                    rangos: c.rangos || {},
+                },
+            ]),
         ),
     };
 }
 
-module.exports = { CAMPOS, POR_SERVICIO, camposObligatorios, configuracion };
+module.exports = { CAMPOS, configDeServicio, camposObligatorios, rangosDe, rangoDe, configuracion };
