@@ -1,5 +1,6 @@
 const notasRepository = require('../repositories/notasRepository');
 const { turnoDesdeHora } = require('../../../core/utils/turno');
+const { camposObligatorios } = require('../signosVitalesConfig');
 
 function inputError(message) {
     const error = new Error(message);
@@ -289,21 +290,25 @@ async function guardarNota(nota) {
     }
 
     if (idNota === null) {
-        const requiredVitales = [
-            ['peso', valores.signosVitales.peso],
-            ['talla', valores.signosVitales.talla],
-            ['perímetro cefálico', valores.signosVitales.pCefalico],
-            ['perímetro abdominal', valores.signosVitales.pAbdominal],
-            ['hemoglucotest', valores.signosVitales.hemoglucotest],
-            ['presión arterial', valores.signosVitales.presionArterial],
-            ['frecuencia cardiaca', valores.signosVitales.frecuenciaCardiaca],
-            ['frecuencia respiratoria', valores.signosVitales.frecuenciaRespiratoria],
-            ['temperatura', valores.signosVitales.temperatura],
-            ['saturación de oxígeno', valores.signosVitales.saturacionOxigeno],
-        ];
-        const missingVital = requiredVitales.find(([, value]) => value === null);
-        if (missingVital) {
-            throw inputError(`El signo vital ${missingVital[0]} es obligatorio al crear una nota.`);
+        // Qué signos vitales son obligatorios depende del servicio (ver
+        // signosVitalesConfig). Los servicios sin configuración exigen todos.
+        const etiquetas = {
+            peso: 'peso',
+            talla: 'talla',
+            pCefalico: 'perímetro cefálico',
+            pAbdominal: 'perímetro abdominal',
+            hemoglucotest: 'hemoglucotest',
+            presionArterial: 'presión arterial',
+            frecuenciaCardiaca: 'frecuencia cardiaca',
+            frecuenciaRespiratoria: 'frecuencia respiratoria',
+            temperatura: 'temperatura',
+            saturacionOxigeno: 'saturación de oxígeno',
+        };
+        const faltantes = camposObligatorios(valores.idServicio)
+            .filter((campo) => valores.signosVitales[campo] === null)
+            .map((campo) => etiquetas[campo] || campo);
+        if (faltantes.length > 0) {
+            throw inputError(`Complete los signos vitales obligatorios de este servicio: ${faltantes.join(', ')}.`);
         }
     }
 

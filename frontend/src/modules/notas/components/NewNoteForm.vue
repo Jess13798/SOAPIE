@@ -69,7 +69,7 @@
     </Teleport>
 
     <!-- Fila de Signos Vitales -->
-    <VitalsGrid :form="form" :read-only="isReadOnly" />
+    <VitalsGrid :form="form" :read-only="isReadOnly" :campos-obligatorios="camposObligatorios" />
 
     <!-- SOAPIE -->
     <SoapieEditor
@@ -131,6 +131,7 @@ import NoteShiftBar from './NoteShiftBar.vue'
 import VitalsGrid from './VitalsGrid.vue'
 import SoapieEditor from './SoapieEditor.vue'
 import SoapieCarePlanSelector from './SoapieCarePlanSelector.vue'
+import { CAMPOS_OBLIGATORIOS_POR_DEFECTO } from '../vitalesConfig'
 import {
   NIC_BLOQUE_TITULO,
   NOC_BLOQUE_TITULO,
@@ -142,7 +143,7 @@ import {
   lineasIntervenciones,
 } from '../planCuidados'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   pacientes: Patient[]
   selectedPatient: Patient | null
   enfermeraProp?: string
@@ -152,7 +153,11 @@ const props = defineProps<{
   notaAnterior?: NotaEnfermeria | null
   isReadOnly?: boolean
   isSubmitting?: boolean
-}>()
+  // Signos vitales que exige el servicio actual (los define el backend).
+  camposObligatorios?: string[]
+}>(), {
+  camposObligatorios: () => [...CAMPOS_OBLIGATORIOS_POR_DEFECTO],
+})
 
 const emit = defineEmits<{
   save: [nota: NotaEnfermeria]
@@ -417,6 +422,14 @@ const etiquetasVitals: Record<string, string> = {
   temp: 'TEMPERATURA', spo2: 'SATURACIÓN'
 }
 
+// Etiquetas por clave del payload, para el mensaje de campos obligatorios.
+const etiquetasVitalesConfig: Record<string, string> = {
+  peso: 'PESO', talla: 'TALLA', pCefalico: 'P. CEFÁLICO', pAbdominal: 'P. ABDOMINAL',
+  hemoglucotest: 'HEMOGLUCOTEST', presionArterial: 'PRESIÓN ART.',
+  frecuenciaCardiaca: 'FREC. CARD.', frecuenciaRespiratoria: 'FREC. RESP.',
+  temperatura: 'TEMPERATURA', saturacionOxigeno: 'SATURACIÓN',
+}
+
 function validateVitales(isExistingNote: boolean, changedVitalFields: string[]) {
   const values: Record<string, string> = {
     peso: form.peso,
@@ -475,12 +488,26 @@ function handleSubmit(shouldSign = false) {
   if (props.isReadOnly || props.isSubmitting) return
 
   const isExistingNote = Boolean(props.initialNota && /^\d+$/.test(props.initialNota.id))
-  const requiredVitals = [
-    form.peso, form.talla, form.pCefalico, form.pAbdominal, form.hemoglucotest,
-    form.presionArterial, form.frecuenciaCardiaca, form.frecuenciaRespiratoria, form.temp, form.spo2,
-  ]
-  if (!isExistingNote && requiredVitals.some(value => !String(value || '').trim())) {
-    showToast('Por favor, complete todos los Signos Vitales antes de guardar.', 'error')
+  // Solo se exigen los campos configurados para el servicio actual. Los demás
+  // se pueden dejar vacíos (p. ej. presión arterial en hospitalización
+  // pediátrica).
+  const valoresPorCampo: Record<string, string> = {
+    peso: form.peso,
+    talla: form.talla,
+    pCefalico: form.pCefalico,
+    pAbdominal: form.pAbdominal,
+    hemoglucotest: form.hemoglucotest,
+    presionArterial: form.presionArterial,
+    frecuenciaCardiaca: form.frecuenciaCardiaca,
+    frecuenciaRespiratoria: form.frecuenciaRespiratoria,
+    temperatura: form.temp,
+    saturacionOxigeno: form.spo2,
+  }
+  const vitalesFaltantes = props.camposObligatorios
+    .filter(campo => !String(valoresPorCampo[campo] || '').trim())
+    .map(campo => etiquetasVitalesConfig[campo] || campo)
+  if (!isExistingNote && vitalesFaltantes.length > 0) {
+    showToast(`Complete los signos vitales obligatorios: ${vitalesFaltantes.join(', ')}.`, 'error')
     return
   }
 

@@ -91,6 +91,7 @@
           :pacientes="pacientes"
           :selected-patient="selectedPatient"
           :nota-anterior="notaAnteriorSeleccionada"
+          :campos-obligatorios="camposObligatoriosVitales"
           @save="onSaveNote"
         />
 
@@ -117,6 +118,7 @@
       :patient="patientForNewNote"
       :nota="selectedNoteForModal || undefined"
       :nota-anterior="notaAnteriorPacienteSeleccionado"
+      :campos-obligatorios="camposObligatoriosVitales"
       :note-number="modalNoteNumber"
       :is-submitting="isSavingNote"
       @save="onSaveNote"
@@ -209,6 +211,7 @@ const {
 // 2. Estado y operaciones de Notas de Enfermería
 const {
   notas,
+  camposObligatoriosVitales,
   isNewNoteModalOpen,
   patientForNewNote,
   selectedNoteForModal,

@@ -119,6 +119,7 @@
           :enfermera-prop="enfermeraMostrada"
           :initial-nota="nota"
           :nota-anterior="notaAnterior"
+          :campos-obligatorios="camposObligatorios"
           :is-read-only="!!nota?.isFirmada"
           :is-submitting="isSubmitting"
           @save="handleSave"
@@ -155,6 +156,8 @@ const props = defineProps<{
   // una nota nueva (el formulario la ignora cuando se está editando `nota`).
   notaAnterior?: NotaEnfermeria | null
   isSubmitting?: boolean
+  // Signos vitales que exige el servicio seleccionado.
+  camposObligatorios?: string[]
 }>()
 
 const emit = defineEmits<{

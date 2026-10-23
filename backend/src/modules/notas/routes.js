@@ -18,6 +18,12 @@ router.get('/notas', async (req, res) => {
     }
 });
 
+// Configuración de signos vitales obligatorios por servicio (la usa la
+// pantalla para marcar los campos y validar antes de enviar).
+router.get('/notas/configuracion-signos-vitales', (req, res) => {
+    res.json(notasModule.configuracionSignosVitales());
+});
+
 // Guardar o actualizar una nota
 router.post('/notas', async (req, res) => {
     try {

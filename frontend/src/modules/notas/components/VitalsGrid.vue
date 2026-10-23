@@ -1,9 +1,16 @@
 <template>
   <!-- Fila de Signos Vitales -->
   <section class="triaje-row grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-10 gap-1 px-0 py-0.5 bg-blue-50/10 bg-blue-color-print">
-    <div v-for="(label, key) in etiquetasVitals" :key="key" class="input-vitals bg-white border border-slate-200 rounded-md overflow-hidden hover:border-blue-300 transition-colors shadow-sm text-center flex flex-col">
+    <div
+      v-for="(label, key) in etiquetasVitals"
+      :key="key"
+      class="input-vitals bg-white border border-slate-200 rounded-md overflow-hidden hover:border-blue-300 transition-colors shadow-sm text-center flex flex-col"
+      :title="esObligatorio(key) ? 'Obligatorio en este servicio' : 'Opcional en este servicio'"
+    >
       <div class="bg-blue-600 py-0.5 px-1 border-b border-blue-700">
-        <label class="block text-[9.5px] font-black text-white uppercase">{{ label }}</label>
+        <label class="block text-[9.5px] font-black text-white uppercase">
+          {{ label }}<span v-if="esObligatorio(key)" class="text-amber-300"> *</span><span v-else class="ml-0.5 text-[7.5px] font-bold normal-case tracking-normal text-sky-100"> (opc.)</span>
+        </label>
       </div>
       <div class="flex items-center justify-center gap-1 p-1 flex-1">
         <template v-if="key === 'presionArterial'">
@@ -47,11 +54,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { NotaFormState } from '../notaForm'
+import { CAMPOS_OBLIGATORIOS_POR_DEFECTO, claveConfiguracionVital } from '../vitalesConfig'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   form: NotaFormState
   readOnly?: boolean
-}>()
+  // Signos vitales obligatorios del servicio actual (los define el backend).
+  camposObligatorios?: string[]
+}>(), {
+  camposObligatorios: () => [...CAMPOS_OBLIGATORIOS_POR_DEFECTO],
+})
+
+function esObligatorio(key: string) {
+  return props.camposObligatorios.includes(claveConfiguracionVital(key))
+}
 
 // Presión arterial dividida en SIS / DIA
 const sis = computed({

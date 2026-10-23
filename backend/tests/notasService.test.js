@@ -227,3 +227,44 @@ test('obtenerNotas propaga el error del repositorio', async (t) => {
 
     await assert.rejects(() => notasService.obtenerNotas(), /boom/);
 });
+
+test('guardarNota en Hospitalización Pediátrica exige solo los vitales configurados', async (t) => {
+    silenciarErrores(t);
+    const guardarCompleta = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => ({ id: 91, vitalesRegistrados: true }));
+
+    const resultado = await notasService.guardarNota(notaSoapieCompleta({
+        servicioId: '213',
+        // Solo los seis obligatorios: los perímetros, la presión y el
+        // hemoglucotest quedan vacíos a propósito.
+        signosVitales: {
+            peso: '70',
+            talla: '170',
+            frecuenciaCardiaca: '78',
+            frecuenciaRespiratoria: '18',
+            temperatura: '36.7',
+            saturacionOxigeno: '98',
+        },
+    }));
+
+    assert.equal(resultado.success, true);
+    assert.equal(guardarCompleta.mock.callCount(), 1);
+});
+
+test('guardarNota sin configuración de servicio sigue exigiendo los diez vitales', async (t) => {
+    silenciarErrores(t);
+    t.mock.method(notasRepository, 'guardarNotaCompleta', async () => ({ id: 92, vitalesRegistrados: true }));
+
+    await assert.rejects(
+        () => notasService.guardarNota(notaSoapieCompleta({
+            signosVitales: {
+                peso: '70',
+                talla: '170',
+                frecuenciaCardiaca: '78',
+                frecuenciaRespiratoria: '18',
+                temperatura: '36.7',
+                saturacionOxigeno: '98',
+            },
+        })),
+        /signos vitales obligatorios/i,
+    );
+});

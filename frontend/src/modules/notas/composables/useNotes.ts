@@ -1,6 +1,7 @@
-import { ref, type Ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 import type { Patient, NotaEnfermeria, SignoVitalHistorial } from '@/types'
 import { notasService } from '@/services/api'
+import { CAMPOS_OBLIGATORIOS_POR_DEFECTO } from '../vitalesConfig'
 
 function mergeNotes(databaseNotes: NotaEnfermeria[], currentNotes: NotaEnfermeria[]) {
   const merged = new Map(databaseNotes.map(note => [note.id, note]))
@@ -59,6 +60,29 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
   const isNewNoteModalOpen = ref(false)
   const patientForNewNote = ref<Patient | null>(null)
   const selectedNoteForModal = ref<NotaEnfermeria | null>(null)
+
+  // Qué signos vitales exige cada servicio. La configuración vive en el backend
+  // para que la pantalla y la validación del servidor coincidan.
+  const obligatoriosPorDefecto = ref<string[]>([...CAMPOS_OBLIGATORIOS_POR_DEFECTO])
+  const obligatoriosPorServicio = ref<Record<string, string[]>>({})
+  const camposObligatoriosVitales = computed(
+    () => obligatoriosPorServicio.value[servicioSeleccionado?.value || ''] || obligatoriosPorDefecto.value,
+  )
+
+  async function cargarConfiguracionSignosVitales() {
+    try {
+      const config = await notasService.getConfiguracionSignosVitales()
+      if (Array.isArray(config.porDefecto) && config.porDefecto.length > 0) {
+        obligatoriosPorDefecto.value = config.porDefecto
+      }
+      obligatoriosPorServicio.value = config.porServicio || {}
+    } catch (error) {
+      // Si falla, se mantiene "todos obligatorios": nunca se guarda una nota
+      // incompleta por un problema de red.
+      console.error('No se pudo cargar la configuración de signos vitales:', error)
+    }
+  }
+  cargarConfiguracionSignosVitales()
 
   async function cargarNotasDesdeBackend() {
     try {
@@ -221,5 +245,6 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
     ultimaNotaDePaciente,
     guardarNota,
     firmarNota,
+    camposObligatoriosVitales,
   }
 }
