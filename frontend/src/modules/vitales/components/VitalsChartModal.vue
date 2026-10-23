@@ -125,7 +125,7 @@ const loading = ref(false)
 // Left panel
 const nombrePaciente = computed(() => props.patient?.nombreCompleto || `${props.patient?.nombre || ''} ${props.patient?.apellido || ''}`.trim() || '-')
 const servicio = computed(() => (props.patient as any)?.servicio || '-')
-const habitacion = computed(() => (props.patient as any)?.cama || (props.patient as any)?.codigo || '-')
+const habitacion = computed(() => (props.patient as any)?.habitacion || (props.patient as any)?.cama || (props.patient as any)?.codigo || '-')
 const enfermera = computed(() => sessionStorage.getItem('empleadoLogueado') || sessionStorage.getItem('usuarioLogueado') || '-')
 
 const pesoActual = computed(() => {
