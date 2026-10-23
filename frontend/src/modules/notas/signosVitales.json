@@ -1,0 +1,36 @@
+{
+  "campos": [
+    "peso",
+    "talla",
+    "pCefalico",
+    "pAbdominal",
+    "hemoglucotest",
+    "presionArterial",
+    "frecuenciaCardiaca",
+    "frecuenciaRespiratoria",
+    "temperatura",
+    "saturacionOxigeno"
+  ],
+  "porDefecto": [
+    "peso",
+    "talla",
+    "pCefalico",
+    "pAbdominal",
+    "hemoglucotest",
+    "presionArterial",
+    "frecuenciaCardiaca",
+    "frecuenciaRespiratoria",
+    "temperatura",
+    "saturacionOxigeno"
+  ],
+  "porServicio": {
+    "213": [
+      "peso",
+      "talla",
+      "frecuenciaCardiaca",
+      "frecuenciaRespiratoria",
+      "temperatura",
+      "saturacionOxigeno"
+    ]
+  }
+}

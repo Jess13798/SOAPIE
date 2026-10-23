@@ -1,39 +1,19 @@
 // Obligatoriedad de los signos vitales por servicio.
 //
-// Al CREAR una nota, el backend exige los campos que aparecen aquí. Un
-// servicio sin configuración mantiene el comportamiento histórico: los diez
+// La fuente única es frontend/src/modules/notas/signosVitales.json: la usan
+// tanto esta validación del servidor como la pantalla, para que nunca se
+// desincronicen.
+//
+// Al CREAR una nota, el backend exige los campos configurados para el servicio.
+// Un servicio sin configuración mantiene el comportamiento histórico: los diez
 // campos son obligatorios. Los campos que no estén en la lista se siguen
 // mostrando en la pantalla, pero se pueden dejar vacíos.
 //
 // Las claves son las mismas que viajan en `signosVitales` de /api/notas.
-const CAMPOS = [
-    'peso',
-    'talla',
-    'pCefalico',
-    'pAbdominal',
-    'hemoglucotest',
-    'presionArterial',
-    'frecuenciaCardiaca',
-    'frecuenciaRespiratoria',
-    'temperatura',
-    'saturacionOxigeno',
-];
+const config = require('../../../../frontend/src/modules/notas/signosVitales.json');
 
-// Servicio 213 = HOSPITALIZACIÓN PEDIATRICA.
-// Obligatorios: peso, talla, frecuencia cardiaca, frecuencia respiratoria,
-// temperatura y saturación de oxígeno.
-// Opcionales: perímetro cefálico, perímetro abdominal, presión arterial y
-// hemoglucotest.
-const POR_SERVICIO = {
-    213: [
-        'peso',
-        'talla',
-        'frecuenciaCardiaca',
-        'frecuenciaRespiratoria',
-        'temperatura',
-        'saturacionOxigeno',
-    ],
-};
+const CAMPOS = config.campos;
+const POR_SERVICIO = config.porServicio;
 
 function camposObligatorios(idServicio) {
     const id = Number(idServicio);
@@ -41,12 +21,11 @@ function camposObligatorios(idServicio) {
     return [...CAMPOS];
 }
 
-// Configuración que consume el frontend para marcar los campos obligatorios
-// y validar antes de enviar la nota.
+// Configuración que expone /api/notas/configuracion-signos-vitales.
 function configuracion() {
     return {
-        campos: [...CAMPOS],
-        porDefecto: [...CAMPOS],
+        campos: [...config.campos],
+        porDefecto: [...config.porDefecto],
         porServicio: Object.fromEntries(
             Object.entries(POR_SERVICIO).map(([id, campos]) => [id, [...campos]]),
         ),

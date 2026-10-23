@@ -258,10 +258,6 @@ export const notasService = {
         return request<NotaEnfermeria[]>('/notas')
     },
 
-    getConfiguracionSignosVitales(): Promise<{ campos: string[]; porDefecto: string[]; porServicio: Record<string, string[]> }> {
-        return request<{ campos: string[]; porDefecto: string[]; porServicio: Record<string, string[]> }>('/notas/configuracion-signos-vitales')
-    },
-
     guardarNota(nota: Partial<NotaEnfermeria>): Promise<{ success: boolean; id: string | number; turno?: 'dia' | 'noche'; vitalesRegistrados?: boolean; servicioId?: number | null }> {
         return request<{ success: boolean; id: string | number; turno?: 'dia' | 'noche'; vitalesRegistrados?: boolean; servicioId?: number | null }>('/notas', {
             method: 'POST',
