@@ -48,6 +48,16 @@
                 </span>
               </div>
             </div>
+            <button
+              v-if="nota?.isFirmada"
+              type="button"
+              @click="handlePrint"
+              class="flex h-8 items-center gap-1.5 rounded-md bg-sky-700 px-2.5 text-[10px] font-bold text-white shadow-sm transition-colors hover:bg-sky-800"
+              title="Imprimir nota SOAPIE firmada"
+            >
+              <Printer class="h-3.5 w-3.5" />
+              Imprimir
+            </button>
 
             <!-- Live Clock -->
             <div v-else class="flex items-center gap-2 text-slate-500 bg-slate-100/70 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
@@ -92,6 +102,10 @@
             </button>
           </div>
         </div>
+
+        <p v-if="printError" role="alert" class="px-6 pb-2 text-right text-xs font-semibold text-red-700">
+          {{ printError }}
+        </p>
 
         <!-- Datos del paciente: siempre visibles -->
         <div class="flex flex-wrap items-center justify-start gap-x-6 gap-y-1 border-t border-slate-100 bg-slate-50/60 px-6 py-2">
@@ -156,15 +170,17 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { PlusCircle, X, Clock, Pencil, ClipboardList, Plus, Book, Activity } from 'lucide-vue-next'
+import { PlusCircle, X, Clock, Pencil, ClipboardList, Plus, Book, Activity, Printer } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
 import NewNoteForm from './NewNoteForm.vue'
 import VitalsHistoryModal from '@/modules/vitales/components/VitalsHistoryModal.vue'
 import VitalsChartModal from '@/modules/vitales/components/VitalsChartModal.vue'
+import { printNotaSoapie } from '../printNotaSoapie'
 
 const formRef = ref<InstanceType<typeof NewNoteForm> | null>(null)
 const showVitalsHistory = ref(false)
 const showBasicVitals = ref(false)
+const printError = ref('')
 
 const props = defineProps<{
   isOpen: boolean
@@ -225,6 +241,18 @@ function handleSave(nota: NotaEnfermeria) {
 function handleSign(nota: NotaEnfermeria) {
   nota.enfermera = enfermeraMostrada.value
   emit('sign', nota)
+}
+
+function handlePrint() {
+  if (!props.nota) return
+  printError.value = ''
+  try {
+    if (!printNotaSoapie(props.nota, props.patient, props.noteNumber)) {
+      printError.value = 'El navegador bloqueó la ventana de impresión. Habilite las ventanas emergentes para este sitio e intente de nuevo.'
+    }
+  } catch (error) {
+    printError.value = error instanceof Error ? error.message : 'No se pudo preparar la nota para impresión.'
+  }
 }
 
 function handleClearVitals() {

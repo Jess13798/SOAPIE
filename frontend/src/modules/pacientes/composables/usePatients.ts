@@ -27,7 +27,7 @@ export function usePatients() {
       edad,
       edadDescripcion,
       genero: 'M' as 'M' | 'F',
-      dni: '',
+      dni: pacienteBD.Dni || '',
       numCuenta: pacienteBD.IdCuentaAtencion || '',
       historiaClinica: pacienteBD.NroHistoriaClinica || '',
       servicio: pacienteBD.Nombre || '',
