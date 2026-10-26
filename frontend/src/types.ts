@@ -18,6 +18,7 @@ export interface Patient {
   financiamiento: string
   habitacion: string
   cama: string
+  tipoCama?: string
   diagnostico: string
   fechaIngreso: string
   estado: 'estable' | 'observacion' | 'critico' | 'alta'
@@ -27,6 +28,7 @@ export interface Patient {
 export interface PacienteBD {
   IdCama?: number | null
   IdCuentaAtencion: string | null
+  Dni?: string | null
   IdEspecialidad?: number | null
   IdProducto?: number | null
   Codigo: string
@@ -62,9 +64,17 @@ export interface PlanCuidadoNota {
   comentario?: string
   nocIds: number[]
   nicIds: number[]
+  // Estado de ejecución de cada NIC planificada.
+  //   nicRealizadasIds  → NIC ejecutadas.
+  //   nicNoRealizadas   → NIC no ejecutadas, con el motivo (puede ir vacío).
+  // Un NIC planificado que no aparezca en ninguna de las dos queda "sin registrar".
+  // El backend los persiste en dbo.NotaEnfermeriaPlanNIC (Realizada / Motivo) y
+  // también viajan dentro del texto de la nota como respaldo legible.
   nicRealizadasIds?: number[]
+  nicNoRealizadas?: Record<number, string>
   nocMetas?: Record<number, string>
   nocEvaluaciones?: Record<number, string>
+
   noc?: Array<{
     id: number
     codigo: string
@@ -100,9 +110,11 @@ export interface NotaEnfermeria {
   id: string
   pacienteId: string
   idCuenta?: string
+  servicioId?: number | null
+  servicio?: string
   fecha: string
   hora: string
-  turno: 'dia' | 'noche' | 'manana' | 'tarde' // <-- Cambiar esta línea
+  turno: 'dia' | 'noche'
   tipo: 'valoracion' | 'evolucion' | 'medicacion' | 'procedimiento' | 'incidencia'
   signosVitales?: SignosVitales
   planCuidados?: PlanCuidadoNota[]

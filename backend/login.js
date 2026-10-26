@@ -1,14 +1,11 @@
-﻿const { sql, dbConfig } = require('./database');
+﻿const sql = require('mssql');
+const { query } = require('./dbHelper');
 const bcrypt = require('bcryptjs');
 
 const validarEmpleado = async (usuario, PasswordEnviado) => {
     try {
-        let pool = await sql.connect(dbConfig);
-
         // 1. Buscamos al empleado SOLO por el usuario
-        let result = await pool.request()
-            .input('user', sql.VarChar, usuario)
-            .query(`
+        const result = await query(`
                 SELECT  IdEmpleado,
                     Usuario,
                     Password,
@@ -19,7 +16,9 @@ const validarEmpleado = async (usuario, PasswordEnviado) => {
                     )) AS Empledo
                 FROM Empleados
                 WHERE Usuario = @user
-            `);
+            `, [
+            { name: 'user', type: sql.VarChar, value: usuario }
+        ]);
 
         const empleado = result.recordset[0];
 

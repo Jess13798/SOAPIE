@@ -1,4 +1,6 @@
 const notasRepository = require('../repositories/notasRepository');
+const { turnoDesdeHora } = require('../../../core/utils/turno');
+const { camposObligatorios, rangoDe } = require('../signosVitalesConfig');
 
 function inputError(message) {
     const error = new Error(message);
@@ -146,6 +148,7 @@ function normalizePlanCuidados(planCuidados = []) {
             nocIds: new Set(),
             nicIds: new Set(),
             nicRealizadasIds: new Set(),
+            nicNoRealizadas: {},
             nocMetas: {},
             nocEvaluaciones: {},
         };
@@ -170,6 +173,12 @@ function normalizePlanCuidados(planCuidados = []) {
         for (const id of item.nicRealizadasIds || []) {
             diagnosis.nicRealizadasIds.add(nullableInteger(id, 'IdNIC realizada', true));
         }
+        // Motivo por el que una NIC planificada no se realizó. Viaja como mapa
+        // { idNIC: motivo }; solo se aceptan motivos de NIC planificadas.
+        if (item.nicNoRealizadas !== undefined && (typeof item.nicNoRealizadas !== 'object' || item.nicNoRealizadas === null || Array.isArray(item.nicNoRealizadas))) {
+            throw inputError('nicNoRealizadas debe ser un objeto { idNIC: motivo }.');
+        }
+        Object.assign(diagnosis.nicNoRealizadas, normalizeTextMap(item.nicNoRealizadas, 'nicNoRealizadas', 500));
         Object.assign(diagnosis.nocMetas, normalizeTextMap(item.nocMetas, 'nocMetas', 250));
         Object.assign(
             diagnosis.nocEvaluaciones,
@@ -186,12 +195,22 @@ function normalizePlanCuidados(planCuidados = []) {
         const nocIds = Array.from(item.nocIds);
         const nocIdSet = new Set(nocIds);
 
+        // Solo tiene sentido el motivo de una NIC planificada y NO realizada.
+        const nicNoRealizadas = Object.fromEntries(
+            Object.entries(item.nicNoRealizadas).filter(([id, motivo]) => (
+                item.nicIds.has(Number(id))
+                && !item.nicRealizadasIds.has(Number(id))
+                && String(motivo || '').trim()
+            )),
+        );
+
         return {
             idNANDA: item.idNANDA,
             comentario: item.comentario,
             nocIds,
             nicIds: Array.from(item.nicIds),
             nicRealizadasIds,
+            nicNoRealizadas,
             nocMetas: Object.fromEntries(
                 Object.entries(item.nocMetas).filter(([id]) => nocIdSet.has(Number(id))),
             ),
@@ -202,11 +221,10 @@ function normalizePlanCuidados(planCuidados = []) {
     });
 }
 
+// La fecha y hora de firma las pone el SERVIDOR (no el reloj del equipo del
+// usuario). Así el registro no depende de que la PC tenga la hora correcta.
 function getSignedDateTime(nota) {
     if (!nota.isFirmada) return null;
-    if (nota.fechaFirmada && nota.horaFirmada) {
-        return sqlDateTime(nota.fechaFirmada, nota.horaFirmada, 'fecha y hora de firma');
-    }
     return new Date();
 }
 
@@ -219,18 +237,31 @@ async function guardarNota(nota) {
     const idCuenta = nullableInteger(nota.idCuenta, 'IdCuenta');
     const idPaciente = nullableInteger(nota.pacienteId, 'IdPaciente', true);
     const idEmpleado = nullableInteger(nota.idEmpleado || nota.IDEMPLEADO, 'IdEmpleado');
+    // Servicio en el que se escribe la nota. El repositorio prioriza la
+    // estancia abierta del paciente; esto queda como respaldo (sin cama).
+    const idServicio = nullableInteger(nota.servicioId, 'IdServicio');
     const idNotaParsed = Number(nota.id);
     const idNota = Number.isInteger(idNotaParsed) && idNotaParsed > 0 && idNotaParsed <= 2147483647
         ? idNotaParsed
         : null;
+
+    // La hora la pone el SERVIDOR, no el reloj de la PC del usuario.
+    // Al crear la nota, el inicio es el momento del guardado; al editarla se
+    // conserva la hora original (el repositorio no modifica Fecha_Hora_Inicio).
+    const ahora = new Date();
+    const fechaInicio = idNota === null
+        ? ahora
+        : sqlDateTime(nota.fecha, nota.hora, 'fecha y hora de inicio');
 
     const valores = {
         idNota,
         idCuenta,
         idPaciente,
         idEmpleado,
-        turno: nota.turno === 'noche' ? 'noche' : 'dia',
-        fechaInicio: sqlDateTime(nota.fecha, nota.hora, 'fecha y hora de inicio'),
+        idServicio,
+        // El turno se DERIVA de la hora de la nota; el usuario ya no lo elige.
+        turno: turnoDesdeHora(fechaInicio),
+        fechaInicio,
         fechaFin: getSignedDateTime(nota),
         subjetivo: requiredClinicalText(nota.subjetivo, 'Subjetivo'),
         objetivo: requiredClinicalText(nota.objetivo, 'Objetivo'),
@@ -251,7 +282,7 @@ async function guardarNota(nota) {
             saturacionOxigeno: nullablePositiveNumber(signos.saturacionOxigeno, 'saturación de oxígeno'),
         },
         planCuidados: normalizePlanCuidados(nota.planCuidados || []),
-        fechaHora: new Date(),
+        fechaHora: ahora,
     };
 
     if (!valores.analisis.trim() && valores.planCuidados.length === 0) {
@@ -259,33 +290,76 @@ async function guardarNota(nota) {
     }
 
     if (idNota === null) {
-        const requiredVitales = [
-            ['peso', valores.signosVitales.peso],
-            ['talla', valores.signosVitales.talla],
-            ['perímetro cefálico', valores.signosVitales.pCefalico],
-            ['perímetro abdominal', valores.signosVitales.pAbdominal],
-            ['hemoglucotest', valores.signosVitales.hemoglucotest],
-            ['presión arterial', valores.signosVitales.presionArterial],
-            ['frecuencia cardiaca', valores.signosVitales.frecuenciaCardiaca],
-            ['frecuencia respiratoria', valores.signosVitales.frecuenciaRespiratoria],
-            ['temperatura', valores.signosVitales.temperatura],
-            ['saturación de oxígeno', valores.signosVitales.saturacionOxigeno],
-        ];
-        const missingVital = requiredVitales.find(([, value]) => value === null);
-        if (missingVital) {
-            throw inputError(`El signo vital ${missingVital[0]} es obligatorio al crear una nota.`);
+        // Qué signos vitales son obligatorios depende del servicio (ver
+        // signosVitalesConfig). Los servicios sin configuración exigen todos.
+        const etiquetas = {
+            peso: 'peso',
+            talla: 'talla',
+            pCefalico: 'perímetro cefálico',
+            pAbdominal: 'perímetro abdominal',
+            hemoglucotest: 'hemoglucotest',
+            presionArterial: 'presión arterial',
+            frecuenciaCardiaca: 'frecuencia cardiaca',
+            frecuenciaRespiratoria: 'frecuencia respiratoria',
+            temperatura: 'temperatura',
+            saturacionOxigeno: 'saturación de oxígeno',
+        };
+        const faltantes = camposObligatorios(valores.idServicio)
+            .filter((campo) => valores.signosVitales[campo] === null)
+            .map((campo) => etiquetas[campo] || campo);
+        if (faltantes.length > 0) {
+            throw inputError(`Complete los signos vitales obligatorios de este servicio: ${faltantes.join(', ')}.`);
         }
     }
 
-    if (valores.signosVitales.saturacionOxigeno !== null && valores.signosVitales.saturacionOxigeno > 100) {
-        throw inputError('La saturación de oxígeno debe estar entre 0 y 100%.');
+    // Rangos configurados por servicio (min/max). Si no hay configuración se
+    // usan los límites técnicos de porDefecto. Los campos opcionales vacíos
+    // (null) se omiten.
+    const etiquetasRango = {
+        peso: 'peso',
+        talla: 'talla',
+        pCefalico: 'perímetro cefálico',
+        pAbdominal: 'perímetro abdominal',
+        hemoglucotest: 'hemoglucotest',
+        frecuenciaCardiaca: 'frecuencia cardiaca',
+        frecuenciaRespiratoria: 'frecuencia respiratoria',
+        temperatura: 'temperatura',
+        saturacionOxigeno: 'saturación de oxígeno',
+    };
+    for (const campo of ['peso', 'talla', 'pCefalico', 'pAbdominal', 'hemoglucotest',
+                         'frecuenciaCardiaca', 'frecuenciaRespiratoria', 'temperatura',
+                         'saturacionOxigeno']) {
+        const valor = valores.signosVitales[campo];
+        if (valor === null) continue;
+        const r = rangoDe(valores.idServicio, campo);
+        if (!r) continue;
+        if (typeof r.min === 'number' && valor < r.min) {
+            throw inputError(`${etiquetasRango[campo]} debe estar entre ${r.min} y ${r.max}.`);
+        }
+        if (typeof r.max === 'number' && valor > r.max) {
+            throw inputError(`${etiquetasRango[campo]} debe estar entre ${r.min} y ${r.max}.`);
+        }
+    }
+    const pa = valores.signosVitales.presionArterial;
+    if (pa) {
+        const [sis, dia] = pa.split('/').map(Number);
+        const rpa = rangoDe(valores.idServicio, 'presionArterial');
+        if (rpa && (sis < rpa.sisMin || sis > rpa.sisMax || dia < rpa.diaMin || dia > rpa.diaMax)) {
+            throw inputError(`La presión arterial debe estar entre ${rpa.sisMin}/${rpa.diaMin} y ${rpa.sisMax}/${rpa.diaMax}.`);
+        }
     }
 
     try {
         const result = await notasRepository.guardarNotaCompleta(valores);
-        const id = typeof result === 'object' ? result.id : result;
-        const vitalesRegistrados = typeof result === 'object' ? result.vitalesRegistrados : undefined;
-        return { success: true, id, vitalesRegistrados };
+        const id = typeof result === 'object' && result !== null ? result.id : result;
+        const vitalesRegistrados = typeof result === 'object' && result !== null ? result.vitalesRegistrados : undefined;
+        const servicioId = typeof result === 'object' && result !== null ? result.servicioId : undefined;
+        // Se devuelve el turno calculado para que el frontend muestre el mismo
+        // valor que quedó guardado en la base de datos.
+        const respuesta = { success: true, id, turno: valores.turno, vitalesRegistrados };
+        // Solo se informa el servicio cuando el repositorio lo pudo resolver.
+        if (servicioId !== undefined) respuesta.servicioId = servicioId;
+        return respuesta;
     } catch (error) {
         console.error('Error al guardar nota:', error.message);
         throw error;
@@ -321,8 +395,10 @@ async function obtenerNotas() {
                     pacienteId: String(row.IdPaciente ?? ''),
                     idCuenta: String(row.IdCuenta ?? ''),
                     idEmpleado: String(row.IdEmpleado ?? ''),
-                    turno: row.Turno || 'dia',
-                    enfermera: '',
+                    servicioId: row.IdServicio == null ? null : Number(row.IdServicio),
+                    servicio: row.Servicio || '',
+                    turno: row.Turno === 'noche' ? 'noche' : 'dia',
+                    enfermera: row.Enfermera || '',
                     fecha: datePart(row.Fecha_Hora_Inicio),
                     hora: timePart(row.Fecha_Hora_Inicio),
                     subjetivo: row.Subjetivo || '',
@@ -362,6 +438,7 @@ async function obtenerNotas() {
                     nocIds: [],
                     nicIds: [],
                     nicRealizadasIds: [],
+                    nicNoRealizadas: {},
                     nocMetas: {},
                     nocEvaluaciones: {},
                     noc: [],
@@ -386,6 +463,9 @@ async function obtenerNotas() {
                 if (!plan.nicIds.includes(row.PlanIdNIC)) plan.nicIds.push(row.PlanIdNIC);
                 if (row.PlanNICRealizada && !plan.nicRealizadasIds.includes(row.PlanIdNIC)) {
                     plan.nicRealizadasIds.push(row.PlanIdNIC);
+                }
+                if (!row.PlanNICRealizada && row.PlanNICMotivo) {
+                    plan.nicNoRealizadas[row.PlanIdNIC] = row.PlanNICMotivo;
                 }
                 addUnique(plan.nic, {
                     id: row.PlanIdNIC,

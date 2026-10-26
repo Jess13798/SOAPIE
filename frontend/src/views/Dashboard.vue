@@ -62,7 +62,8 @@
             :servicios="servicios"
             :servicio-seleccionado="servicioSeleccionado"
             :refresh-pacientes-sin-cama-token="refreshPacientesSinCamaToken"
-            @select="handleSelectPatient" 
+            @select="handleSelectPatient"
+            @buscar-paciente="handleBuscarPaciente" 
             @new-note="handleNewNoteFromList"
             @edit-draft="handleEditDraft($event, selectedPatient)"
             @cambio-servicio="cambiarServicio"
@@ -77,6 +78,7 @@
                 class="h-full rounded-none border-0 shadow-none"
                 :notas="notas"
                 :selected-patient="selectedPatient"
+                :servicio-id="servicioSeleccionado"
                 @view-note="handleViewNote($event, selectedPatient)"
               />
             </template>
@@ -88,6 +90,8 @@
           v-if="activeView === 'nueva-nota'"
           :pacientes="pacientes"
           :selected-patient="selectedPatient"
+          :nota-anterior="notaAnteriorSeleccionada"
+          :campos-obligatorios="camposObligatoriosVitales"
           @save="onSaveNote"
         />
 
@@ -99,6 +103,11 @@
         />
 
         <NandaNocNicView v-if="activeView === 'catalogos-nanda'" />
+
+        <AuditoriaCamasView
+          v-if="activeView === 'auditoria-camas'"
+          :servicios="servicios"
+        />
       </div>
     </main>
 
@@ -108,6 +117,8 @@
       :is-open="isNewNoteModalOpen"
       :patient="patientForNewNote"
       :nota="selectedNoteForModal || undefined"
+      :nota-anterior="notaAnteriorPacienteSeleccionado"
+      :campos-obligatorios="camposObligatoriosVitales"
       :note-number="modalNoteNumber"
       :is-submitting="isSavingNote"
       @save="onSaveNote"
@@ -165,22 +176,24 @@
 import { ref, computed, onMounted } from 'vue'
 import { Menu, X } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
+import type { PacienteBusqueda } from '@/services/api'
 import AppSidebar from '@/components/AppSidebar.vue'
-import PatientListView from '@/components/PatientListView.vue'
-import NewNoteModal from '@/components/NewNoteModal.vue'
-import NewNoteForm from '@/components/NewNoteForm.vue'
-import VitalsHistoryModal from '@/components/VitalsHistoryModal.vue'
-import VitalsOverview from '@/components/VitalsOverview.vue'
 import NandaNocNicView from '@/components/NandaNocNicView.vue'
+import AuditoriaCamasView from '@/modules/auditoria/components/AuditoriaCamasView.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
-import BedModal from '@/components/BedModal.vue'
-import NotesHistoryPanel from '@/components/NotesHistoryPanel.vue'
-import TotalBedsModal from '@/components/TotalBedsModal.vue'
-import TransferModal from '@/components/TransferModal.vue'
+import PatientListView from '@/modules/pacientes/components/PatientListView.vue'
+import BedModal from '@/modules/pacientes/components/BedModal.vue'
+import TotalBedsModal from '@/modules/pacientes/components/TotalBedsModal.vue'
+import TransferModal from '@/modules/pacientes/components/TransferModal.vue'
+import NewNoteModal from '@/modules/notas/components/NewNoteModal.vue'
+import NewNoteForm from '@/modules/notas/components/NewNoteForm.vue'
+import NotesHistoryPanel from '@/modules/notas/components/NotesHistoryPanel.vue'
+import VitalsHistoryModal from '@/modules/vitales/components/VitalsHistoryModal.vue'
+import VitalsOverview from '@/modules/vitales/components/VitalsOverview.vue'
 
-import { usePatients } from '@/composables/usePatients'
-import { useNotes } from '@/composables/useNotes'
-import { useBedModals } from '@/composables/useBedModals'
+import { usePatients } from '@/modules/pacientes/composables/usePatients'
+import { useBedModals } from '@/modules/pacientes/composables/useBedModals'
+import { useNotes } from '@/modules/notas/composables/useNotes'
 import { useDashboard } from '@/composables/useDashboard'
 
 // 1. Estado y operaciones de Pacientes y Servicios
@@ -192,11 +205,13 @@ const {
   cargarPacientes,
   cargarServicios,
   cambiarServicio,
+  seleccionarPacienteGlobal,
 } = usePatients()
 
 // 2. Estado y operaciones de Notas de Enfermería
 const {
   notas,
+  camposObligatoriosVitales,
   isNewNoteModalOpen,
   patientForNewNote,
   selectedNoteForModal,
@@ -205,9 +220,20 @@ const {
   handleNewNoteFromList,
   handleEditDraft,
   handleCloseModal,
+  ultimaNotaDePaciente,
   guardarNota,
   firmarNota,
-} = useNotes(pacientes)
+} = useNotes(pacientes, servicioSeleccionado)
+
+// Plan de cuidados heredado: al crear una nota nueva se precargan los
+// diagnósticos NOC/NIC de la última nota del paciente (el formulario lo ignora
+// cuando se está editando una nota existente).
+const notaAnteriorPacienteSeleccionado = computed(() =>
+  selectedNoteForModal.value ? null : ultimaNotaDePaciente(patientForNewNote.value),
+)
+const notaAnteriorSeleccionada = computed(() =>
+  selectedPatient.value ? ultimaNotaDePaciente(selectedPatient.value) : null,
+)
 
 // 3. Modales de Camas y Transferencias
 const {
@@ -311,17 +337,16 @@ async function onSignNote(nota: NotaEnfermeria) {
   }
 }
 
+async function handleBuscarPaciente(paciente: PacienteBusqueda) {
+  activeView.value = 'pacientes'
+  await seleccionarPacienteGlobal(paciente)
+}
+
 onMounted(async () => {
   await cargarServicios()
 
-  // Seleccionar Medicina o el primer servicio disponible
-  if (servicios.value.length > 0) {
-    const servicioMedicina = servicios.value.find(s => s.Nombre.toUpperCase().includes('MEDICINA'))
-    const servicioInicial = servicioMedicina || servicios.value[0]
-    servicioSeleccionado.value = String(servicioInicial.IdServicio)
-    await cargarPacientes(servicioSeleccionado.value)
-  }
-
+  // Sin servicio preseleccionado: el usuario elige desde el buscador.
+  // La lista de pacientes se carga al seleccionar un servicio.
   await cargarNotasDesdeBackend()
 })
 </script>

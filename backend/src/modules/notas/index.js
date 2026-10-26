@@ -3,6 +3,7 @@
 // hacia la estructura modular sin romper la compatibilidad del proyecto.
 
 const notasService = require('./services/notasService');
+const signosVitalesConfig = require('./signosVitalesConfig');
 
 module.exports = {
     guardarNota: notasService.guardarNota,
@@ -10,4 +11,5 @@ module.exports = {
     eliminarNota: notasService.eliminarNota,
     obtenerHistorialVitals: notasService.obtenerHistorialVitals,
     obtenerHistorialVitalsPorAtencion: notasService.obtenerHistorialVitalsPorAtencion,
+    configuracionSignosVitales: signosVitalesConfig.configuracion,
 };

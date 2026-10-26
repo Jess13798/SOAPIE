@@ -71,12 +71,18 @@ test('guardarNota normalizes selections and persists the SOAPIE payload', async 
         ],
     }));
 
-    assert.deepEqual(result, { success: true, id: 81, vitalesRegistrados: true });
+    assert.equal(result.success, true);
+    assert.equal(result.id, 81);
+    assert.equal(result.vitalesRegistrados, true);
+    assert.ok(result.turno === 'dia' || result.turno === 'noche');
     assert.equal(savedNote.idNota, null);
     assert.equal(savedNote.idPaciente, 100);
     assert.equal(savedNote.idCuenta, 200);
     assert.equal(savedNote.idEmpleado, 300);
-    assert.equal(savedNote.turno, 'noche');
+    assert.ok(
+        savedNote.turno === 'dia' || savedNote.turno === 'noche',
+        'el turno se deriva de la hora del servidor, ya no se copia del usuario'
+    );
     assert.equal(savedNote.signosVitales.temperatura, 36.7);
     assert.equal(savedNote.signosVitales.frecuenciaCardiaca, 80);
     assert.deepEqual(savedNote.planCuidados, [
@@ -86,10 +92,32 @@ test('guardarNota normalizes selections and persists the SOAPIE payload', async 
             nocIds: [10, 11],
             nicIds: [20],
             nicRealizadasIds: [20],
+            nicNoRealizadas: {},
             nocMetas: { 10: 'Meta inicial' },
             nocEvaluaciones: { 10: 'Evolución favorable' },
         },
     ]);
+});
+
+test('guardarNota conserva el motivo de una NIC no realizada', async (context) => {
+    let savedNote;
+    context.mock.method(notasRepository, 'guardarNotaCompleta', async (note) => {
+        savedNote = note;
+        return { id: 81, vitalesRegistrados: true };
+    });
+
+    await notasService.guardarNota(notePayload({
+        planCuidados: [{
+            idNANDA: 1,
+            nocIds: [],
+            nicIds: [20, 21],
+            nicRealizadasIds: [20],
+            nicNoRealizadas: { 21: '  paciente en ayunas  ', 99: 'no planificada' },
+        }],
+    }));
+
+    // Solo se guarda el motivo de una NIC planificada y no realizada, recortado.
+    assert.deepEqual(savedNote.planCuidados[0].nicNoRealizadas, { 21: 'paciente en ayunas' });
 });
 
 test('guardarNota rejects a performed NIC that was not planned', async () => {
@@ -185,7 +213,8 @@ test('guardarNota allows SOAPIE edits without a complete new vital-sign set', as
     }));
 
     assert.equal(savedNote.idNota, 81);
-    assert.deepEqual(result, { success: true, id: 81, vitalesRegistrados: false });
+    assert.deepEqual(result, { success: true, id: 81, turno: result.turno, vitalesRegistrados: false });
+    assert.ok(result.turno === 'dia' || result.turno === 'noche');
 });
 
 test('guardarNota rejects comments longer than the database column limit', async () => {

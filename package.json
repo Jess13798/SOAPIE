@@ -7,7 +7,8 @@
     "client": "npm run dev --prefix frontend",
     "start": "node backend/index.js",
     "db:setup": "node backend/setup-database.js",
-    "test": "node --test backend/src/modules/notas/repositories/notasRepository.test.js backend/src/modules/catalogos/services/nandaNocNicService.test.js"
+    "test": "node --test \"backend/tests/*.test.js\" \"backend/src/modules/**/*.test.js\" \"frontend/src/**/*.test.ts\"",
+    "esquema": "node backend/verEsquemaBD.js"
   },
   "keywords": [],
   "author": "",

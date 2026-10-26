@@ -12,13 +12,15 @@ async function obtenerPacientesSinCama(nombreServicio = null) {
     }
 }
 
-async function asignarCama({ IdPaciente, IdCuentaAtencion, IdCama, IdMedicoOrdena }) {
+async function asignarCama({ IdPaciente, IdCuentaAtencion, IdCama, IdMedicoOrdena, idUsuario, usuario }) {
     try {
         return await pacientesSinCamaRepository.asignarCama({
             IdPaciente,
             IdCuentaAtencion,
             IdCama,
             IdMedicoOrdena,
+            idUsuario,
+            usuario,
         });
     } catch (error) {
         console.error('Error en pacientesSinCamaService.asignarCama:', error.message);
@@ -26,12 +28,14 @@ async function asignarCama({ IdPaciente, IdCuentaAtencion, IdCama, IdMedicoOrden
     }
 }
 
-async function moverPacienteDeCama({ IdPaciente, IdCama, IdCuentaAtencion }) {
+async function moverPacienteDeCama({ IdPaciente, IdCama, IdCuentaAtencion, idUsuario, usuario }) {
     try {
         return await pacientesSinCamaRepository.moverPacienteDeCama({
             IdPaciente,
             IdCama,
             IdCuentaAtencion,
+            idUsuario,
+            usuario,
         });
     } catch (error) {
         console.error('Error en pacientesSinCamaService.moverPacienteDeCama:', error.message);
@@ -48,9 +52,19 @@ async function registrarTransferenciaEstancia(payload) {
     }
 }
 
+async function obtenerAuditoriaCamas(filtros = {}) {
+    try {
+        return await pacientesSinCamaRepository.getAuditoriaCamas(filtros);
+    } catch (error) {
+        console.error('Error en pacientesSinCamaService.obtenerAuditoriaCamas:', error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     obtenerPacientesSinCama,
     asignarCama,
     moverPacienteDeCama,
     registrarTransferenciaEstancia,
+    obtenerAuditoriaCamas,
 };

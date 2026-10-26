@@ -22,7 +22,7 @@ const router = createRouter({
 
 // Navigation guard to handle redirection
 router.beforeEach((to, from, next) => {
-  const isLogged = sessionStorage.getItem('usuarioLogueado')
+  const isLogged = sessionStorage.getItem('token')
   if (to.path === '/dashboard' && !isLogged) {
     next('/')
   } else if (to.path === '/' && isLogged) {

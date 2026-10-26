@@ -21,7 +21,17 @@ async function obtenerServicios() {
     }
 }
 
+async function buscarPacientes(texto) {
+    try {
+        return await pacientesRepository.buscarPacientes(texto);
+    } catch (error) {
+        console.error('Error en pacientesService.buscarPacientes:', error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     obtenerPacientes,
     obtenerServicios,
+    buscarPacientes,
 };

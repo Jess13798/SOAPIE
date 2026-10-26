@@ -1,6 +1,6 @@
 # Módulos del frontend
 
-Este directorio está pensado para crecer con una estructura por dominio clínico y mantener la vista principal más limpia.
+Este directorio organiza el frontend por dominio clínico para mantener la vista principal más limpia.
 
 ## Objetivo
 - separar la lógica por módulo
@@ -8,19 +8,53 @@ Este directorio está pensado para crecer con una estructura por dominio clínic
 - reutilizar componentes y composables por área clínica
 - preparar la app para nuevos documentos y workflows del hospital
 
-## Estado actual
+## Estado actual (2026-10-09)
 
-Ya se dejó una base funcional con estas separaciones:
+Los componentes que antes vivían todos juntos en `src/components/` ya están
+agrupados por dominio bajo `src/modules/`:
 
-- `Dashboard.vue` reducida a su papel de orquestador visual
-- `useDashboard.ts` para la lógica de navegación, títulos y modales
-- la estructura de módulos queda abierta para crecer por dominio
+```
+src/
+  components/                 # UI transversal / compartida
+    AppSidebar.vue            # layout de navegación
+    SuccessModal.vue          # modal genérico de éxito
+  composables/
+    useDashboard.ts           # orquestación visual del Dashboard
+  modules/
+    pacientes/
+      components/             # PatientListView, PatientDetail, PacientesSinCamaTable,
+                              # BedModal, BedActionMenu, BedCountersHeader,
+                              # StatsHeader, TotalBedsModal, TransferModal
+      composables/            # usePatients.ts, useBedModals.ts
+    notas/
+      components/             # NewNoteModal, NewNoteForm, NoteCard, NotesHistoryPanel
+                              # + subcomponentes del formulario:
+                              #   NoteShiftBar.vue, VitalsGrid.vue, SoapieEditor.vue
+      composables/            # useNotes.ts
+      notaForm.ts             # tipo compartido NotaFormState
+    vitales/
+      components/             # VitalsOverview, VitalsHistoryModal
+    auditoria/
+      components/             # AuditoriaCamasView (rastro de asignación de camas)
+```
 
-## Estructura recomendada
+`Dashboard.vue` sigue siendo el orquestador: importa los componentes de cada
+módulo y los composables, sin lógica de negocio de cada dominio.
 
-- pacientes/
-- notas/
-- vitales/
+## Formulario de nota (split)
+
+`NewNoteForm.vue` se partió en tres subcomponentes de presentación que comparten
+el mismo objeto reactivo `form` (mantenido en el padre, junto a la validación):
+
+- `NoteShiftBar.vue` — turno automático (solo lectura) y autoría
+- `VitalsGrid.vue` — grilla de signos vitales (incluye SIS/DIA)
+- `SoapieEditor.vue` — pestañas y textarea SOAPIE
+
+La lógica de guardado, validaciones estrictas, `watch` de la nota inicial y
+`clearVitals()` permanecen en `NewNoteForm.vue` para no cambiar el comportamiento.
+
+## Estructura recomendada (siguiente)
+
 - kardex/
 - balance/
 - documentacion/

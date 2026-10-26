@@ -109,7 +109,7 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { Eye, EyeOff } from "lucide-vue-next";
-import { authService } from "@/services/api";
+import { authService, setToken } from "@/services/api";
 
 const router = useRouter();
 const credentials = ref({ usuario: '', contrasena: '' });
@@ -128,10 +128,14 @@ const iniciarSesion = async () => {
     });
     
     if (data.success) {
+      if (data.token) setToken(data.token);
       sessionStorage.setItem('usuarioLogueado', data.usuario || '');
       sessionStorage.setItem('empleadoLogueado', data.empleado || '');
       if (data.idEmpleado) {
         sessionStorage.setItem('idEmpleado', String(data.idEmpleado));
+      }
+      if (data.turno) {
+        sessionStorage.setItem('turno', data.turno);
       }
       router.push('/dashboard'); 
     } else {
