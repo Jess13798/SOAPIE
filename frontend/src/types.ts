@@ -28,6 +28,7 @@ export interface Patient {
 export interface PacienteBD {
   IdCama?: number | null
   IdCuentaAtencion: string | null
+  Dni?: string | null
   IdEspecialidad?: number | null
   IdProducto?: number | null
   Codigo: string

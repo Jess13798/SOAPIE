@@ -30,6 +30,7 @@ async function getPacientesByServicio(servicioId = null) {
                         ISNULL(p.SegundoNombre, '') + ' ' +
                         ISNULL(p.TercerNombre, '')
                     ))) AS Pacientes,
+                    p.NroDocumento AS Dni,
                     p.NroHistoriaClinica,
                     ed.Edad,
                     ed.TipoEdad,
