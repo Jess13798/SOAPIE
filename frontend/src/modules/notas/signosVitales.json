@@ -1,0 +1,53 @@
+{
+  "campos": [
+    "peso",
+    "talla",
+    "pCefalico",
+    "pAbdominal",
+    "hemoglucotest",
+    "presionArterial",
+    "frecuenciaCardiaca",
+    "frecuenciaRespiratoria",
+    "temperatura",
+    "saturacionOxigeno"
+  ],
+  "porDefecto": {
+    "obligatorios": [
+      "peso", "talla", "pCefalico", "pAbdominal", "hemoglucotest",
+      "presionArterial", "frecuenciaCardiaca", "frecuenciaRespiratoria",
+      "temperatura", "saturacionOxigeno"
+    ],
+    "rangos": {
+      "peso": { "min": 0, "max": 999.99 },
+      "talla": { "min": 0, "max": 999.99 },
+      "pCefalico": { "min": 0, "max": 999.99 },
+      "pAbdominal": { "min": 0, "max": 999.99 },
+      "hemoglucotest": { "min": 0, "max": 999.99 },
+      "presionArterial": { "sisMin": 0, "sisMax": 999, "diaMin": 0, "diaMax": 999 },
+      "frecuenciaCardiaca": { "min": 0, "max": 2147483647 },
+      "frecuenciaRespiratoria": { "min": 0, "max": 2147483647 },
+      "temperatura": { "min": 0, "max": 99.99 },
+      "saturacionOxigeno": { "min": 0, "max": 100 }
+    }
+  },
+  "porServicio": {
+    "213": {
+      "obligatorios": [
+        "peso", "talla", "frecuenciaCardiaca", "frecuenciaRespiratoria",
+        "temperatura", "saturacionOxigeno"
+      ],
+      "rangos": {
+        "peso": { "min": 0.5, "max": 150 },
+        "talla": { "min": 30, "max": 200 },
+        "pCefalico": { "min": 25, "max": 60 },
+        "pAbdominal": { "min": 20, "max": 120 },
+        "hemoglucotest": { "min": 20, "max": 600 },
+        "presionArterial": { "sisMin": 39, "sisMax": 131, "diaMin": 16, "diaMax": 83 },
+        "frecuenciaCardiaca": { "min": 50, "max": 205 },
+        "frecuenciaRespiratoria": { "min": 12, "max": 60 },
+        "temperatura": { "min": 35.5, "max": 38.0 },
+        "saturacionOxigeno": { "min": 90, "max": 100 }
+      }
+    }
+  }
+}
