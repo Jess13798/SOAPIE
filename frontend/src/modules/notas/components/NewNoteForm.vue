@@ -74,20 +74,21 @@
     <!-- SOAPIE -->
     <SoapieEditor
       v-model:section="activeTab"
+      v-model:pain-score="painScore"
       :form="form"
       :read-only="isReadOnly"
       :permite-editar-analisis="permiteEditarAnalisisAnterior"
     />
 
     <p
-      v-if="planFueHeredado && ['a', 'p', 'i', 'e'].includes(activeTab)"
+      v-if="planFueHeredado && activeTab === 'a'"
       class="border-b border-sky-100 bg-sky-50 px-4 py-1.5 text-[11px] font-semibold text-sky-800"
     >
-      Plan heredado de la nota anterior: revise los diagnósticos y marque en Intervención lo que se ejecutó.
+      Diagnósticos heredados de la nota anterior: revíselos antes de guardar.
     </p>
 
     <SoapieCarePlanSelector
-      v-if="['a', 'p', 'i', 'e'].includes(activeTab)"
+      v-if="activeTab === 'a'"
       v-model="planCuidados"
       :section="activeTab"
       :disabled="isReadOnly"
@@ -131,7 +132,8 @@ import NoteShiftBar from './NoteShiftBar.vue'
 import VitalsGrid from './VitalsGrid.vue'
 import SoapieEditor from './SoapieEditor.vue'
 import SoapieCarePlanSelector from './SoapieCarePlanSelector.vue'
-import { CAMPOS_OBLIGATORIOS_POR_DEFECTO } from '../vitalesConfig'
+import { appendWongBakerMarker, extractWongBakerScore, removeWongBakerMarker, type WongBakerScore } from '../wongBaker'
+import { CAMPOS_OBLIGATORIOS_POR_DEFECTO, type RangoVital } from '../vitalesConfig'
 import {
   NIC_BLOQUE_TITULO,
   NOC_BLOQUE_TITULO,
@@ -155,8 +157,10 @@ const props = withDefaults(defineProps<{
   isSubmitting?: boolean
   // Signos vitales que exige el servicio actual (los define el backend).
   camposObligatorios?: string[]
+  rangosVitales?: Record<string, RangoVital>
 }>(), {
   camposObligatorios: () => [...CAMPOS_OBLIGATORIOS_POR_DEFECTO],
+  rangosVitales: () => ({}),
 })
 
 const emit = defineEmits<{
@@ -186,7 +190,7 @@ const defaultForm = () => ({
   s: props.initialNota?.subjetivo || "", 
   o: props.initialNota?.objetivo || "", 
   a: textoLibre(props.initialNota?.analisis || "", 'DIAGNOSTICOS NANDA'),
-  p: textoLibre(props.initialNota?.plan || "", NOC_BLOQUE_TITULO),
+  p: textoLibre(removeWongBakerMarker(props.initialNota?.plan || ""), NOC_BLOQUE_TITULO),
   i: textoLibre(props.initialNota?.intervencion || "", NIC_BLOQUE_TITULO),
   e: textoLibre(props.initialNota?.evaluacion || "", NOC_EVALUACION_BLOQUE_TITULO),
   antecedentes: props.initialNota?.antecedentes || "", 
@@ -200,6 +204,7 @@ const form = reactive(defaultForm())
 // Sección SOAPIE activa. La maneja SoapieEditor (v-model:section) y la usa el
 // selector de plan de cuidados para saber a qué sección agregar el NANDA/NOC/NIC.
 const activeTab = ref<'s' | 'o' | 'a' | 'p' | 'i' | 'e'>('s')
+const painScore = ref<WongBakerScore | null>(extractWongBakerScore(props.initialNota?.plan || ''))
 // El textarea de Análisis solo se muestra si la nota traía un análisis previo;
 // en notas nuevas el Análisis se arma con los diagnósticos NANDA seleccionados.
 const permiteEditarAnalisisAnterior = ref(
@@ -301,7 +306,8 @@ watch(() => props.initialNota, (newNote) => {
     form.o = newNote.objetivo || ""
     form.a = textoLibre(newNote.analisis || "", 'DIAGNOSTICOS NANDA')
     permiteEditarAnalisisAnterior.value = Boolean(form.a)
-    form.p = textoLibre(newNote.plan || "", NOC_BLOQUE_TITULO)
+    form.p = textoLibre(removeWongBakerMarker(newNote.plan || ""), NOC_BLOQUE_TITULO)
+    painScore.value = extractWongBakerScore(newNote.plan || '')
     form.i = textoLibre(newNote.intervencion || "", NIC_BLOQUE_TITULO)
     form.e = textoLibre(newNote.evaluacion || "", NOC_EVALUACION_BLOQUE_TITULO)
     form.antecedentes = newNote.antecedentes || ""
@@ -395,6 +401,7 @@ function editableStateFromForm() {
     objetivo: normalizedText(form.o),
     analisis: normalizedText(form.a),
     plan: normalizedText(form.p),
+    painScore: painScore.value,
     intervencion: normalizedText(form.i),
     evaluacion: normalizedText(form.e),
     planCuidados: normalizedPlan(planCuidados.value),
@@ -407,7 +414,8 @@ function editableStateFromNota(nota: NotaEnfermeria) {
     subjetivo: normalizedText(nota.subjetivo),
     objetivo: normalizedText(nota.objetivo),
     analisis: normalizedText(textoLibre(nota.analisis || '', 'DIAGNOSTICOS NANDA')),
-    plan: normalizedText(textoLibre(nota.plan || '', 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS')),
+    plan: normalizedText(textoLibre(removeWongBakerMarker(nota.plan || ''), 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS')),
+    painScore: extractWongBakerScore(nota.plan || ''),
     intervencion: normalizedText(textoLibre(nota.intervencion || '', 'INTERVENCIONES NIC REALIZADAS')),
     evaluacion: normalizedText(textoLibre(nota.evaluacion || '', 'EVALUACION DE RESULTADOS NOC')),
     planCuidados: normalizedPlan(hidratarPlanCuidados(nota)),
@@ -467,6 +475,16 @@ function validateVitales(isExistingNote: boolean, changedVitalFields: string[]) 
     } else if (!/^\d+$/.test(value)) {
       return 'La frecuencia cardiaca y respiratoria deben ser números enteros no negativos.'
     }
+
+    const range = props.rangosVitales[field]
+    const numericValue = Number(value)
+    if (
+      range
+      && ((range.min !== undefined && numericValue < range.min)
+        || (range.max !== undefined && numericValue > range.max))
+    ) {
+      return `${etiquetasVitalesConfig[field].toLowerCase()} debe estar entre ${range.min} y ${range.max}.`
+    }
   }
 
   const pressureChanged = !isExistingNote || changedVitalFields.includes('presionArterial')
@@ -474,6 +492,18 @@ function validateVitales(isExistingNote: boolean, changedVitalFields: string[]) 
     const match = form.presionArterial.match(/^(\d{1,3})\/(\d{1,3})$/)
     if (!match || Number(match[1]) <= Number(match[2]) || Number(match[2]) === 0) {
       return 'La presión arterial debe tener formato sistólica/diastólica y la sistólica debe ser mayor.'
+    }
+    const range = props.rangosVitales.presionArterial
+    const sistolica = Number(match[1])
+    const diastolica = Number(match[2])
+    if (
+      range
+      && ((range.sisMin !== undefined && sistolica < range.sisMin)
+        || (range.sisMax !== undefined && sistolica > range.sisMax)
+        || (range.diaMin !== undefined && diastolica < range.diaMin)
+        || (range.diaMax !== undefined && diastolica > range.diaMax))
+    ) {
+      return `La presión arterial debe estar entre ${range.sisMin}/${range.diaMin} y ${range.sisMax}/${range.diaMax}.`
     }
   }
   return ''
@@ -518,19 +548,6 @@ function handleSubmit(shouldSign = false) {
 
   if (!form.a.trim() && planCuidados.value.length === 0) {
     showToast('Seleccione al menos un diagnóstico NANDA para completar la sección Análisis.', 'error')
-    return
-  }
-
-  // Las intervenciones marcadas como "no realizada" deben explicar el motivo:
-  // es justamente el dato que permite ver por qué no se cumplió el plan.
-  const nicSinMotivo = planCuidados.value.some(item =>
-    (item.nic || []).some(nic =>
-      (item.nicNoRealizadas && Object.prototype.hasOwnProperty.call(item.nicNoRealizadas, nic.id))
-      && !(item.nicNoRealizadas?.[nic.id] || '').trim(),
-    ),
-  )
-  if (nicSinMotivo) {
-    showToast('Indique el motivo de cada intervención marcada como "No realizada".', 'error')
     return
   }
 
@@ -590,9 +607,9 @@ function handleSubmit(shouldSign = false) {
     subjetivo: form.s,
     objetivo: form.o,
     analisis: bloqueEstructurado(form.a, 'DIAGNOSTICOS NANDA', lineasDiagnosticosNanda()),
-    plan: bloqueEstructurado(form.p, NOC_BLOQUE_TITULO, lineasPlan()),
-    intervencion: bloqueEstructurado(form.i, NIC_BLOQUE_TITULO, lineasIntervenciones(planCuidados.value)),
-    evaluacion: bloqueEstructurado(form.e, NOC_EVALUACION_BLOQUE_TITULO, lineasEvaluacion()),
+    plan: appendWongBakerMarker(normalizedText(form.p), painScore.value),
+    intervencion: normalizedText(form.i),
+    evaluacion: normalizedText(form.e),
     antecedentes: form.antecedentes,
     diagnosticos: form.diagnosticos,
     farmacia: form.farmacia,

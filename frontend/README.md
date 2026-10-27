@@ -20,3 +20,5 @@ npm run dev -- --host 0.0.0.0
 ```
 
 Comparte con tus compañeros la dirección que Vite muestra en `Network`. Las llamadas a `/api` se envían mediante el proxy de Vite al backend local en el puerto `3000`; ambos servidores deben permanecer activos.
+
+Si el backend responde `Origen no permitido (CORS)`, agrega a `backend/.env` el origen exacto mostrado en la barra del navegador en `CORS_ORIGIN` (separado por comas, sin una `/` final) y reinicia el backend.
