@@ -8,7 +8,7 @@
          pestaña SOAPIE, los resultados del buscador y el plan seleccionado,
          y todo el contenido "saltaba". El formulario de dentro ya tiene su
          propia área scrolleable. -->
-    <div class="relative flex h-[85vh] w-full max-w-6xl transform flex-col overflow-hidden rounded-xl bg-white shadow-2xl border border-slate-200">
+    <div class="relative flex h-[85vh] w-full max-w-7xl transform flex-col overflow-hidden rounded-xl bg-white shadow-2xl border border-slate-200">
       <!-- Unified Header -->
       <div class="flex flex-col border-b border-slate-100 bg-white shrink-0">
         <!-- Top Bar: Title & Close -->

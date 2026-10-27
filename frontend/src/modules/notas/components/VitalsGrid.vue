@@ -15,7 +15,7 @@
       </p>
     </div>
 
-    <div class="grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-5">
+    <div class="grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-10">
       <div
         v-for="(label, key) in etiquetasVitals"
         :key="key"
