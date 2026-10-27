@@ -83,7 +83,10 @@
         
         <div>
           <h4 class="text-[11px] font-bold uppercase tracking-wider text-teal-600 mb-1">P - Plan</h4>
-          <p class="text-sm leading-relaxed text-slate-600">{{ nota.plan }}</p>
+          <p class="text-sm leading-relaxed text-slate-600">{{ planText }}</p>
+          <p v-if="painFace" class="mt-1 text-xs font-semibold text-sky-800">
+            Escala Wong-Baker: {{ painFace.face }} {{ painFace.score }}/10 — {{ painFace.meaning }}
+          </p>
         </div>
 
          <div>
@@ -117,6 +120,7 @@
 import { computed } from 'vue'
 import { Thermometer, Heart, Wind, Activity } from 'lucide-vue-next'
 import type { NotaEnfermeria, Patient } from '@/types'
+import { extractWongBakerScore, removeWongBakerMarker, wongBakerFace } from '../wongBaker'
 
 const props = defineProps<{
   nota: NotaEnfermeria
@@ -125,6 +129,8 @@ const props = defineProps<{
 }>()
 
 const patient = computed(() => props.pacientes?.find((p: Patient) => String(p.id) === String(props.nota.pacienteId)))
+const planText = computed(() => removeWongBakerMarker(props.nota.plan || ''))
+const painFace = computed(() => wongBakerFace(extractWongBakerScore(props.nota.plan || '')))
 
 const tipoLabels: Record<string, string> = {
   valoracion: 'Valoracion',
