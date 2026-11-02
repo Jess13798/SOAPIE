@@ -1,7 +1,7 @@
 import { computed, ref, type Ref } from 'vue'
 import type { Patient, NotaEnfermeria, SignoVitalHistorial } from '@/types'
-import { notasService } from '@/services/api'
-import { camposObligatoriosDeServicio } from '../vitalesConfig'
+import { ApiError, notasService } from '@/services/api'
+import { camposObligatoriosDeServicio, rangosDeServicio } from '../vitalesConfig'
 
 function mergeNotes(databaseNotes: NotaEnfermeria[], currentNotes: NotaEnfermeria[]) {
   const merged = new Map(databaseNotes.map(note => [note.id, note]))
@@ -66,6 +66,9 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
   // primer render, sin depender de una consulta.
   const camposObligatoriosVitales = computed(
     () => camposObligatoriosDeServicio(servicioSeleccionado?.value),
+  )
+  const rangosVitales = computed(
+    () => rangosDeServicio(servicioSeleccionado?.value),
   )
 
   async function cargarNotasDesdeBackend() {
@@ -179,6 +182,10 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
       }
     } catch (err) {
       console.error('Error guardando nota en BD:', err)
+      if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
+        return { success: false, error: err }
+      }
+
       // Se conserva temporalmente en memoria de la sesión si falla SQL Server.
       const notaAnterior = notas.value.find(n => n.id === nota.id)
       const vitalesModificados = hasVitalChanges(nota, notaAnterior)
@@ -230,5 +237,6 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
     guardarNota,
     firmarNota,
     camposObligatoriosVitales,
+    rangosVitales,
   }
 }

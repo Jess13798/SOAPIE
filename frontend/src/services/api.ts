@@ -12,6 +12,13 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 // ==========================================
 const TOKEN_KEY = 'token'
 
+export class ApiError extends Error {
+    constructor(message: string, readonly status: number) {
+        super(message)
+        this.name = 'ApiError'
+    }
+}
+
 export function getToken(): string | null {
     return sessionStorage.getItem(TOKEN_KEY)
 }
@@ -60,7 +67,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
         } catch {
             // Ignorar si la respuesta de error no es JSON
         }
-        throw new Error(errorDetalle)
+        throw new ApiError(errorDetalle, response.status)
     }
 
     return response.json()

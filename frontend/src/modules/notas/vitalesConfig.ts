@@ -6,6 +6,15 @@
 // depender de una consulta al servidor.
 import config from './signosVitales.json'
 
+export type RangoVital = {
+  min?: number
+  max?: number
+  sisMin?: number
+  sisMax?: number
+  diaMin?: number
+  diaMax?: number
+}
+
 export const CAMPOS_SIGNOS_VITALES: string[] = config.campos
 
 // Servicios sin configuración: se exigen todos (comportamiento histórico).
@@ -20,13 +29,13 @@ export function camposObligatoriosDeServicio(idServicio?: string | null): string
 // Rangos (min/max) configurados para el servicio. Sirven para validar y para
 // mostrar el rango permitido en la pantalla. Si no hay configuración, se usan
 // los límites técnicos de porDefecto.
-export function rangosDeServicio(idServicio?: string | null): Record<string, any> {
+export function rangosDeServicio(idServicio?: string | null): Record<string, RangoVital> {
   const id = String(idServicio ?? '').trim()
   const c = id && config.porServicio ? config.porServicio[id] : undefined
   return (c && c.rangos) || config.porDefecto.rangos || {}
 }
 
-export function rangoDeServicio(idServicio: string | null | undefined, campo: string): any {
+export function rangoDeServicio(idServicio: string | null | undefined, campo: string): RangoVital | null {
   const r = rangosDeServicio(idServicio)
   return r && r[campo] ? r[campo] : null
 }

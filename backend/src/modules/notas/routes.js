@@ -31,7 +31,8 @@ router.post('/notas', async (req, res) => {
         const resultado = await notasModule.guardarNota(nota);
         res.json(resultado);
     } catch (err) {
-        res.status(500).json({ success: false, mensaje: 'Error: ' + err.message });
+        const status = err.code === 'NOTAS_INVALID_INPUT' ? 400 : 500;
+        res.status(status).json({ success: false, mensaje: err.message });
     }
 });
 

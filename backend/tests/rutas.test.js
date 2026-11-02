@@ -57,6 +57,23 @@ async function invocarGet(router, ruta, query) {
     return { status, body };
 }
 
+async function invocarPost(router, ruta, body) {
+    const capa = router.stack.find((c) => c.route && c.route.path === ruta && c.route.methods.post);
+    assert.ok(capa, `debe existir la ruta POST ${ruta}`);
+    const handler = capa.route.stack[0].handle;
+
+    const req = { body };
+    let status = 200;
+    let responseBody = null;
+    const res = {
+        status(codigo) { status = codigo; return this; },
+        json(datos) { responseBody = datos; return this; },
+    };
+
+    await handler(req, res);
+    return { status, body: responseBody };
+}
+
 test('GET /medicos sin especialidadId responde 400', async () => {
     const router = require('../src/modules/medicos/routes');
     const respuesta = await invocarGet(router, '/medicos', {});
@@ -78,6 +95,14 @@ test('GET /medicos con especialidadId filtra por esa especialidad', async (t) =>
     assert.equal(respuesta.status, 200);
     assert.equal(respuesta.body[0].Medico, 'FILTRADO');
     assert.deepEqual(porEspecialidad.mock.calls[0].arguments, ['6']);
+});
+
+test('POST /notas responde 400 para errores de validación', async () => {
+    const respuesta = await invocarPost(require('../src/modules/notas/routes'), '/notas', {});
+
+    assert.equal(respuesta.status, 400);
+    assert.equal(respuesta.body.success, false);
+    assert.match(respuesta.body.mensaje, /IdPaciente es obligatorio/i);
 });
 
 test('el router de notas expone las rutas de notas y vitales', () => {

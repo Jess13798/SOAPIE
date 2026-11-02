@@ -250,6 +250,27 @@ test('guardarNota en Hospitalización Pediátrica exige solo los vitales configu
     assert.equal(guardarCompleta.mock.callCount(), 1);
 });
 
+test('guardarNota rechaza frecuencia cardiaca fuera del rango del servicio', async (t) => {
+    silenciarErrores(t);
+    const guardarCompleta = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => ({ id: 93 }));
+
+    await assert.rejects(
+        () => notasService.guardarNota(notaSoapieCompleta({
+            servicioId: '213',
+            signosVitales: {
+                peso: '70',
+                talla: '170',
+                frecuenciaCardiaca: '49',
+                frecuenciaRespiratoria: '18',
+                temperatura: '36.7',
+                saturacionOxigeno: '98',
+            },
+        })),
+        /frecuencia cardiaca debe estar entre 50 y 205/i,
+    );
+    assert.equal(guardarCompleta.mock.callCount(), 0);
+});
+
 test('guardarNota sin configuración de servicio sigue exigiendo los diez vitales', async (t) => {
     silenciarErrores(t);
     t.mock.method(notasRepository, 'guardarNotaCompleta', async () => ({ id: 92, vitalesRegistrados: true }));

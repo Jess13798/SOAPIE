@@ -92,6 +92,7 @@
           :selected-patient="selectedPatient"
           :nota-anterior="notaAnteriorSeleccionada"
           :campos-obligatorios="camposObligatoriosVitales"
+          :rangos-vitales="rangosVitales"
           @save="onSaveNote"
         />
 
@@ -119,6 +120,7 @@
       :nota="selectedNoteForModal || undefined"
       :nota-anterior="notaAnteriorPacienteSeleccionado"
       :campos-obligatorios="camposObligatoriosVitales"
+      :rangos-vitales="rangosVitales"
       :note-number="modalNoteNumber"
       :is-submitting="isSavingNote"
       @save="onSaveNote"
@@ -212,6 +214,7 @@ const {
 const {
   notas,
   camposObligatoriosVitales,
+  rangosVitales,
   isNewNoteModalOpen,
   patientForNewNote,
   selectedNoteForModal,

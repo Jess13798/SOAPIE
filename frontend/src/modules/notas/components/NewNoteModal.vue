@@ -144,6 +144,7 @@
           :initial-nota="nota"
           :nota-anterior="notaAnterior"
           :campos-obligatorios="camposObligatorios"
+          :rangos-vitales="rangosVitales"
           :is-read-only="!!nota?.isFirmada"
           :is-submitting="isSubmitting"
           @save="handleSave"
@@ -193,6 +194,7 @@ const props = defineProps<{
   isSubmitting?: boolean
   // Signos vitales que exige el servicio seleccionado.
   camposObligatorios?: string[]
+  rangosVitales?: Record<string, import('../vitalesConfig').RangoVital>
 }>()
 
 const emit = defineEmits<{
@@ -247,7 +249,7 @@ function handlePrint() {
   if (!props.nota) return
   printError.value = ''
   try {
-    if (!printNotaSoapie(props.nota, props.patient, props.noteNumber)) {
+    if (!printNotaSoapie(props.nota, props.patient)) {
       printError.value = 'El navegador bloqueó la ventana de impresión. Habilite las ventanas emergentes para este sitio e intente de nuevo.'
     }
   } catch (error) {
