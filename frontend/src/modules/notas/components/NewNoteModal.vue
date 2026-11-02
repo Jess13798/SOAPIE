@@ -94,6 +94,16 @@
               <Activity class="h-4 w-4" />
             </button>
 
+            <!-- Balance hídrico: disponible siempre -->
+            <button
+              type="button"
+              @click="showBalanceHidrico = true"
+              class="flex items-center justify-center w-8 h-8 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm active:scale-95 border border-indigo-700"
+              title="Balance Hídrico"
+            >
+              <Droplet class="h-4 w-4" />
+            </button>
+
             <button 
               @click="$emit('close')"
               class="rounded-md p-1 bg-red-500 text-white hover:bg-red-600 transition-colors shadow-sm"
@@ -167,20 +177,28 @@
     :registros-temporales="nota?.historialTemporalSignosVitales || []"
     @close="showBasicVitals = false"
   />
+  <BalanceHidricoModal
+    :is-open="showBalanceHidrico"
+    :id-cuenta="patient.numCuenta || ''"
+    :patient="patient"
+    @close="showBalanceHidrico = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { PlusCircle, X, Clock, Pencil, ClipboardList, Plus, Book, Activity, Printer } from 'lucide-vue-next'
+import { PlusCircle, X, Clock, Pencil, ClipboardList, Plus, Book, Activity, Printer, Droplet } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
 import NewNoteForm from './NewNoteForm.vue'
 import VitalsHistoryModal from '@/modules/vitales/components/VitalsHistoryModal.vue'
 import VitalsChartModal from '@/modules/vitales/components/VitalsChartModal.vue'
+import BalanceHidricoModal from '@/modules/balance-hidrico/components/BalanceHidricoModal.vue'
 import { printNotaSoapie } from '../printNotaSoapie'
 
 const formRef = ref<InstanceType<typeof NewNoteForm> | null>(null)
 const showVitalsHistory = ref(false)
 const showBasicVitals = ref(false)
+const showBalanceHidrico = ref(false)
 const printError = ref('')
 
 const props = defineProps<{

@@ -285,6 +285,24 @@ export const notasService = {
     getHistorialVitalsPorAtencion(idCuenta: string | number, limit = 10, page = 1): Promise<SignoVitalHistorial[]> {
         return request<SignoVitalHistorial[]>(`/atenciones/${idCuenta}/vitals?limit=${limit}&page=${page}`)
     },
+
+    getBalanceHidrico(idCuenta: string | number, fecha?: string): Promise<any[]> {
+        const qs = fecha ? `?idCuenta=${idCuenta}&fecha=${fecha}` : `?idCuenta=${idCuenta}`
+        return request<any[]>(`/balance-hidrico${qs}`)
+    },
+
+    guardarBalanceHidrico(registro: any): Promise<{ success: boolean; id: number }> {
+        return request<{ success: boolean; id: number }>('/balance-hidrico', {
+            method: 'POST',
+            body: JSON.stringify(registro),
+        })
+    },
+
+    eliminarBalanceHidrico(id: string | number): Promise<{ success: boolean }> {
+        return request<{ success: boolean }>(`/balance-hidrico/${id}`, {
+            method: 'DELETE',
+        })
+    },
 }
 
 // ==========================================
