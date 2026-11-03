@@ -70,6 +70,13 @@ app.use('/api', medicosRoutes);
 app.use('/api', balanceHidricoRoutes);
 app.use('/api', catalogosRoutes);
 
+// Fallback SPA: cualquier ruta que no sea /api ni archivo estatico devuelve
+// index.html para que Vue Router resuelva la vista (evita 'Cannot GET /dashboard').
+app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(frontendDir, 'index.html'));
+});
+
 // --- INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
