@@ -1,7 +1,32 @@
 const sql = require('mssql');
 const { query } = require('../../../../dbHelper');
 
+async function asegurarTabla() {
+    await query(`
+        IF OBJECT_ID(N'dbo.BalanceHidrico', N'U') IS NULL
+        BEGIN
+            CREATE TABLE dbo.BalanceHidrico (
+                IdBalance INT IDENTITY(1,1) PRIMARY KEY,
+                IdPaciente INT NOT NULL,
+                IdCuenta INT NULL,
+                IdServicio INT NULL,
+                Fecha DATE NOT NULL,
+                Turno VARCHAR(10) NOT NULL,
+                Tipo VARCHAR(10) NOT NULL,
+                Concepto VARCHAR(50) NOT NULL,
+                Cantidad DECIMAL(8,2) NOT NULL,
+                IdEmpleado INT NULL,
+                FechaHora DATETIME NOT NULL DEFAULT GETDATE(),
+                IdNota INT NULL
+            );
+            CREATE INDEX IX_BalanceHidrico_Cuenta_Fecha
+                ON dbo.BalanceHidrico (IdCuenta, Fecha);
+        END
+    `);
+}
+
 async function guardarRegistro(nota) {
+    await asegurarTabla();
     const idPaciente = nota.pacienteId ? Number(nota.pacienteId) : null;
     const idCuenta = nota.idCuenta ? Number(nota.idCuenta) : null;
     const idServicio = nota.servicioId ? Number(nota.servicioId) : null;
@@ -32,6 +57,7 @@ async function guardarRegistro(nota) {
 }
 
 async function obtenerRegistros(idCuenta, fecha) {
+    await asegurarTabla();
     const cuentaId = idCuenta ? Number(idCuenta) : null;
     if (!cuentaId) return [];
     let sqlText = `SELECT IdBalance, IdPaciente, IdCuenta, IdServicio, Fecha, Turno, Tipo, Concepto, Cantidad, IdEmpleado, FechaHora
@@ -47,6 +73,7 @@ async function obtenerRegistros(idCuenta, fecha) {
 }
 
 async function eliminarRegistro(id) {
+    await asegurarTabla();
     const idNum = Number(id);
     if (!idNum) throw new Error('Id inválido');
     await query('DELETE FROM dbo.BalanceHidrico WHERE IdBalance = @id', [
