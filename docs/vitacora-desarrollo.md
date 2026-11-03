@@ -181,7 +181,7 @@ impresión).
 
 | Decisión | Detalle |
 |---|---|
-| Base de datos | `sigh` en `192.168.80.11` (SQL Server 2012). Login `johann`/`1234` (sysadmin). |
+| Base de datos | SQL Server; configurar la conexión mediante variables de entorno locales. |
 | Restauración diaria | `RESTORE DATABASE [sigh]` desde `D:\subir_data\data_galen\sigh_backup.bak`. Borraba datos propios → se propuso base `soapie` separada (pendiente). |
 | `IdServicio` en `NotaEnfermeria` | INT NULL, sin FK (para futura base `soapie` separada). |
 | Resolución de servicio | Desde la estancia abierta real; `servicioId` del payload es respaldo. |

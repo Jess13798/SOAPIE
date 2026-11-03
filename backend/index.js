@@ -13,6 +13,7 @@ const pacientesSinCamaRoutes = require('./src/modules/pacientes-sin-cama/routes'
 const diagnosticosRoutes = require('./src/modules/diagnosticos/routes');
 const medicosRoutes = require('./src/modules/medicos/routes');
 const balanceHidricoRoutes = require('./src/modules/balance-hidrico/routes');
+const kardexRoutes = require('./src/modules/kardex/routes');
 const catalogosRoutes = require('./src/modules/catalogos/routes');
 
 const { ejecutarMigracionesAlArrancar } = require('./src/core/db/migraciones');
@@ -78,6 +79,7 @@ app.use('/api', pacientesSinCamaRoutes);
 app.use('/api', diagnosticosRoutes);
 app.use('/api', medicosRoutes);
 app.use('/api', balanceHidricoRoutes);
+app.use('/api', kardexRoutes);
 app.use('/api', catalogosRoutes);
 
 // Fallback SPA: cualquier ruta que no sea /api ni archivo estatico devuelve

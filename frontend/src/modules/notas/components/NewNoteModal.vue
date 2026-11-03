@@ -104,6 +104,15 @@
               <Droplet class="h-4 w-4" />
             </button>
 
+            <button
+              type="button"
+              @click="showKardex = true"
+              class="flex items-center justify-center w-8 h-8 rounded-md bg-emerald-700 text-white hover:bg-emerald-800 transition-colors shadow-sm active:scale-95 border border-emerald-800"
+              title="Kardex de enfermería"
+            >
+              <ClipboardList class="h-4 w-4" />
+            </button>
+
             <button 
               @click="$emit('close')"
               class="rounded-md p-1 bg-red-500 text-white hover:bg-red-600 transition-colors shadow-sm"
@@ -183,6 +192,12 @@
     :patient="patient"
     @close="showBalanceHidrico = false"
   />
+  <KardexModal
+    :is-open="showKardex"
+    :id-cuenta="patient.numCuenta || ''"
+    :patient="patient"
+    @close="showKardex = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -193,12 +208,14 @@ import NewNoteForm from './NewNoteForm.vue'
 import VitalsHistoryModal from '@/modules/vitales/components/VitalsHistoryModal.vue'
 import VitalsChartModal from '@/modules/vitales/components/VitalsChartModal.vue'
 import BalanceHidricoModal from '@/modules/balance-hidrico/components/BalanceHidricoModal.vue'
+import KardexModal from '@/modules/kardex/components/KardexModal.vue'
 import { printNotaSoapie } from '../printNotaSoapie'
 
 const formRef = ref<InstanceType<typeof NewNoteForm> | null>(null)
 const showVitalsHistory = ref(false)
 const showBasicVitals = ref(false)
 const showBalanceHidrico = ref(false)
+const showKardex = ref(false)
 const printError = ref('')
 
 const props = defineProps<{
