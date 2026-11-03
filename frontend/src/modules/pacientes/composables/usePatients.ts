@@ -21,6 +21,7 @@ export function usePatients() {
       id: pacienteId,
       idEspecialidad: pacienteBD.IdEspecialidad ? String(pacienteBD.IdEspecialidad) : '',
       idProducto: pacienteBD.IdProducto ? String(pacienteBD.IdProducto) : '',
+      servicioId: pacienteBD.IdServicio || null,
       nombreCompleto,
       nombre: nombreCompleto.split(/\s+/)[0] || '',
       apellido: nombreCompleto,

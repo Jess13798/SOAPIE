@@ -47,7 +47,7 @@
                 ]"
                 @click="painScore = painScore === face.score ? null : face.score"
               >
-                <span class="text-xl leading-none" aria-hidden="true">{{ face.face }}</span>
+                <span class="h-5 w-5 rounded-full shadow-sm" :class="face.color" aria-hidden="true"></span>
                 <span class="mt-1 text-[9px] font-black">{{ face.score }}/10</span>
                 <span class="w-full whitespace-normal text-[9px] leading-tight">{{ face.meaning }}</span>
               </button>

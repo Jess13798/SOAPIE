@@ -551,6 +551,19 @@ function handleSubmit(shouldSign = false) {
     return
   }
 
+  // Las intervenciones marcadas como "no realizada" deben explicar el motivo:
+  // es justamente el dato que permite ver por qué no se cumplió el plan.
+  const nicSinMotivo = planCuidados.value.some(item =>
+    (item.nic || []).some(nic =>
+      (item.nicNoRealizadas && Object.prototype.hasOwnProperty.call(item.nicNoRealizadas, nic.id))
+      && !(item.nicNoRealizadas?.[nic.id] || '').trim(),
+    ),
+  )
+  if (nicSinMotivo) {
+    showToast('Indique el motivo de cada intervención marcada como "No realizada".', 'error')
+    return
+  }
+
   const initialState = props.initialNota ? editableStateFromNota(props.initialNota) : null
   const currentState = editableStateFromForm()
   const vitalFields = Object.keys(currentState.vitals) as Array<keyof typeof currentState.vitals>

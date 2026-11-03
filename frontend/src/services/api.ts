@@ -73,6 +73,27 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     return response.json()
 }
 
+export interface RegistroKardex {
+    IdKardex: number
+    IdPaciente: number
+    IdCuenta: number
+    IdServicio: number | null
+    Fecha: string
+    Turno: 'M' | 'T' | 'N'
+    Categoria: 'CUIDADO' | 'MEDICAMENTO'
+    Detalle: string | null
+    Medicamento: string | null
+    Dosis: string | null
+    Via: string | null
+    Frecuencia: string | null
+    HoraProgramada: string | null
+    Estado: 'PENDIENTE' | 'ADMINISTRADO' | 'NO_ADMINISTRADO' | null
+    Observacion: string | null
+    IdEmpleado: number | null
+    Responsable: string
+    FechaHora: string
+}
+
 // ==========================================
 // 1. AUTENTICACIÓN / LOGIN
 // ==========================================
@@ -284,6 +305,55 @@ export const notasService = {
 
     getHistorialVitalsPorAtencion(idCuenta: string | number, limit = 10, page = 1): Promise<SignoVitalHistorial[]> {
         return request<SignoVitalHistorial[]>(`/atenciones/${idCuenta}/vitals?limit=${limit}&page=${page}`)
+    },
+
+    getBalanceHidrico(idCuenta: string | number, fecha?: string): Promise<any[]> {
+        const qs = fecha ? `?idCuenta=${idCuenta}&fecha=${fecha}` : `?idCuenta=${idCuenta}`
+        return request<any[]>(`/balance-hidrico${qs}`)
+    },
+
+    guardarBalanceHidrico(registro: any): Promise<{ success: boolean; id: number }> {
+        return request<{ success: boolean; id: number }>('/balance-hidrico', {
+            method: 'POST',
+            body: JSON.stringify(registro),
+        })
+    },
+
+    eliminarBalanceHidrico(id: string | number): Promise<{ success: boolean }> {
+        return request<{ success: boolean }>(`/balance-hidrico/${id}`, {
+            method: 'DELETE',
+        })
+    },
+}
+
+export const kardexService = {
+    getRegistros(idCuenta: string | number, fecha: string): Promise<RegistroKardex[]> {
+        const params = new URLSearchParams({ idCuenta: String(idCuenta), fecha })
+        return request<RegistroKardex[]>(`/kardex?${params.toString()}`)
+    },
+
+    guardarRegistro(registro: {
+        pacienteId: string | number
+        idCuenta: string | number
+        servicioId?: string | number | null
+        idEmpleado?: string | number | null
+        responsable: string
+        fecha: string
+        turno: 'M' | 'T' | 'N'
+        categoria: 'cuidado' | 'medicamento'
+        detalle?: string
+        medicamento?: string
+        dosis?: string
+        via?: string
+        frecuencia?: string
+        horaProgramada?: string
+        estado?: 'pendiente' | 'administrado' | 'no_administrado'
+        observacion?: string
+    }): Promise<{ success: boolean; id: number }> {
+        return request<{ success: boolean; id: number }>('/kardex', {
+            method: 'POST',
+            body: JSON.stringify(registro),
+        })
     },
 }
 

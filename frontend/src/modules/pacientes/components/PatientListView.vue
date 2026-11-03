@@ -33,9 +33,62 @@
           <slot name="inside-list" />
         </div>
         <div class="min-w-0 self-start w-full">
-          <!-- Table -->
-          <div class="overflow-x-auto">
-            <div :class="filteredPatients.length > 8 ? 'max-h-[560px] overflow-y-auto' : ''">
+            <!-- Vista móvil: tarjetas -->
+            <div class="md:hidden space-y-2">
+              <div
+                v-for="(patient, index) in filteredPatients"
+                :key="'m-' + (patient.id || index)"
+                @click="$emit('select', patient)"
+                :class="[
+                  'rounded-lg border p-3 cursor-pointer transition-all',
+                  selectedId === patient.id ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-white'
+                ]"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <div :class="['flex h-8 w-8 items-center justify-center rounded-full text-white shrink-0', patient.numCuenta ? 'bg-red-500' : 'bg-green-500']">
+                      <FileText class="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p class="text-sm font-bold text-slate-800 leading-tight">{{ patient.apellido }}</p>
+                      <p class="text-xs text-slate-500">{{ patient.habitacion }} · {{ patient.numCuenta ? 'Ocupada' : 'Disponible' }}</p>
+                    </div>
+                  </div>
+                  <span
+                    :class="[
+                      'inline-flex items-center gap-1 rounded px-2 py-0.5 text-[9px] font-bold uppercase',
+                      patient.estado === 'estable' ? 'bg-green-100 text-green-700' :
+                      patient.estado === 'critico' ? 'bg-red-100 text-red-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    ]"
+                  >{{ patient.estado }}</span>
+                </div>
+                <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+                  <span>Historia: <span class="font-bold text-slate-700">{{ patient.historiaClinica }}</span></span>
+                  <span>Cuenta: <span class="font-bold text-slate-700">{{ patient.numCuenta }}</span></span>
+                </div>
+                <div class="mt-2 flex items-center justify-end gap-2">
+                  <template v-if="patient.numCuenta">
+                    <button type="button" class="rounded-full bg-sky-600 p-1.5 text-white" title="Historial vitales" @click.stop="$emit('view-vitals-history', patient)">
+                      <Book class="h-4 w-4" />
+                    </button>
+                    <button v-if="draftNoteForPatient(patient.id)" type="button" class="rounded-full bg-orange-500 p-1.5 text-white" title="Modificar borrador" @click.stop="$emit('edit-draft', draftNoteForPatient(patient.id)!)">
+                      <Pencil class="h-4 w-4" />
+                    </button>
+                    <button v-if="!draftNoteForPatient(patient.id)" type="button" class="rounded-full bg-emerald-500 p-1.5 text-white" title="Nueva nota" @click.stop="$emit('new-note', patient)">
+                      <Plus class="h-4 w-4" />
+                    </button>
+                  </template>
+                </div>
+              </div>
+              <div v-if="filteredPatients.length === 0" class="flex flex-col items-center justify-center py-12 text-slate-400">
+                <p class="text-sm font-bold">No se encontraron pacientes</p>
+              </div>
+            </div>
+
+            <!-- Table (desktop) -->
+            <div class="hidden md:block overflow-x-auto">
+              <div :class="filteredPatients.length > 8 ? 'max-h-[560px] overflow-y-auto' : ''">
               <table class="w-full min-w-[900px] table-fixed text-left border-collapse">
                 <colgroup>
                   <col class="w-[20%]" />

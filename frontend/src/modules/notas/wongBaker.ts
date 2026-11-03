@@ -1,12 +1,14 @@
 export const WONG_BAKER_MARKER = '[ESCALA_WONG_BAKER]'
 
+// Escala de dolor Wong-Baker: se representa con un punto de color (verde -> rojo)
+// en lugar de emojis, para que armonice con el resto del sistema.
 export const WONG_BAKER_FACES = [
-  { score: 0, face: '😊', meaning: 'No duele' },
-  { score: 2, face: '🙂', meaning: 'Duele un poco' },
-  { score: 4, face: '😐', meaning: 'Duele un poco más' },
-  { score: 6, face: '🙁', meaning: 'Duele aún más' },
-  { score: 8, face: '😣', meaning: 'Duele mucho' },
-  { score: 10, face: '😭', meaning: 'El peor dolor' },
+  { score: 0, color: 'bg-emerald-500', meaning: 'No duele' },
+  { score: 2, color: 'bg-lime-500', meaning: 'Duele un poco' },
+  { score: 4, color: 'bg-yellow-500', meaning: 'Duele un poco más' },
+  { score: 6, color: 'bg-orange-400', meaning: 'Duele aún más' },
+  { score: 8, color: 'bg-orange-600', meaning: 'Duele mucho' },
+  { score: 10, color: 'bg-red-600', meaning: 'El peor dolor' },
 ] as const
 
 export type WongBakerScore = typeof WONG_BAKER_FACES[number]['score']

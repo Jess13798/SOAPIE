@@ -34,6 +34,8 @@ src/
       notaForm.ts             # tipo compartido NotaFormState
     vitales/
       components/             # VitalsOverview, VitalsHistoryModal
+    kardex/
+      components/             # KardexModal (cuidados y administración de medicamentos)
     auditoria/
       components/             # AuditoriaCamasView (rastro de asignación de camas)
 ```
@@ -75,3 +77,8 @@ La lógica de negocio no debe vivir mezclada dentro de componentes de presentaci
 - dominio clínico
 
 Con esto el proyecto puede crecer hacia SOAPIE, Kardex, balance hídrico, señales vitales y futuros documentos sin romper la base actual.
+
+El Kardex se abre desde el formulario de enfermería y registra por atención, fecha
+y turno las acciones de cuidado y el seguimiento de medicamentos según la
+indicación vigente. Los registros son históricos; los medicamentos no se
+prescriben ni modifican desde este módulo.
