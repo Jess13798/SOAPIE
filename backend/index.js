@@ -52,7 +52,17 @@ app.use(express.json());
 const frontendDir = require('fs').existsSync(path.join(__dirname, '../frontend/dist'))
     ? path.join(__dirname, '../frontend/dist')
     : path.join(__dirname, '../frontend');
-app.use(express.static(frontendDir));
+app.use(express.static(frontendDir, {
+    // index.html nunca se cachea: asi un F5 siempre trae el build nuevo.
+    // Los assets de Vite ya llevan hash en el nombre, esos si pueden cachearse.
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    },
+}));
 
 // --- RUTAS PÚBLICAS ---
 // Solo /api/login. Debe ir ANTES del middleware de protección.
@@ -71,6 +81,17 @@ app.use('/api', medicosRoutes);
 app.use('/api', balanceHidricoRoutes);
 app.use('/api', kardexRoutes);
 app.use('/api', catalogosRoutes);
+
+// Fallback SPA: cualquier ruta que no sea /api ni archivo estatico devuelve
+// index.html para que Vue Router resuelva la vista (evita 'Cannot GET /dashboard').
+app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+    // El HTML de entrada nunca se cachea, para que un F5 traiga el build nuevo.
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.sendFile(path.join(frontendDir, 'index.html'));
+});
 
 // --- INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 3000;

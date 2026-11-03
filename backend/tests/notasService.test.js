@@ -271,15 +271,16 @@ test('guardarNota rechaza frecuencia cardiaca fuera del rango del servicio', asy
     assert.equal(guardarCompleta.mock.callCount(), 0);
 });
 
-test('guardarNota sin configuración de servicio sigue exigiendo los diez vitales', async (t) => {
+test('guardarNota sin configuración de servicio exige los vitales básicos', async (t) => {
     silenciarErrores(t);
     t.mock.method(notasRepository, 'guardarNotaCompleta', async () => ({ id: 92, vitalesRegistrados: true }));
 
+    // Sin configuración propia se exigen peso, talla, FC, FR, temperatura y
+    // saturación. Falta la talla a propósito; la presión arterial es opcional.
     await assert.rejects(
         () => notasService.guardarNota(notaSoapieCompleta({
             signosVitales: {
                 peso: '70',
-                talla: '170',
                 frecuenciaCardiaca: '78',
                 frecuenciaRespiratoria: '18',
                 temperatura: '36.7',

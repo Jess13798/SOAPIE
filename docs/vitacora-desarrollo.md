@@ -121,6 +121,21 @@ impresión).
 - En desktop: tabla original.
 - Tests 73/73.
 
+### 3 de noviembre de 2026
+
+#### Balance Hídrico (módulo independiente)
+- Tabla `dbo.BalanceHidrico` (migración `005`) y endpoints
+  `GET/POST/DELETE /api/balance-hidrico`.
+- El repositorio crea la tabla si no existe (resiste restauraciones de la BD).
+- El peso en kg se toma del último signo vital registrado de la atención.
+
+#### Signos vitales obligatorios por defecto
+- Servicios sin configuración propia: obligatorios peso, talla, FC, FR,
+  temperatura y saturación; opcionales presión arterial, perímetro cefálico,
+  perímetro abdominal y hemoglucotest.
+- Pediatría (213) mantiene su configuración específica.
+- Tests 78/78.
+
 ---
 
 ## Funcionalidades implementadas
@@ -166,7 +181,7 @@ impresión).
 
 | Decisión | Detalle |
 |---|---|
-| Base de datos | `sigh` en `192.168.80.11` (SQL Server 2012). Login `johann`/`1234` (sysadmin). |
+| Base de datos | SQL Server; configurar la conexión mediante variables de entorno locales. |
 | Restauración diaria | `RESTORE DATABASE [sigh]` desde `D:\subir_data\data_galen\sigh_backup.bak`. Borraba datos propios → se propuso base `soapie` separada (pendiente). |
 | `IdServicio` en `NotaEnfermeria` | INT NULL, sin FK (para futura base `soapie` separada). |
 | Resolución de servicio | Desde la estancia abierta real; `servicioId` del payload es respaldo. |
