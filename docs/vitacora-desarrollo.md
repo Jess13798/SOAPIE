@@ -121,6 +121,21 @@ impresión).
 - En desktop: tabla original.
 - Tests 73/73.
 
+### 3 de noviembre de 2026
+
+#### Balance Hídrico (módulo independiente)
+- Tabla `dbo.BalanceHidrico` (migración `005`) y endpoints
+  `GET/POST/DELETE /api/balance-hidrico`.
+- El repositorio crea la tabla si no existe (resiste restauraciones de la BD).
+- El peso en kg se toma del último signo vital registrado de la atención.
+
+#### Signos vitales obligatorios por defecto
+- Servicios sin configuración propia: obligatorios peso, presión arterial, FC,
+  FR, temperatura y saturación; opcionales talla, perímetro cefálico,
+  perímetro abdominal y hemoglucotest.
+- Pediatría (213) mantiene su configuración específica.
+- Tests 78/78.
+
 ---
 
 ## Funcionalidades implementadas

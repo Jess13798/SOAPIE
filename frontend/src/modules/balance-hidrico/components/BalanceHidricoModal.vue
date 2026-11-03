@@ -193,7 +193,7 @@
 import { ref, watch, computed } from 'vue'
 import { Droplet, X } from 'lucide-vue-next'
 import { notasService } from '@/services/api'
-import type { Patient } from '@/types'
+import type { Patient, SignoVitalHistorial } from '@/types'
 
 const props = defineProps<{
   isOpen: boolean
@@ -207,6 +207,7 @@ const loading = ref(false)
 const guardando = ref(false)
 const errorBH = ref('')
 const registros = ref<any[]>([])
+const historialVitals = ref<SignoVitalHistorial[]>([])
 
 // Formulario de nuevo registro
 const nuevoTipo = ref('ingreso')
@@ -224,10 +225,17 @@ const nombrePaciente = computed(() => props.patient?.nombreCompleto || `${props.
 const servicio = computed(() => (props.patient as any)?.servicio || '-')
 const habitacion = computed(() => (props.patient as any)?.habitacion || (props.patient as any)?.cama || (props.patient as any)?.codigo || '-')
 const enfermera = computed(() => sessionStorage.getItem('empleadoLogueado') || sessionStorage.getItem('usuarioLogueado') || '-')
+// El peso sale del último signo vital registrado para la atención (el balance
+// hídrico no guarda peso propio). Se usa el más reciente que sí tenga valor.
 const pesoActual = computed(() => {
-  const r = registros.value
-  if (!r.length) return ''
-  return r[r.length - 1]?.Peso || ''
+  const encontrado = historialVitals.value.find((r) => {
+    const valor = (r as any).Peso ?? (r as any).peso
+    return valor !== null && valor !== undefined && String(valor).trim() !== ''
+  })
+  if (!encontrado) return ''
+  const valor = (encontrado as any).Peso ?? (encontrado as any).peso
+  const numero = Number(valor)
+  return Number.isFinite(numero) ? String(numero) : String(valor)
 })
 const fechaHoy = computed(() => new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }))
 
@@ -250,6 +258,20 @@ const fetchRegistros = async () => {
     registros.value = []
   } finally {
     loading.value = false
+  }
+}
+
+// Peso actual: último vital registrado de la atención.
+const fetchHistorialVitals = async () => {
+  if (!props.idCuenta || isNaN(Number(props.idCuenta))) {
+    historialVitals.value = []
+    return
+  }
+  try {
+    historialVitals.value = await notasService.getHistorialVitalsPorAtencion(props.idCuenta, 100, 1)
+  } catch (e) {
+    console.error(e)
+    historialVitals.value = []
   }
 }
 
@@ -328,5 +350,10 @@ function balanceTurno(turno: string): string {
   return (ing - egr).toFixed(2)
 }
 
-watch(() => props.isOpen, (v) => { if (v) fetchRegistros() }, { immediate: true })
+watch(() => props.isOpen, (v) => {
+  if (v) {
+    fetchRegistros()
+    fetchHistorialVitals()
+  }
+}, { immediate: true })
 </script>

@@ -13,9 +13,8 @@
   ],
   "porDefecto": {
     "obligatorios": [
-      "peso", "talla", "pCefalico", "pAbdominal", "hemoglucotest",
-      "presionArterial", "frecuenciaCardiaca", "frecuenciaRespiratoria",
-      "temperatura", "saturacionOxigeno"
+      "peso", "presionArterial", "frecuenciaCardiaca",
+      "frecuenciaRespiratoria", "temperatura", "saturacionOxigeno"
     ],
     "rangos": {
       "peso": { "min": 0, "max": 999.99 },
