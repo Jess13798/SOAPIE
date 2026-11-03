@@ -130,8 +130,8 @@ impresión).
 - El peso en kg se toma del último signo vital registrado de la atención.
 
 #### Signos vitales obligatorios por defecto
-- Servicios sin configuración propia: obligatorios peso, presión arterial, FC,
-  FR, temperatura y saturación; opcionales talla, perímetro cefálico,
+- Servicios sin configuración propia: obligatorios peso, talla, FC, FR,
+  temperatura y saturación; opcionales presión arterial, perímetro cefálico,
   perímetro abdominal y hemoglucotest.
 - Pediatría (213) mantiene su configuración específica.
 - Tests 78/78.

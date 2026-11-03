@@ -275,13 +275,12 @@ test('guardarNota sin configuración de servicio exige los vitales básicos', as
     silenciarErrores(t);
     t.mock.method(notasRepository, 'guardarNotaCompleta', async () => ({ id: 92, vitalesRegistrados: true }));
 
-    // Sin configuración propia se exigen peso, presión, FC, FR, temperatura y
-    // saturación. Falta la presión arterial a propósito.
+    // Sin configuración propia se exigen peso, talla, FC, FR, temperatura y
+    // saturación. Falta la talla a propósito; la presión arterial es opcional.
     await assert.rejects(
         () => notasService.guardarNota(notaSoapieCompleta({
             signosVitales: {
                 peso: '70',
-                talla: '170',
                 frecuenciaCardiaca: '78',
                 frecuenciaRespiratoria: '18',
                 temperatura: '36.7',

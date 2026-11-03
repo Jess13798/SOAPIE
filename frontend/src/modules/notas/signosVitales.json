@@ -13,7 +13,7 @@
   ],
   "porDefecto": {
     "obligatorios": [
-      "peso", "presionArterial", "frecuenciaCardiaca",
+      "peso", "talla", "frecuenciaCardiaca",
       "frecuenciaRespiratoria", "temperatura", "saturacionOxigeno"
     ],
     "rangos": {
