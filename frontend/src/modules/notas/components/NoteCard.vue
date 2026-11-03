@@ -84,8 +84,9 @@
         <div>
           <h4 class="text-[11px] font-bold uppercase tracking-wider text-teal-600 mb-1">P - Plan</h4>
           <p class="text-sm leading-relaxed text-slate-600">{{ planText }}</p>
-          <p v-if="painFace" class="mt-1 text-xs font-semibold text-sky-800">
-            Escala Wong-Baker: {{ painFace.face }} {{ painFace.score }}/10 — {{ painFace.meaning }}
+          <p v-if="painFace" class="mt-1 flex items-center gap-1.5 text-xs font-semibold text-sky-800">
+            <span class="h-3 w-3 rounded-full" :class="painFace.color"></span>
+            Escala Wong-Baker: {{ painFace.score }}/10 — {{ painFace.meaning }}
           </p>
         </div>
 
