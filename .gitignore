@@ -1,6 +1,5 @@
 # Archivos de entorno y credenciales
 .env
-backend/.env
 
 # Dependencias pesadas
 node_modules/
