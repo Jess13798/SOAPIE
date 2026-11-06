@@ -1,7 +1,7 @@
 # Vitácora de desarrollo — Sistema SOAPIE (Notas de Enfermería)
 
 > Repositorio: `Jess13798/SOAPIE` — Rama de trabajo: `JJRama`
-> Última actualización: 27 de octubre de 2026
+> Última actualización: 6 de noviembre de 2026
 
 ---
 
@@ -89,7 +89,7 @@ impresión).
   PALS de la hoja de funciones vitales).
 - Backend valida min/max según el servicio; sin configuración usa límites
   técnicos actuales.
-- Pediatría: temp 35.5–38.0, FC 50–205, FR 12–60, SatO₂ 90–100,
+- Pediatría: temp 35.5–38.0, FC 50–205, FR 12–60, Sat. oxígeno 90–100,
   PA 39–131 / 16–83, peso 0.5–150, talla 30–200, etc.
 
 #### `4211b86` — Ignora PDFs de referencia en docs
@@ -136,6 +136,61 @@ impresión).
 - Pediatría (213) mantiene su configuración específica.
 - Tests 78/78.
 
+### 6 de noviembre de 2026
+
+#### `e0c27d0` + `72fa060` — Etiquetas de vitales más claras
+- “Presión arterial” en hojas/tablas; “P. arterial” en tarjetas compactas.
+- “Sat. oxígeno” / “SAT. OXÍGENO” en lugar de `SatO₂` / `SpO₂`.
+- Se aplicó en formulario, modal, tarjeta, grilla, gráfica, historial,
+  resumen e impresión.
+
+#### `7bc65f0` — Merge de Piero
+- Se integró el módulo **Kardex** (`006-kardex.sql`, backend, rutas, servicio,
+  repositorio, tests y `KardexModal.vue`).
+- `backend/.env` salió del repositorio y se agregó a `.gitignore`; se conservó
+  el `.env` local. No se cambiaron usuarios ni contraseñas.
+
+#### `0c9a20c` — Elimina el módulo de auditoría de camas
+- Se retiraron pantalla, menú, endpoint, funciones de auditoría, migraciones
+  `002`/`003` y tests: 14 archivos, 883 líneas menos.
+- Se conservaron la asignación/traslado de camas y las columnas nativas del HIS
+  `IdUsuarioAuditoria` y `FechaAsignacion`.
+- Las tablas `dbo.EnfermeriaAuditoriaCamas` y `dbo.EnfermeriaAuditoriaDetalle`
+  siguen en la base; no se ejecutó `DROP TABLE`. La restauración diaria las
+  elimina. La auditoría se verá después.
+
+#### `16136a5` — Quita la pantalla del catálogo NANDA
+- Se retiraron solo la vista/menú `NandaNocNicView` y su ruta: 4 archivos,
+  145 líneas menos.
+- Se conservaron las tablas `Catalogo_NANDA`, `Catalogo_NOC`, `Catalogo_NIC` y
+  `NANDA_Interrelacion` con sus datos, el script
+  `backend/sql/catalogo-nanda-noc-nic.sql`, el endpoint
+  `/api/catalogos/nanda-noc-nic` y el selector del plan SOAPIE.
+- Si el plan de cuidados debe ser 100 % manual, será un cambio aparte.
+
+#### `4793901` — Corrige la recarga infinita del historial de vitales
+- **Causa:** el reloj de `NewNoteModal` re-renderiza cada segundo y creaba un
+  arreglo nuevo en `:registros-temporales`; el `watch` de
+  `VitalsHistoryModal` lo interpretaba como cambio y recargaba sin parar.
+- **Solución:** `registrosTemporalesNota` como `computed` estable en
+  `NewNoteModal` y `watch` por clave estable de registros en
+  `VitalsHistoryModal`.
+- `KardexModal`: `idCuenta` ahora acepta `string | number`; desaparece el
+  warning de Vue.
+- Tests 82/82 y build correcto. Subido a `JJRama` y `main`.
+
+#### Rendimiento del modal — diagnóstico, sin cambio de código
+- Se midió contra la base real: catálogo NANDA 107 ms, Kardex 12 ms,
+  Balance Hídrico 23 ms e historial de vitales 9 ms. La BD no es el cuello.
+- Se detectó que `NewNoteForm` declara `pacientes` sin usarla y que
+  `NewNoteModal` pasa `[patient]` (arreglo nuevo en cada render), además del
+  reloj cada segundo; eso re-renderiza el formulario completo.
+- El `timer` del reloj sigue después de cerrar el modal porque `NewNoteModal`
+  queda montado y solo se limpia en `onUnmounted`.
+- El usuario prefirió medir primero y dejarlo así porque no se demora tanto.
+  No se aplicó optimización. Queda como pendiente opcional.
+- Detalle completo: `docs/avance-2026-11-06.md`.
+
 ---
 
 ## Funcionalidades implementadas
@@ -145,7 +200,7 @@ impresión).
 - Secciones SOAPIE: Subjetivo, Objetivo, Análisis, Plan, Intervención,
   Evaluación.
 - Signos vitales dentro de la nota: peso, talla, p.cefálico, p.abdominal,
-  hemoglucotest, PA, FC, FR, temp, SatO₂.
+  hemoglucotest, PA, FC, FR, temp, Sat. oxígeno.
 - Herencia del plan de cuidados de la nota anterior del paciente.
 - Turno (día/noche) y hora puestos por el servidor.
 - Notas separadas por servicio (filtro paciente + servicio).
@@ -158,12 +213,12 @@ impresión).
 
 ### Signos vitales
 - Historial de signos vitales por atención (botón del libro).
-- Gráfica de vitales básicos (SpO₂, PA, Temp, Pulso) con datos fijos a la
+- Gráfica de vitales básicos (Sat. oxígeno, PA, Temp, Pulso) con datos fijos a la
   izquierda y grilla por fecha/hora.
 - Rangos y obligatoriedad configurables por servicio (JSON).
 
 ### Pacientes y camas
-- Listado por servicio, asignación/traslado de cama, auditoría de camas.
+- Listado por servicio, asignación/traslado de cama (sin módulo de auditoría).
 - Pacientes sin cama (asignación).
 - Página responsiva (tarjetas en móvil).
 
@@ -204,7 +259,10 @@ impresión).
 8. Capacitación al personal.
 9. Control de edad en pediatría.
 10. Migración a base `soapie` separada (synonyms).
-11. Avisar a Piero: sacar `backend/.env` de git.
+11. `backend/.env` ya no se versiona; si se decide volver a subirlo, discutirlo
+    antes.
+12. Optimizaciones opcionales del modal de la nota (ver
+    `docs/avance-2026-11-06.md`).
 
 ---
 
@@ -219,4 +277,4 @@ impresión).
 
 ---
 
-*Vitácora generada el 27 de octubre de 2026. Rama `JJRama`.*
+*Vitácora actualizada el 6 de noviembre de 2026. Ramas `JJRama` y `main`.*
