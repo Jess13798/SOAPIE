@@ -34,6 +34,7 @@ async function getPacientesByServicio(servicioId = null) {
                     p.NroHistoriaClinica,
                     ed.Edad,
                     ed.TipoEdad,
+                    s.IdServicio,
                     s.IdEspecialidad,
                     s.Nombre,
                     ROW_NUMBER() OVER (

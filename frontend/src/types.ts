@@ -15,6 +15,7 @@ export interface Patient {
   medico: string
   idMedico?: number | null
   idMedicoOrdena?: number | null
+  servicioId?: number | null
   financiamiento: string
   habitacion: string
   cama: string
@@ -30,6 +31,7 @@ export interface PacienteBD {
   IdCuentaAtencion: string | null
   Dni?: string | null
   IdEspecialidad?: number | null
+  IdServicio?: number | null
   IdProducto?: number | null
   Codigo: string
   EstadoCama: string

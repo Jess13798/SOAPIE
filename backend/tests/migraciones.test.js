@@ -39,6 +39,7 @@ test('listarMigraciones devuelve .sql ordenados y con la migracion de auditoria'
     );
     assert.ok(archivos.includes('001-crear-tablas-notas.sql'));
     assert.ok(archivos.includes('002-crear-tabla-auditoria-camas.sql'));
+    assert.ok(archivos.includes('006-kardex.sql'));
 });
 
 test('separarLotes parte el 001 real (que usa GO)', () => {
