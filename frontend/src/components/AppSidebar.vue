@@ -80,7 +80,7 @@ import { useRouter } from 'vue-router'
 import { limpiarSesion } from '@/services/api'
 import { 
   Users,
-  Activity, BookOpen, LogOut, Menu, ChevronLeft, ShieldCheck
+  Activity, BookOpen, LogOut, Menu, ChevronLeft
 } from 'lucide-vue-next'
 
 // --- LÃGICA DE COLAPSO ---
@@ -103,7 +103,6 @@ const navItems = [
   { view: 'pacientes', label: 'Pacientes', icon: Users },
   { view: 'vitales', label: 'Signos Vitales', icon: Activity },
   { view: 'catalogos-nanda', label: 'Catálogo NANDA / NOC / NIC', icon: BookOpen },
-  { view: 'auditoria-camas', label: 'Auditoría de Camas', icon: ShieldCheck },
 ]
 
 function handleNavClick(view: string) {

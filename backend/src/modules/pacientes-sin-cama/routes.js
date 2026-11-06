@@ -29,8 +29,8 @@ router.post('/asignar-cama', async (req, res) => {
             });
         }
 
-        // El usuario se toma del token (no del body) para que la auditoría
-        // no pueda falsearse desde el cliente.
+        // El usuario se toma del token (no del body) para registrar
+        // IdUsuarioAuditoria en la estancia.
         const resultado = await pacienteSinCamaModule.asignarCama({
             IdPaciente,
             IdCuentaAtencion,
@@ -67,24 +67,6 @@ router.post('/mover-cama', async (req, res) => {
         });
 
         res.json(resultado);
-    } catch (err) {
-        res.status(500).json({ success: false, mensaje: 'Error: ' + err.message });
-    }
-});
-
-// Ruta para consultar el rastro de auditoría de camas
-router.get('/auditoria-camas', async (req, res) => {
-    try {
-        const { fechaDesde, fechaHasta, servicioId, accion, usuario, limit } = req.query;
-        const datos = await pacienteSinCamaModule.obtenerAuditoriaCamas({
-            fechaDesde,
-            fechaHasta,
-            servicioId,
-            accion,
-            usuario,
-            limit,
-        });
-        res.json(datos);
     } catch (err) {
         res.status(500).json({ success: false, mensaje: 'Error: ' + err.message });
     }

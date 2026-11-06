@@ -52,19 +52,9 @@ async function registrarTransferenciaEstancia(payload) {
     }
 }
 
-async function obtenerAuditoriaCamas(filtros = {}) {
-    try {
-        return await pacientesSinCamaRepository.getAuditoriaCamas(filtros);
-    } catch (error) {
-        console.error('Error en pacientesSinCamaService.obtenerAuditoriaCamas:', error.message);
-        throw error;
-    }
-}
-
 module.exports = {
     obtenerPacientesSinCama,
     asignarCama,
     moverPacienteDeCama,
     registrarTransferenciaEstancia,
-    obtenerAuditoriaCamas,
 };

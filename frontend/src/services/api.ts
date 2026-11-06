@@ -224,61 +224,6 @@ export const camasService = {
 }
 
 // ==========================================
-// 3.5. AUDITORÍA DE CAMAS
-// ==========================================
-export type AccionAuditoriaCama = 'ASIGNAR' | 'MOVER' | 'TRANSFERIR'
-
-export interface RegistroAuditoriaCama {
-    IdAuditoria: number
-    FechaHora: string
-    Accion: AccionAuditoriaCama | string
-    IdCuentaAtencion: number | null
-    IdPaciente: number | null
-    Paciente: string | null
-    IdCama: number | null
-    Cama: string | null
-    CamaAnterior: string | null
-    IdServicio: number | null
-    Servicio: string | null
-    IdUsuario: number | null
-    Usuario: string | null
-    Detalle: string | null
-    // Nombre completo del enfermero/a que hizo el movimiento (resuelto en el
-    // backend desde Empleados). Cae al usuario de login si no se encuentra.
-    NombreEnfermero?: string | null
-    // Detalle clínico del movimiento (tabla EnfermeriaAuditoriaDetalle).
-    // Vacío en los cambios de cama, que no llevan médico ni diagnóstico.
-    IdEspecialidad?: number | null
-    Especialidad?: string | null
-    IdMedicoOrdena?: number | null
-    MedicoOrdena?: string | null
-    Diagnostico?: string | null
-}
-
-export interface FiltrosAuditoriaCamas {
-    fechaDesde?: string
-    fechaHasta?: string
-    servicioId?: string | number
-    accion?: string
-    usuario?: string
-    limit?: number
-}
-
-export const auditoriaCamasService = {
-    getRegistros(filtros: FiltrosAuditoriaCamas = {}): Promise<RegistroAuditoriaCama[]> {
-        const params = new URLSearchParams()
-        if (filtros.fechaDesde) params.set('fechaDesde', filtros.fechaDesde)
-        if (filtros.fechaHasta) params.set('fechaHasta', filtros.fechaHasta)
-        if (filtros.servicioId) params.set('servicioId', String(filtros.servicioId))
-        if (filtros.accion) params.set('accion', filtros.accion)
-        if (filtros.usuario) params.set('usuario', filtros.usuario)
-        if (filtros.limit) params.set('limit', String(filtros.limit))
-        const query = params.toString()
-        return request<RegistroAuditoriaCama[]>(`/auditoria-camas${query ? `?${query}` : ''}`)
-    },
-}
-
-// ==========================================
 // 4. NOTAS DE ENFERMERÍA Y SIGNOS VITALES
 // ==========================================
 export const notasService = {

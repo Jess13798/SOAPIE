@@ -104,11 +104,6 @@
         />
 
         <NandaNocNicView v-if="activeView === 'catalogos-nanda'" />
-
-        <AuditoriaCamasView
-          v-if="activeView === 'auditoria-camas'"
-          :servicios="servicios"
-        />
       </div>
     </main>
 
@@ -181,7 +176,6 @@ import type { Patient, NotaEnfermeria } from '@/types'
 import type { PacienteBusqueda } from '@/services/api'
 import AppSidebar from '@/components/AppSidebar.vue'
 import NandaNocNicView from '@/components/NandaNocNicView.vue'
-import AuditoriaCamasView from '@/modules/auditoria/components/AuditoriaCamasView.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
 import PatientListView from '@/modules/pacientes/components/PatientListView.vue'
 import BedModal from '@/modules/pacientes/components/BedModal.vue'

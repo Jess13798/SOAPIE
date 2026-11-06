@@ -29,7 +29,7 @@ test('separarLotes no parte un GO dentro de un string', () => {
     assert.equal(lotes.length, 1);
 });
 
-test('listarMigraciones devuelve .sql ordenados y con la migracion de auditoria', () => {
+test('listarMigraciones devuelve .sql ordenados', () => {
     const archivos = listarMigraciones();
     assert.ok(archivos.length >= 2);
     assert.ok(archivos.every((n) => n.toLowerCase().endsWith('.sql')));
@@ -38,8 +38,9 @@ test('listarMigraciones devuelve .sql ordenados y con la migracion de auditoria'
         [...archivos].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
     );
     assert.ok(archivos.includes('001-crear-tablas-notas.sql'));
-    assert.ok(archivos.includes('002-crear-tabla-auditoria-camas.sql'));
     assert.ok(archivos.includes('006-kardex.sql'));
+    assert.ok(!archivos.includes('002-crear-tabla-auditoria-camas.sql'));
+    assert.ok(!archivos.includes('003-crear-tabla-auditoria-detalle.sql'));
 });
 
 test('separarLotes parte el 001 real (que usa GO)', () => {

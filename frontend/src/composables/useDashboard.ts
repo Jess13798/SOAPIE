@@ -41,7 +41,6 @@ export function useDashboard({
     'nueva-nota': 'Nueva Nota de Enfermeria',
     vitales: 'Signos Vitales',
     'catalogos-nanda': 'Catálogo NANDA / NOC / NIC',
-    'auditoria-camas': 'Auditoría de Camas',
   }
 
   const totalNotesForSelected = computed(() => {
