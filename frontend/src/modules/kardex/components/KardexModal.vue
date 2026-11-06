@@ -222,9 +222,9 @@ async function guardar() {
   guardando.value = true
   try {
     await kardexService.guardarRegistro({
-      pacienteId: props.patient.id,
+      idPaciente: props.patient.id,
       idCuenta: props.idCuenta,
-      servicioId: props.patient.servicioId,
+      idServicio: props.patient.servicioId,
       idEmpleado: sessionStorage.getItem('idEmpleado'),
       responsable: responsable.value,
       fecha: fecha.value,
@@ -271,7 +271,24 @@ function claseEstado(value: NonNullable<RegistroKardex['Estado']>) {
 }
 
 function formatoFechaHora(value: string) {
-  return new Date(value).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  const partes = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(value)
+  if (!partes) return value
+
+  const fechaLocalBD = new Date(Date.UTC(
+    Number(partes[1]),
+    Number(partes[2]) - 1,
+    Number(partes[3]),
+    Number(partes[4]),
+    Number(partes[5]),
+  ))
+  return fechaLocalBD.toLocaleString('es-PE', {
+    day: 'numeric',
+    month: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'UTC',
+  })
 }
 
 watch(() => props.isOpen, (abierto) => {
