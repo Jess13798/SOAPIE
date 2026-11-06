@@ -131,6 +131,14 @@ function registrosLocales() {
   return props.registrosTemporales || []
 }
 
+// Clave estable: el arreglo puede cambiar de identidad en cada render del padre,
+// pero mientras los registros sean los mismos no debe recargarse el historial.
+const registrosKey = computed(() =>
+  (props.registrosTemporales || [])
+    .map((r) => `${r.IdSignoVital ?? ''}:${r.Fecha_Hora ?? ''}`)
+    .join('|')
+)
+
 const headers = computed(() =>
   props.soloBasicos
     ? ['FECHA / HORA', 'Presión arterial', 'F.CARD', 'TEMP', 'Sat. oxígeno', 'ENFERMERA']
@@ -211,9 +219,13 @@ const formatFecha = (dateStr: string) => {
   })
 }
 
-watch([() => props.isOpen, () => props.idCuenta, () => props.registrosTemporales], ([newVal]) => {
-  if (newVal) fetchHistory()
-})
+watch(
+  [() => props.isOpen, () => props.idCuenta, registrosKey],
+  ([abierto]) => {
+    if (abierto) fetchHistory()
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>

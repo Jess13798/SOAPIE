@@ -176,14 +176,14 @@
   <VitalsHistoryModal
     :is-open="showVitalsHistory"
     :id-cuenta="patient.numCuenta || ''"
-    :registros-temporales="nota?.historialTemporalSignosVitales || []"
+    :registros-temporales="registrosTemporalesNota"
     @close="showVitalsHistory = false"
   />
   <VitalsChartModal
     :is-open="showBasicVitals"
     :id-cuenta="patient.numCuenta || ''"
     :patient="patient"
-    :registros-temporales="nota?.historialTemporalSignosVitales || []"
+    :registros-temporales="registrosTemporalesNota"
     @close="showBasicVitals = false"
   />
   <BalanceHidricoModal
@@ -248,6 +248,10 @@ const edadPacienteTexto = computed(() => {
   const desc = (props.patient.edadDescripcion || '').trim()
   return desc ? `${props.patient.edad} ${desc}` : `${props.patient.edad} años`
 })
+
+// Arreglo estable: evita que el reloj (que re-renderiza cada segundo) entregue
+// una referencia nueva y dispare recargas en los modales de vitales.
+const registrosTemporalesNota = computed(() => props.nota?.historialTemporalSignosVitales || [])
 
 const updateClock = () => {
   const now = new Date()
