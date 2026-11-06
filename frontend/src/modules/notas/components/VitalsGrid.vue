@@ -108,7 +108,7 @@ const dia = computed({
 const etiquetasVitals: Record<string, string> = {
   peso: 'PESO', talla: 'TALLA', pCefalico: 'P. CEFÁLICO', pAbdominal: 'P. ABDOMINAL',
   hemoglucotest: 'HEMOGLUCOTEST', presionArterial: 'PRESIÓN ART.', frecuenciaCardiaca: 'FREC. CARD.', frecuenciaRespiratoria: 'FREC. RESP.',
-  temp: 'TEMPERATURA', spo2: 'SAT. O₂'
+  temp: 'TEMPERATURA', spo2: 'SAT. OXÍGENO'
 }
 
 const placeholderVitals: Record<string, string> = {

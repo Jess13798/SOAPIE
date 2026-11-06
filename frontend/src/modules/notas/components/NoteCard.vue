@@ -53,11 +53,11 @@
               <p class="text-sm font-bold text-slate-800">{{ nota.signosVitales.frecuenciaRespiratoria }} rpm</p>
             </div>
           </div>
-          <!-- SpO2 -->
+          <!-- Sat. oxígeno -->
           <div class="flex items-center gap-3">
             <Wind class="h-5 w-5 text-teal-600" />
             <div>
-              <p class="text-[10px] text-slate-400 font-bold uppercase">SatO₂</p>
+              <p class="text-[10px] text-slate-400 font-bold uppercase">Sat. oxígeno</p>
               <p class="text-sm font-bold text-slate-800">{{ nota.signosVitales.saturacionOxigeno }}%</p>
             </div>
           </div>

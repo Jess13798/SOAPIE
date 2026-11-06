@@ -34,7 +34,7 @@ function renderRequiredVitals(nota: NotaEnfermeria): string {
     frecuenciaCardiaca: { label: 'FC', unit: 'lpm' },
     frecuenciaRespiratoria: { label: 'FR', unit: 'rpm' },
     temperatura: { label: 'T', unit: '°C' },
-    saturacionOxigeno: { label: 'SpO₂', unit: '%' },
+    saturacionOxigeno: { label: 'Sat. oxígeno', unit: '%' },
   }
   const requiredFields = camposObligatoriosDeServicio(
     nota.servicioId == null ? null : String(nota.servicioId),

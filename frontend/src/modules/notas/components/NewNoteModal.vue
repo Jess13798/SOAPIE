@@ -89,7 +89,7 @@
               type="button"
               @click="showBasicVitals = true"
               class="flex items-center justify-center w-8 h-8 rounded-md bg-teal-600 text-white hover:bg-teal-700 transition-colors shadow-sm active:scale-95 border border-teal-700"
-              title="Vitales básicos (SatO₂, Presión arterial, Temp, Pulso)"
+              title="Vitales básicos (Sat. oxígeno, Presión arterial, Temp, Pulso)"
             >
               <Activity class="h-4 w-4" />
             </button>

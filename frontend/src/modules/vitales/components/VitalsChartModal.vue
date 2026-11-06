@@ -11,7 +11,7 @@
           </div>
           <div>
             <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Gráfica de Vitales Básicos</h3>
-            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">SpO₂, Presión arterial, Temp y Pulso — por fecha y hora</p>
+            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">Sat. oxígeno, Presión arterial, Temp y Pulso — por fecha y hora</p>
           </div>
         </div>
         <button @click="$emit('close')" class="rounded-md p-1.5 bg-slate-200 text-slate-600 hover:bg-red-500 hover:text-white transition-all shadow-sm">
@@ -182,7 +182,7 @@ const vitales = [
   { key: 'pa', label: 'Presión arterial' },
   { key: 'pulso', label: 'PULSO' },
   { key: 'temp', label: 'TEMP' },
-  { key: 'sat', label: 'SatO₂' },
+  { key: 'sat', label: 'Sat. oxígeno' },
 ]
 
 function celda(fecha: string, slotIdx: number, vitalKey: string): string {
