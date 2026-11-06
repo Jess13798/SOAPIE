@@ -33,7 +33,7 @@
           <div class="flex items-center gap-3">
             <Activity class="h-5 w-5 text-teal-600" />
             <div>
-              <p class="text-[10px] text-slate-400 font-bold uppercase">P.A.</p>
+              <p class="text-[10px] text-slate-400 font-bold uppercase">P. arterial</p>
               <p class="text-sm font-bold text-slate-800">{{ nota.signosVitales.presionArterial }} mmHg</p>
             </div>
           </div>
@@ -57,7 +57,7 @@
           <div class="flex items-center gap-3">
             <Wind class="h-5 w-5 text-teal-600" />
             <div>
-              <p class="text-[10px] text-slate-400 font-bold uppercase">SpO2</p>
+              <p class="text-[10px] text-slate-400 font-bold uppercase">SatO₂</p>
               <p class="text-sm font-bold text-slate-800">{{ nota.signosVitales.saturacionOxigeno }}%</p>
             </div>
           </div>

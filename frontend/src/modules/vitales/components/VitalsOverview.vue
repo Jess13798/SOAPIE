@@ -29,7 +29,7 @@
             </div>
             <div class="flex flex-col items-center gap-1 rounded-lg bg-muted/50 p-2">
               <Activity class="h-4 w-4 text-primary" />
-              <span class="text-xs text-muted-foreground">P.A.</span>
+              <span class="text-xs text-muted-foreground">P. arterial</span>
               <span class="text-sm font-bold text-card-foreground">{{ getLatestVitals(patient.id)!.presionArterial }}</span>
             </div>
             <div class="flex flex-col items-center gap-1 rounded-lg bg-muted/50 p-2">
@@ -44,7 +44,7 @@
             </div>
             <div class="flex flex-col items-center gap-1 rounded-lg bg-muted/50 p-2">
               <Droplets class="h-4 w-4 text-primary" />
-              <span class="text-xs text-muted-foreground">SpO2</span>
+              <span class="text-xs text-muted-foreground">SatO₂</span>
               <span class="text-sm font-bold text-card-foreground">{{ getLatestVitals(patient.id)!.saturacionOxigeno }}%</span>
             </div>
             <div v-if="getLatestVitals(patient.id)!.glucosa" class="flex flex-col items-center gap-1 rounded-lg bg-muted/50 p-2">

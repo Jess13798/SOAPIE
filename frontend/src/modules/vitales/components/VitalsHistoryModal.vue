@@ -13,7 +13,7 @@
           </div>
           <div>
             <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">{{ soloBasicos ? "Vitales Básicos" : "Historial de Signos Vitales" }}</h3>
-            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">{{ soloBasicos ? "SpO₂, P.A., Temp y Pulso" : "Registros capturados durante esta atención" }}</p>
+            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">{{ soloBasicos ? "SpO₂, Presión arterial, Temp y Pulso" : "Registros capturados durante esta atención" }}</p>
           </div>
         </div>
         
@@ -133,8 +133,8 @@ function registrosLocales() {
 
 const headers = computed(() =>
   props.soloBasicos
-    ? ['FECHA / HORA', 'P. ART', 'F.CARD', 'TEMP', 'SAT', 'ENFERMERA']
-    : ['ID', 'FECHA / HORA', 'PESO', 'TALLA', 'P.CEF', 'P.ABD', 'HEMOG', 'P. ART', 'F.CARD', 'F.RESP', 'TEMP', 'SAT', 'ENFERMERA']
+    ? ['FECHA / HORA', 'Presión arterial', 'F.CARD', 'TEMP', 'SatO₂', 'ENFERMERA']
+    : ['ID', 'FECHA / HORA', 'PESO', 'TALLA', 'P.CEF', 'P.ABD', 'HEMOG', 'Presión arterial', 'F.CARD', 'F.RESP', 'TEMP', 'SatO₂', 'ENFERMERA']
 )
 
 const fetchHistory = async (isLoadMore = false) => {
