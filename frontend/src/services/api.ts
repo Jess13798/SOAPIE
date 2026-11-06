@@ -333,9 +333,9 @@ export const kardexService = {
     },
 
     guardarRegistro(registro: {
-        pacienteId: string | number
+        idPaciente: string | number
         idCuenta: string | number
-        servicioId?: string | number | null
+        idServicio?: string | number | null
         idEmpleado?: string | number | null
         responsable: string
         fecha: string
