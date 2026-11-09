@@ -161,6 +161,11 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
         ...nota,
         // El servidor decide el turno según la hora; se refleja lo que guardó.
         turno: data.turno || nota.turno,
+        fecha: data.fecha,
+        hora: data.hora,
+        fechaFirmada: data.fechaFirmada,
+        horaFirmada: data.horaFirmada,
+        isFirmada: data.isFirmada,
         id: String(data.id),
         servicioId: data.servicioId ?? (Number(servicioId) || null),
         estadoGuardado: 'guardada' as const,
@@ -217,10 +222,7 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
   }
 
   function firmarNota(nota: NotaEnfermeria) {
-    const now = new Date()
-    const fechaFirmada = now.toISOString().split('T')[0]
-    const horaFirmada = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-    return guardarNota({ ...nota, isFirmada: true, fechaFirmada, horaFirmada })
+    return guardarNota({ ...nota, isFirmada: true })
   }
 
   return {

@@ -354,9 +354,25 @@ async function guardarNota(nota) {
         const id = typeof result === 'object' && result !== null ? result.id : result;
         const vitalesRegistrados = typeof result === 'object' && result !== null ? result.vitalesRegistrados : undefined;
         const servicioId = typeof result === 'object' && result !== null ? result.servicioId : undefined;
+        const fechaHoraInicio = typeof result === 'object' && result !== null
+            ? result.fechaHoraInicio || valores.fechaInicio
+            : valores.fechaInicio;
+        const fechaHoraFin = typeof result === 'object' && result !== null
+            ? result.fechaHoraFin === undefined ? valores.fechaFin : result.fechaHoraFin
+            : valores.fechaFin;
         // Se devuelve el turno calculado para que el frontend muestre el mismo
         // valor que quedó guardado en la base de datos.
-        const respuesta = { success: true, id, turno: valores.turno, vitalesRegistrados };
+        const respuesta = {
+            success: true,
+            id,
+            turno: valores.turno,
+            vitalesRegistrados,
+            fecha: datePart(fechaHoraInicio),
+            hora: timePart(fechaHoraInicio),
+            fechaFirmada: datePart(fechaHoraFin),
+            horaFirmada: timePart(fechaHoraFin),
+            isFirmada: Boolean(fechaHoraFin),
+        };
         // Solo se informa el servicio cuando el repositorio lo pudo resolver.
         if (servicioId !== undefined) respuesta.servicioId = servicioId;
         return respuesta;
@@ -367,11 +383,27 @@ async function guardarNota(nota) {
 }
 
 function datePart(value) {
-    return value ? new Date(value).toISOString().split('T')[0] : '';
+    if (!value) return '';
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Lima',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).formatToParts(new Date(value));
+    const values = Object.fromEntries(parts.map(({ type, value: part }) => [type, part]));
+    return `${values.year}-${values.month}-${values.day}`;
 }
 
 function timePart(value) {
-    return value ? new Date(value).toISOString().substring(11, 16) : '';
+    if (!value) return '';
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'America/Lima',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+    }).formatToParts(new Date(value));
+    const values = Object.fromEntries(parts.map(({ type, value: part }) => [type, part]));
+    return `${values.hour}:${values.minute}`;
 }
 
 function addUnique(items, value, key) {

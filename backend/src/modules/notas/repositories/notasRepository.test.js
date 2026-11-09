@@ -213,7 +213,20 @@ test('guardarNota allows SOAPIE edits without a complete new vital-sign set', as
     }));
 
     assert.equal(savedNote.idNota, 81);
-    assert.deepEqual(result, { success: true, id: 81, turno: result.turno, vitalesRegistrados: false });
+    assert.equal(result.success, true);
+    assert.equal(result.id, 81);
+    assert.equal(result.vitalesRegistrados, false);
+    assert.equal(result.fecha, savedNote.fechaInicio.toISOString().slice(0, 10));
+    const horaLocal = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'America/Lima',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+    }).format(savedNote.fechaInicio);
+    assert.equal(result.hora, horaLocal);
+    assert.equal(result.fechaFirmada, '');
+    assert.equal(result.horaFirmada, '');
+    assert.equal(result.isFirmada, false);
     assert.ok(result.turno === 'dia' || result.turno === 'noche');
 });
 

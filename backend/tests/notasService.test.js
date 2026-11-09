@@ -79,7 +79,7 @@ test('obtenerNotas mapea las filas de la BD al formato del frontend', async (t) 
     assert.equal(n.enfermera, 'JUAN PEREZ');
     assert.equal(n.subjetivo, 'dolor');
     assert.equal(n.fecha, '2026-10-08');
-    assert.equal(n.hora, '22:30');
+    assert.equal(n.hora, '17:30', 'convierte UTC a la hora local de Perú');
     assert.equal(n.isFirmada, false, 'sin Fecha_Hora_Fin no esta firmada');
     assert.equal(n.fechaFirmada, '');
     assert.equal(n.horaFirmada, '');
@@ -101,7 +101,7 @@ test('obtenerNotas marca y da formato a una nota firmada', async (t) => {
 
     assert.equal(n.isFirmada, true);
     assert.equal(n.fechaFirmada, '2026-10-08');
-    assert.equal(n.horaFirmada, '14:15');
+    assert.equal(n.horaFirmada, '09:15', 'convierte UTC a la hora local de Perú');
 });
 
 test('obtenerNotas devuelve [] si la consulta no trae recordset', async (t) => {
@@ -132,14 +132,15 @@ test('guardarNota crea una nota nueva y persiste los signos vitales', async (t) 
 test('guardarNota pone la hora de inicio en el SERVIDOR, no en los datos del cliente', async (t) => {
     silenciarErrores(t);
     // El servidor vive a las 10:30 aunque el cliente mande las 08:00.
-    t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 9, 19, 10, 30, 0) });
+    t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-19T15:30:00.000Z') });
     const guardarCompleta = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => ({ id: 60, vitalesRegistrados: true }));
 
-    await notasService.guardarNota(notaSoapieCompleta());
+    const resultado = await notasService.guardarNota(notaSoapieCompleta());
 
     const payload = guardarCompleta.mock.calls[0].arguments[0];
-    assert.equal(payload.fechaInicio.getHours(), 10, 'usa la hora del servidor');
-    assert.equal(payload.fechaInicio.getMinutes(), 30);
+    assert.equal(payload.fechaInicio.toISOString(), '2026-10-19T15:30:00.000Z', 'usa la hora del servidor');
+    assert.equal(resultado.fecha, '2026-10-19');
+    assert.equal(resultado.hora, '10:30', 'devuelve la hora local de Perú');
 });
 
 test('guardarNota deriva el turno de la hora del servidor e ignora el que elige el usuario', async (t) => {
@@ -178,7 +179,7 @@ test('guardarNota sella la firma con la hora del servidor', async (t) => {
     const guardarCompleta = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => ({ id: 42, vitalesRegistrados: false }));
 
     const antes = Date.now();
-    await notasService.guardarNota(notaSoapieCompleta({
+    const resultado = await notasService.guardarNota(notaSoapieCompleta({
         id: '42',
         hora: '10:00',
         isFirmada: true,
@@ -192,6 +193,21 @@ test('guardarNota sella la firma con la hora del servidor', async (t) => {
         payload.fechaFin.getTime() >= antes && payload.fechaFin.getTime() <= despues,
         'fechaFin usa la hora del servidor y no la que manda el cliente'
     );
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'America/Lima',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+    }).formatToParts(payload.fechaFin);
+    const localDate = `${parts.find(part => part.type === 'year').value}-${parts.find(part => part.type === 'month').value}-${parts.find(part => part.type === 'day').value}`;
+    const localHour = parts.find(part => part.type === 'hour').value;
+    const localMinute = parts.find(part => part.type === 'minute').value;
+    assert.equal(resultado.fechaFirmada, localDate);
+    assert.equal(resultado.horaFirmada, `${localHour}:${localMinute}`);
+    assert.equal(resultado.isFirmada, true);
 });
 
 test('eliminarNota delega en el repositorio', async (t) => {
