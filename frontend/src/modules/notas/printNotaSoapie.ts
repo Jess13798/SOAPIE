@@ -21,6 +21,12 @@ function textBlock(text?: string): string {
   return value ? escapeHtml(value) : '<span class="empty">Sin registro</span>'
 }
 
+function freeAnalysisText(analysis?: string): string {
+  const marker = /\n\s*\[DIAGNOSTICOS NANDA\]\s*/i
+  const markerIndex = String(analysis ?? '').search(marker)
+  return markerIndex < 0 ? String(analysis ?? '').trim() : String(analysis ?? '').slice(0, markerIndex).trim()
+}
+
 function renderRequiredVitals(nota: NotaEnfermeria): string {
   if (!nota.signosVitales) return ''
 
@@ -101,6 +107,10 @@ export function printNotaSoapie(nota: NotaEnfermeria, patient: Patient): boolean
   const patientName = patient.nombreCompleto || `${patient.nombre} ${patient.apellido}`.trim()
   const carePlanAnalysis = renderCarePlan(nota.planCuidados, 'analysis')
   const objectiveContent = [textBlock(nota.objetivo), renderRequiredVitals(nota)].filter(Boolean).join('<br>')
+  const analysisText = freeAnalysisText(nota.analisis)
+  const analysisContent = nota.planCuidados?.length
+    ? `${analysisText ? textBlock(analysisText) : ''}${carePlanAnalysis}`
+    : textBlock(nota.analisis)
   const planContent = removeWongBakerMarker(nota.plan || '')
   const painScale = renderWongBakerScale(nota.plan || '')
   const logoUrl = new URL(`${import.meta.env.BASE_URL}logo.webp`, window.location.href).href
@@ -159,7 +169,7 @@ export function printNotaSoapie(nota: NotaEnfermeria, patient: Patient): boolean
         <tbody>
           ${soapRow('S', textBlock(nota.subjetivo))}
           ${soapRow('O', objectiveContent)}
-          ${soapRow('A', `${textBlock(nota.analisis)}${carePlanAnalysis}`)}
+          ${soapRow('A', analysisContent)}
           ${soapRow('P', `${textBlock(planContent)}${painScale}`)}
           ${soapRow('I', textBlock(nota.intervencion))}
           ${soapRow('E', textBlock(nota.evaluacion))}

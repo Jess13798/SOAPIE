@@ -601,7 +601,7 @@ function handleSubmit(shouldSign = false) {
   const nota: NotaEnfermeria = {
     id: draftId.value,
     pacienteId: pacienteIdValue,
-    fecha: props.initialNota?.fecha || now.toISOString().split('T')[0],
+    fecha: props.initialNota?.fecha || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
     hora: props.initialNota?.hora || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
     turno: turnoMostrado.value,
     tipo: props.initialNota?.tipo || 'valoracion',

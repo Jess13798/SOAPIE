@@ -51,6 +51,8 @@ async function guardarNotaCompleta(nota) {
     try {
         let idNota = nota.idNota;
         let servicioId = null;
+        let fechaHoraInicio;
+        let fechaHoraFin;
         const isNewNote = !idNota;
         const notaRequest = transaction.request();
         bindNota(notaRequest, nota);
@@ -71,7 +73,9 @@ async function guardarNotaCompleta(nota) {
                     Plan_ = @plan,
                     Intervencion = @intervencion,
                     Evaluacion = @evaluacion
-                OUTPUT INSERTED.IdServicio AS IdServicio
+                OUTPUT INSERTED.IdServicio AS IdServicio,
+                       INSERTED.Fecha_Hora_Inicio AS FechaHoraInicio,
+                       INSERTED.Fecha_Hora_Fin AS FechaHoraFin
                 WHERE IdNotaEnfermeria = @idNota;
             `);
 
@@ -81,6 +85,8 @@ async function guardarNotaCompleta(nota) {
             // El servicio no se toca al editar: la nota pertenece al servicio
             // donde se escribió, aunque el paciente ya se haya trasladado.
             servicioId = updateResult.recordset[0]?.IdServicio ?? null;
+            fechaHoraInicio = updateResult.recordset[0]?.FechaHoraInicio;
+            fechaHoraFin = updateResult.recordset[0]?.FechaHoraFin;
         } else {
             const insertResult = await notaRequest.query(`
                 -- El servicio se toma de la estancia abierta del paciente.
@@ -107,7 +113,9 @@ async function guardarNotaCompleta(nota) {
                     Analisis, Plan_, Intervencion, Evaluacion
                 )
                 OUTPUT INSERTED.IdNotaEnfermeria AS IdNotaEnfermeria,
-                       INSERTED.IdServicio AS IdServicio
+                       INSERTED.IdServicio AS IdServicio,
+                       INSERTED.Fecha_Hora_Inicio AS FechaHoraInicio,
+                       INSERTED.Fecha_Hora_Fin AS FechaHoraFin
                 VALUES (
                     @idCuenta, @idPaciente, @idEmpleado, @turno, @servicioNota,
                     @fechaInicio, @fechaFin, @subjetivo, @objetivo,
@@ -116,6 +124,8 @@ async function guardarNotaCompleta(nota) {
             `);
             idNota = insertResult.recordset[0].IdNotaEnfermeria;
             servicioId = insertResult.recordset[0].IdServicio ?? null;
+            fechaHoraInicio = insertResult.recordset[0].FechaHoraInicio;
+            fechaHoraFin = insertResult.recordset[0].FechaHoraFin;
         }
 
         let vitalesRegistrados = isNewNote;
@@ -203,7 +213,13 @@ async function guardarNotaCompleta(nota) {
         }
 
         await transaction.commit();
-        return { id: idNota, vitalesRegistrados, servicioId };
+        return {
+            id: idNota,
+            vitalesRegistrados,
+            servicioId,
+            fechaHoraInicio,
+            fechaHoraFin,
+        };
     } catch (error) {
         await transaction.rollback();
         throw error;
