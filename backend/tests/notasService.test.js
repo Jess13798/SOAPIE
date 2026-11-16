@@ -62,6 +62,10 @@ test('obtenerNotas mapea las filas de la BD al formato del frontend', async (t) 
                 Objetivo: 'febril',
                 Analisis: 'infeccion',
                 Plan_: 'antibiotico',
+                WongBakerScore: 8,
+                PlanServicioId: 712,
+                PlanServicioCodigo: '00100',
+                PlanServicioNombre: 'ANESTESIA DE PRUEBA',
                 Intervencion: 'medicacion',
                 Evaluacion: 'estable',
             },
@@ -80,6 +84,12 @@ test('obtenerNotas mapea las filas de la BD al formato del frontend', async (t) 
     assert.equal(n.subjetivo, 'dolor');
     assert.equal(n.fecha, '2026-10-08');
     assert.equal(n.hora, '17:30', 'convierte UTC a la hora local de Perú');
+    assert.equal(n.wongBakerScore, 8);
+    assert.deepEqual(n.serviciosPlanificados, [{
+        id: 712,
+        codigo: '00100',
+        nombre: 'ANESTESIA DE PRUEBA',
+    }]);
     assert.equal(n.isFirmada, false, 'sin Fecha_Hora_Fin no esta firmada');
     assert.equal(n.fechaFirmada, '');
     assert.equal(n.horaFirmada, '');
@@ -102,6 +112,20 @@ test('obtenerNotas marca y da formato a una nota firmada', async (t) => {
     assert.equal(n.isFirmada, true);
     assert.equal(n.fechaFirmada, '2026-10-08');
     assert.equal(n.horaFirmada, '09:15', 'convierte UTC a la hora local de Perú');
+});
+
+test('obtenerNotas recupera una puntuación Wong-Baker histórica del marcador del plan', async (t) => {
+    t.mock.method(notasRepository, 'getAllNotas', async () => ({
+        recordset: [{
+            IdNotaEnfermeria: 9,
+            Plan_: 'Continuar analgesia.\n\n[ESCALA_WONG_BAKER]\n10',
+            WongBakerScore: null,
+        }],
+    }));
+
+    const [nota] = await notasService.obtenerNotas();
+
+    assert.equal(nota.wongBakerScore, 10);
 });
 
 test('obtenerNotas devuelve [] si la consulta no trae recordset', async (t) => {
@@ -127,6 +151,78 @@ test('guardarNota crea una nota nueva y persiste los signos vitales', async (t) 
     assert.equal(payload.idNota, null, 'sin id se trata como nota nueva');
     assert.equal(payload.subjetivo, 'sin dolor');
     assert.equal(payload.signosVitales.peso, 70, 'convierte los vitales a número');
+});
+
+test('guardarNota persiste Wong-Baker como un puntaje separado del plan', async (t) => {
+    silenciarErrores(t);
+    const guardarCompleta = t.mock.method(
+        notasRepository,
+        'guardarNotaCompleta',
+        async () => ({ id: 56, vitalesRegistrados: true }),
+    );
+
+    await notasService.guardarNota(notaSoapieCompleta({
+        plan: 'Continuar analgesia.',
+        wongBakerScore: 6,
+    }));
+
+    const payload = guardarCompleta.mock.calls[0].arguments[0];
+    assert.equal(payload.plan, 'Continuar analgesia.');
+    assert.equal(payload.wongBakerScore, 6);
+});
+
+test('guardarNota normaliza y deduplica servicios planificados por IdProducto', async (t) => {
+    silenciarErrores(t);
+    let payloadGuardado;
+    t.mock.method(notasRepository, 'guardarNotaCompleta', async (payload) => {
+        payloadGuardado = payload;
+        return { id: 59, vitalesRegistrados: true };
+    });
+
+    await notasService.guardarNota(notaSoapieCompleta({
+        serviciosPlanificados: [{ id: '712' }, { id: 712 }, { id: '913' }],
+    }));
+
+    assert.deepEqual(payloadGuardado.serviciosPlanificados, [712, 913]);
+});
+
+test('guardarNota rechaza servicios planificados con IdProducto inválido', async (t) => {
+    silenciarErrores(t);
+    const guardar = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => 60);
+    await assert.rejects(
+        notasService.guardarNota(notaSoapieCompleta({
+            serviciosPlanificados: [{ id: 'no-es-id' }],
+        })),
+        { code: 'NOTAS_INVALID_INPUT' },
+    );
+    assert.equal(guardar.mock.callCount(), 0);
+});
+
+test('guardarNota reads the legacy Wong-Baker marker and removes it from the plan', async (t) => {
+    silenciarErrores(t);
+    const guardarCompleta = t.mock.method(
+        notasRepository,
+        'guardarNotaCompleta',
+        async () => ({ id: 57, vitalesRegistrados: true }),
+    );
+
+    await notasService.guardarNota(notaSoapieCompleta({
+        plan: 'Continuar analgesia.\n\n[ESCALA_WONG_BAKER]\n4',
+    }));
+
+    const payload = guardarCompleta.mock.calls[0].arguments[0];
+    assert.equal(payload.plan, 'Continuar analgesia.');
+    assert.equal(payload.wongBakerScore, 4);
+});
+
+test('guardarNota rejects unsupported Wong-Baker scores', async (t) => {
+    silenciarErrores(t);
+    const save = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => 58);
+    await assert.rejects(
+        notasService.guardarNota(notaSoapieCompleta({ wongBakerScore: 5 })),
+        { code: 'NOTAS_INVALID_INPUT' },
+    );
+    assert.equal(save.mock.callCount(), 0);
 });
 
 test('guardarNota pone la hora de inicio en el SERVIDOR, no en los datos del cliente', async (t) => {

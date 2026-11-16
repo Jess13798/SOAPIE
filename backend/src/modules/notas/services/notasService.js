@@ -108,6 +108,43 @@ function requiredClinicalText(value, fieldName) {
     return value;
 }
 
+function normalizeWongBakerScore(value, plan) {
+    const marker = /\r?\n\r?\n\[ESCALA_WONG_BAKER\]\r?\n(0|2|4|6|8|10)$/;
+    const match = plan.match(marker);
+    const rawScore = value === undefined || value === null || value === ''
+        ? match?.[1] ?? null
+        : value;
+    const score = rawScore === null
+        ? null
+        : typeof rawScore === 'number'
+            ? rawScore
+            : typeof rawScore === 'string' && /^(0|2|4|6|8|10)$/.test(rawScore.trim())
+                ? Number(rawScore)
+                : NaN;
+
+    if (score !== null && (![0, 2, 4, 6, 8, 10].includes(score) || !Number.isInteger(score))) {
+        throw inputError('La escala Wong-Baker debe ser 0, 2, 4, 6, 8 o 10.');
+    }
+
+    return {
+        score,
+        plan: plan.replace(marker, '').trimEnd(),
+    };
+}
+
+function normalizeServiciosPlanificados(servicios = []) {
+    if (!Array.isArray(servicios)) {
+        throw inputError('serviciosPlanificados debe ser una lista.');
+    }
+
+    return Array.from(new Set(servicios.map((servicio) => {
+        if (!servicio || typeof servicio !== 'object') {
+            throw inputError('Cada servicio planificado debe ser válido.');
+        }
+        return nullableInteger(servicio.id, 'IdProducto', true);
+    })));
+}
+
 function sqlDateTime(fecha, hora, fieldName) {
     if (
         typeof fecha !== 'string'
@@ -253,6 +290,8 @@ async function guardarNota(nota) {
         ? ahora
         : sqlDateTime(nota.fecha, nota.hora, 'fecha y hora de inicio');
 
+    const plan = requiredClinicalText(nota.plan, 'Plan');
+    const wongBaker = normalizeWongBakerScore(nota.wongBakerScore, plan);
     const valores = {
         idNota,
         idCuenta,
@@ -266,7 +305,9 @@ async function guardarNota(nota) {
         subjetivo: requiredClinicalText(nota.subjetivo, 'Subjetivo'),
         objetivo: requiredClinicalText(nota.objetivo, 'Objetivo'),
         analisis: typeof nota.analisis === 'string' ? nota.analisis : '',
-        plan: requiredClinicalText(nota.plan, 'Plan'),
+        plan: requiredClinicalText(wongBaker.plan, 'Plan'),
+        wongBakerScore: wongBaker.score,
+        serviciosPlanificados: normalizeServiciosPlanificados(nota.serviciosPlanificados || []),
         intervencion: requiredClinicalText(nota.intervencion, 'Intervención'),
         evaluacion: requiredClinicalText(nota.evaluacion, 'Evaluación'),
         signosVitales: {
@@ -437,6 +478,10 @@ async function obtenerNotas() {
                     objetivo: row.Objetivo || '',
                     analisis: row.Analisis || '',
                     plan: row.Plan_ || '',
+                    wongBakerScore: row.WongBakerScore == null
+                        ? normalizeWongBakerScore(undefined, row.Plan_ || '').score
+                        : Number(row.WongBakerScore),
+                    serviciosPlanificados: [],
                     intervencion: row.Intervencion || '',
                     evaluacion: row.Evaluacion || '',
                     isFirmada,
@@ -457,6 +502,14 @@ async function obtenerNotas() {
                     planCuidados: [],
                 };
                 notes.set(id, nota);
+            }
+
+            if (row.PlanServicioId != null) {
+                addUnique(nota.serviciosPlanificados, {
+                    id: row.PlanServicioId,
+                    codigo: row.PlanServicioCodigo,
+                    nombre: row.PlanServicioNombre,
+                }, 'id');
             }
 
             if (row.PlanIdNANDA == null) continue;

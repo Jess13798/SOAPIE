@@ -19,6 +19,10 @@ El orden de ejecución respeta las claves foráneas:
 
 El flujo nuevo usa `NotaEnfermeriaDiagnostico` como relación entre una nota y sus diagnósticos, `NotaEnfermeriaPlanNOC` para resultado, meta y evaluación, y `NotaEnfermeriaPlanNIC` para intervención y si fue realizada. Las metas y evaluaciones históricas permanecen en los campos de texto SOAPIE y se pueden seguir consultando allí.
 
+La puntuación opcional Wong-Baker se guarda como `dbo.NotaEnfermeria.WongBakerScore` (`TINYINT`, admite `NULL` o `0, 2, 4, 6, 8, 10`), separada del texto de planificación. La migración del esquema agrega la columna y su restricción de validación de forma idempotente.
+
+Para una prueba de integración, la pestaña P del SOAPIE permite buscar servicios activos en la tabla existente `dbo.FactCatalogoServicios` (máximo 50 resultados por búsqueda). Los servicios elegidos se guardan en `dbo.NotaEnfermeriaPlanServicio`, relacionados con la nota y con `IdProducto`; también se conserva el código y nombre como estaban al seleccionarlos. `nota-enfermeria-plan-servicio.sql` agrega esa relación como migración incremental para bases existentes. `001-crear-tablas-notas.sql` y `nota-enfermeria-core.sql` también incluyen la estructura para bases nuevas.
+
 ## Migración de datos de una base antigua (manual)
 
 Antes de la normalización, el plan vivía en `dbo.NotaEnfermeriaPlanCuidado`. La copia de esos datos a las tablas nuevas y el renombrado de la tabla vieja a `NotaEnfermeriaPlanCuidadoLegacy` se hacen con `backend/sql-manual/nota-enfermeria-plan-cuidado-legacy.sql`, que **no** se ejecuta automáticamente.

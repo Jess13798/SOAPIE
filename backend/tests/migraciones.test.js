@@ -39,6 +39,12 @@ test('listarMigraciones devuelve .sql ordenados', () => {
     );
     assert.ok(archivos.includes('001-crear-tablas-notas.sql'));
     assert.ok(archivos.includes('006-kardex.sql'));
+    assert.ok(archivos.includes('nota-enfermeria-plan-servicio.sql'));
+    assert.ok(
+        archivos.indexOf('nota-enfermeria-core.sql')
+        < archivos.indexOf('nota-enfermeria-plan-servicio.sql'),
+        'la tabla de servicios planificados debe crearse después de NotaEnfermeria',
+    );
     assert.ok(!archivos.includes('002-crear-tabla-auditoria-camas.sql'));
     assert.ok(!archivos.includes('003-crear-tabla-auditoria-detalle.sql'));
 });
@@ -50,4 +56,36 @@ test('separarLotes parte el 001 real (que usa GO)', () => {
     const lotes = separarLotes(fs.readFileSync(ruta, 'utf8'));
     assert.ok(lotes.length >= 2);
     assert.ok(lotes.every((lote) => !/^[ \t]*GO[ \t]*;?[ \t]*$/im.test(lote)));
+});
+
+test('el esquema de notas persiste la puntuación Wong-Baker como campo nullable validado', () => {
+    const sql = fs.readFileSync(
+        path.join(__dirname, '..', 'sql', 'nota-enfermeria-core.sql'),
+        'utf8',
+    );
+    assert.match(sql, /WongBakerScore\s+TINYINT\s+NULL/i);
+    assert.match(sql, /CHECK\s*\(WongBakerScore IS NULL OR WongBakerScore IN \(0, 2, 4, 6, 8, 10\)\)/i);
+    assert.match(sql, /COL_LENGTH\(N'dbo\.NotaEnfermeria', N'WongBakerScore'\)/i);
+});
+
+test('el esquema de notas crea una relación para los servicios planificados', () => {
+    const sql = fs.readFileSync(
+        path.join(__dirname, '..', 'sql', 'nota-enfermeria-core.sql'),
+        'utf8',
+    );
+    assert.match(sql, /CREATE TABLE dbo\.NotaEnfermeriaPlanServicio/i);
+    assert.match(sql, /FOREIGN KEY \(IdNotaEnfermeria\)[\s\S]*?REFERENCES dbo\.NotaEnfermeria/i);
+    assert.match(sql, /FOREIGN KEY \(IdProducto\)[\s\S]*?REFERENCES dbo\.FactCatalogoServicios \(IdProducto\)/i);
+    assert.match(sql, /CodigoServicio VARCHAR\(20\) NOT NULL/i);
+    assert.match(sql, /NombreServicio VARCHAR\(255\) NOT NULL/i);
+});
+
+test('la migración incremental crea la relación de servicios planificados para bases existentes', () => {
+    const sql = fs.readFileSync(
+        path.join(__dirname, '..', 'sql', 'nota-enfermeria-plan-servicio.sql'),
+        'utf8',
+    );
+    assert.match(sql, /IF OBJECT_ID\(N'dbo\.NotaEnfermeriaPlanServicio', N'U'\) IS NULL/i);
+    assert.match(sql, /REFERENCES dbo\.NotaEnfermeria \(IdNotaEnfermeria\)/i);
+    assert.match(sql, /REFERENCES dbo\.FactCatalogoServicios \(IdProducto\)/i);
 });

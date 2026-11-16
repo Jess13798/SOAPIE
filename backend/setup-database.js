@@ -9,6 +9,7 @@ const scripts = [
     'nota-enfermeria-core.sql',
     'nota-enfermeria-diagnostico-comentario.sql',
     'nota-enfermeria-plan-cuidado.sql',
+    'nota-enfermeria-plan-servicio.sql',
 ];
 
 const expectedTables = [
@@ -21,6 +22,7 @@ const expectedTables = [
     'NotaEnfermeriaDiagnostico',
     'NotaEnfermeriaPlanNOC',
     'NotaEnfermeriaPlanNIC',
+    'NotaEnfermeriaPlanServicio',
 ];
 
 async function main() {

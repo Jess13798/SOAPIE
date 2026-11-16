@@ -13,6 +13,7 @@ const routers = {
     'pacientes-sin-cama': require('../src/modules/pacientes-sin-cama/routes'),
     diagnosticos: require('../src/modules/diagnosticos/routes'),
     medicos: require('../src/modules/medicos/routes'),
+    catalogos: require('../src/modules/catalogos/routes'),
 };
 
 test('cada modulo expone un router de Express valido', () => {
@@ -95,6 +96,34 @@ test('GET /medicos con especialidadId filtra por esa especialidad', async (t) =>
     assert.equal(respuesta.status, 200);
     assert.equal(respuesta.body[0].Medico, 'FILTRADO');
     assert.deepEqual(porEspecialidad.mock.calls[0].arguments, ['6']);
+});
+
+test('GET /catalogos/servicios requiere un término de búsqueda de al menos 2 caracteres', async () => {
+    const respuesta = await invocarGet(
+        require('../src/modules/catalogos/routes'),
+        '/catalogos/servicios',
+        { buscar: 'a' },
+    );
+    assert.equal(respuesta.status, 400);
+    assert.equal(respuesta.body.success, false);
+});
+
+test('GET /catalogos/servicios devuelve el catálogo filtrado', async (t) => {
+    const catalogosModule = require('../src/modules/catalogos');
+    const buscarServicios = t.mock.method(
+        catalogosModule,
+        'buscarServicios',
+        async () => [{ id: 12, codigo: '00100', nombre: 'Servicio de prueba' }],
+    );
+    const respuesta = await invocarGet(
+        require('../src/modules/catalogos/routes'),
+        '/catalogos/servicios',
+        { buscar: '001' },
+    );
+
+    assert.equal(respuesta.status, 200);
+    assert.equal(respuesta.body[0].codigo, '00100');
+    assert.deepEqual(buscarServicios.mock.calls[0].arguments, ['001']);
 });
 
 test('POST /notas responde 400 para errores de validación', async () => {
