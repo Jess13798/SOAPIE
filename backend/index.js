@@ -22,7 +22,7 @@ const app = express();
 
 // --- MIDDLEWARES ---
 // CORS restringido a los orígenes permitidos (configurable con CORS_ORIGIN en .env).
-const ORIGENES_PERMITIDOS = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000')
+const ORIGENES_PERMITIDOS = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,http://localhost:3000')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);

@@ -49,9 +49,9 @@ BEGIN TRY
           AND parent_object_id = OBJECT_ID(N'dbo.NotaEnfermeria')
     )
     BEGIN
-        ALTER TABLE dbo.NotaEnfermeria
+        EXEC(N'ALTER TABLE dbo.NotaEnfermeria
             ADD CONSTRAINT CK_NotaEnfermeria_WongBakerScore
-            CHECK (WongBakerScore IS NULL OR WongBakerScore IN (0, 2, 4, 6, 8, 10));
+            CHECK (WongBakerScore IS NULL OR WongBakerScore IN (0, 2, 4, 6, 8, 10));');
     END;
 
     IF OBJECT_ID(N'dbo.NotaEnfermeriaPlanServicio', N'U') IS NULL
