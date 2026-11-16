@@ -85,7 +85,7 @@
           <h4 class="text-[11px] font-bold uppercase tracking-wider text-teal-600 mb-1">P - Plan</h4>
           <p class="text-sm leading-relaxed text-slate-600">{{ planText }}</p>
           <p v-if="painFace" class="mt-1 flex items-center gap-1.5 text-xs font-semibold text-sky-800">
-            <span class="h-3 w-3 rounded-full" :class="painFace.color"></span>
+            <WongBakerFace :score="painFace.score" size-class="h-4 w-4" />
             Escala Wong-Baker: {{ painFace.score }}/10 — {{ painFace.meaning }}
           </p>
         </div>
@@ -120,6 +120,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Thermometer, Heart, Wind, Activity } from 'lucide-vue-next'
+import WongBakerFace from './WongBakerFace.vue'
 import type { NotaEnfermeria, Patient } from '@/types'
 import { extractWongBakerScore, removeWongBakerMarker, wongBakerFace } from '../wongBaker'
 

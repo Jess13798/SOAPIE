@@ -30,7 +30,7 @@
             <legend class="text-[10px] font-black uppercase tracking-wide text-slate-700">
               Escala de caras Wong-Baker (opcional)
             </legend>
-            <div class="grid grid-cols-3 gap-1 sm:grid-cols-6">
+            <div class="grid grid-cols-3 gap-2 sm:grid-cols-6">
               <button
                 v-for="face in WONG_BAKER_FACES"
                 :key="face.score"
@@ -40,16 +40,18 @@
                 :aria-pressed="painScore === face.score"
                 :title="`${face.score}/10 — ${face.meaning}`"
                 :class="[
-                  'flex min-w-0 flex-col items-center rounded-md border px-1 py-1 transition-colors disabled:cursor-default',
+                  'flex items-center justify-center gap-2 rounded-md border px-2 py-1.5 transition-colors disabled:cursor-default',
                   painScore === face.score
                     ? 'border-sky-700 bg-sky-100 text-sky-950 ring-1 ring-sky-600'
                     : 'border-transparent bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50'
                 ]"
                 @click="painScore = painScore === face.score ? null : face.score"
               >
-                <span class="h-5 w-5 rounded-full shadow-sm" :class="face.color" aria-hidden="true"></span>
-                <span class="mt-1 text-[9px] font-black">{{ face.score }}/10</span>
-                <span class="w-full whitespace-normal text-[9px] leading-tight">{{ face.meaning }}</span>
+                <WongBakerFace :score="face.score" size-class="h-7 w-7" />
+                <span class="flex min-w-0 flex-col text-left">
+                  <span class="text-[10px] font-black">{{ face.score }}/10</span>
+                  <span class="whitespace-normal text-[10px] leading-tight">{{ face.meaning }}</span>
+                </span>
               </button>
             </div>
           </fieldset>
@@ -68,6 +70,7 @@
 <script setup lang="ts">
 import type { NotaFormState } from '../notaForm'
 import { WONG_BAKER_FACES, type WongBakerScore } from '../wongBaker'
+import WongBakerFace from './WongBakerFace.vue'
 
 defineProps<{
   form: NotaFormState
