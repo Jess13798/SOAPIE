@@ -22,6 +22,7 @@ function bindNota(request, nota) {
     request.input('objetivo', sql.NVarChar(sql.MAX), nota.objetivo);
     request.input('analisis', sql.NVarChar(sql.MAX), nota.analisis);
     request.input('plan', sql.NVarChar(sql.MAX), nota.plan);
+    request.input('wongBakerScore', sql.TinyInt, nota.wongBakerScore);
     request.input('intervencion', sql.NVarChar(sql.MAX), nota.intervencion);
     request.input('evaluacion', sql.NVarChar(sql.MAX), nota.evaluacion);
 }
@@ -71,6 +72,7 @@ async function guardarNotaCompleta(nota) {
                     Objetivo = @objetivo,
                     Analisis = @analisis,
                     Plan_ = @plan,
+                    WongBakerScore = @wongBakerScore,
                     Intervencion = @intervencion,
                     Evaluacion = @evaluacion
                 OUTPUT INSERTED.IdServicio AS IdServicio,
@@ -110,7 +112,7 @@ async function guardarNotaCompleta(nota) {
                 INSERT INTO dbo.NotaEnfermeria (
                     IdCuenta, IdPaciente, IdEmpleado, Turno, IdServicio,
                     Fecha_Hora_Inicio, Fecha_Hora_Fin, Subjetivo, Objetivo,
-                    Analisis, Plan_, Intervencion, Evaluacion
+                    Analisis, Plan_, WongBakerScore, Intervencion, Evaluacion
                 )
                 OUTPUT INSERTED.IdNotaEnfermeria AS IdNotaEnfermeria,
                        INSERTED.IdServicio AS IdServicio,
@@ -119,7 +121,7 @@ async function guardarNotaCompleta(nota) {
                 VALUES (
                     @idCuenta, @idPaciente, @idEmpleado, @turno, @servicioNota,
                     @fechaInicio, @fechaFin, @subjetivo, @objetivo,
-                    @analisis, @plan, @intervencion, @evaluacion
+                    @analisis, @plan, @wongBakerScore, @intervencion, @evaluacion
                 );
             `);
             idNota = insertResult.recordset[0].IdNotaEnfermeria;
@@ -172,6 +174,16 @@ async function guardarNotaCompleta(nota) {
                     @temperatura, @saturacion
                 );
             `);
+        }
+
+        const serviciosRequest = transaction.request();
+        serviciosRequest.input('idNotaPlanServicio', sql.Int, idNota);
+        await serviciosRequest.query(`
+            DELETE FROM dbo.NotaEnfermeriaPlanServicio
+            WHERE IdNotaEnfermeria = @idNotaPlanServicio;
+        `);
+        for (const idProducto of nota.serviciosPlanificados) {
+            await insertarServicioPlanificado(transaction, idNota, idProducto);
         }
 
         const carePlanRequest = transaction.request();
@@ -273,6 +285,34 @@ async function saveDiagnosis(transaction, idNota, idNANDA, comentario) {
             VALUES (@idNotaComentario, @idNANDAComentario, @comentarioNANDA);
         END;
     `);
+}
+
+async function insertarServicioPlanificado(transaction, idNota, idProducto) {
+    const request = transaction.request();
+    request.input('idNotaPlanServicio', sql.Int, idNota);
+    request.input('idProductoPlanServicio', sql.Int, idProducto);
+    const result = await request.query(`
+        INSERT INTO dbo.NotaEnfermeriaPlanServicio (
+            IdNotaEnfermeria, IdProducto, CodigoServicio, NombreServicio
+        )
+        SELECT
+            @idNotaPlanServicio,
+            servicio.IdProducto,
+            servicio.Codigo,
+            servicio.Nombre
+        FROM dbo.FactCatalogoServicios AS servicio
+        WHERE servicio.IdProducto = @idProductoPlanServicio
+          AND servicio.idEstado = 1;
+
+        SELECT @@ROWCOUNT AS FilasInsertadas;
+    `);
+
+    if (result.recordset[0].FilasInsertadas !== 1) {
+        throw createRepositoryError(
+            'PLAN_SERVICE_INVALID',
+            'Uno de los servicios seleccionados no existe o ya no está activo en el catálogo.',
+        );
+    }
 }
 
 async function insertCarePlanNoc(transaction, idNota, idNANDA, idNOC, meta, resultadoObservado) {
@@ -406,6 +446,7 @@ const NOTAS_QUERY = `
         n.Objetivo,
         n.Analisis,
         n.Plan_,
+        n.WongBakerScore,
         n.Intervencion,
         n.Evaluacion,
         vital.IdSignoVital,
@@ -433,7 +474,10 @@ const NOTAS_QUERY = `
         nic.Codigo AS PlanCodigoNIC,
         nic.Intervencion AS PlanIntervencionNIC,
         cuidado.NICRealizada AS PlanNICRealizada,
-        cuidado.NICMotivo AS PlanNICMotivo
+        cuidado.NICMotivo AS PlanNICMotivo,
+        servicioPlan.IdProducto AS PlanServicioId,
+        servicioPlan.CodigoServicio AS PlanServicioCodigo,
+        servicioPlan.NombreServicio AS PlanServicioNombre
     FROM dbo.NotaEnfermeria AS n
     LEFT JOIN dbo.Empleados AS e
         ON e.IdEmpleado = n.IdEmpleado
@@ -456,6 +500,8 @@ const NOTAS_QUERY = `
         ON noc.IdNOC = cuidado.IdNOC
     LEFT JOIN dbo.Catalogo_NIC AS nic
         ON nic.IdNIC = cuidado.IdNIC
+    LEFT JOIN dbo.NotaEnfermeriaPlanServicio AS servicioPlan
+        ON servicioPlan.IdNotaEnfermeria = n.IdNotaEnfermeria
 `;
 
 async function getAllNotas() {
@@ -549,6 +595,9 @@ async function deleteNotaById(idNota) {
         request.input('idNota', sql.Int, idNota);
         await request.query(`
             DELETE FROM dbo.NotaEnfermeriaSignosVitales
+            WHERE IdNotaEnfermeria = @idNota;
+
+            DELETE FROM dbo.NotaEnfermeriaPlanServicio
             WHERE IdNotaEnfermeria = @idNota;
 
             DELETE FROM dbo.NotaEnfermeriaPlanNOC

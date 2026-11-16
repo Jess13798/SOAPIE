@@ -25,13 +25,55 @@ BEGIN
         Objetivo          NVARCHAR(MAX)  NULL,
         Analisis          NVARCHAR(MAX)  NULL,
         Plan_             NVARCHAR(MAX)  NULL,
+        WongBakerScore    TINYINT        NULL,
+        -------------------------------------
+
         Intervencion      NVARCHAR(MAX)  NULL,
-        Evaluacion        NVARCHAR(MAX)  NULL
+        Evaluacion        NVARCHAR(MAX)  NULL,
+        CONSTRAINT CK_NotaEnfermeria_WongBakerScore
+            CHECK (WongBakerScore IS NULL OR WongBakerScore IN (0, 2, 4, 6, 8, 10))
     );
     PRINT 'Tabla NotaEnfermeria creada.';
 END
 ELSE
     PRINT 'Tabla NotaEnfermeria ya existía (no se modificó).';
+
+IF COL_LENGTH('dbo.NotaEnfermeria', 'WongBakerScore') IS NULL
+BEGIN
+    ALTER TABLE dbo.NotaEnfermeria
+        ADD WongBakerScore TINYINT NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.check_constraints
+    WHERE name = 'CK_NotaEnfermeria_WongBakerScore'
+      AND parent_object_id = OBJECT_ID('dbo.NotaEnfermeria')
+)
+BEGIN
+    ALTER TABLE dbo.NotaEnfermeria
+        ADD CONSTRAINT CK_NotaEnfermeria_WongBakerScore
+        CHECK (WongBakerScore IS NULL OR WongBakerScore IN (0, 2, 4, 6, 8, 10));
+END;
+GO
+
+IF OBJECT_ID('dbo.NotaEnfermeriaPlanServicio', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.NotaEnfermeriaPlanServicio (
+        IdNotaEnfermeria INT NOT NULL,
+        IdProducto INT NOT NULL,
+        CodigoServicio VARCHAR(20) NOT NULL,
+        NombreServicio VARCHAR(255) NOT NULL,
+        CONSTRAINT PK_NotaEnfermeriaPlanServicio
+            PRIMARY KEY (IdNotaEnfermeria, IdProducto),
+        CONSTRAINT FK_NotaEnfermeriaPlanServicio_Nota
+            FOREIGN KEY (IdNotaEnfermeria)
+            REFERENCES dbo.NotaEnfermeria (IdNotaEnfermeria),
+        CONSTRAINT FK_NotaEnfermeriaPlanServicio_Catalogo
+            FOREIGN KEY (IdProducto)
+            REFERENCES dbo.FactCatalogoServicios (IdProducto)
+    );
+END;
 GO
 
 IF OBJECT_ID('dbo.NotaEnfermeriaSignosVitales', 'U') IS NULL

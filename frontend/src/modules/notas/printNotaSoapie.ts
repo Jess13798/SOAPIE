@@ -56,12 +56,21 @@ function renderRequiredVitals(nota: NotaEnfermeria): string {
   return values.length ? `<div class="vital-line"><strong>Signos vitales:</strong> ${values.join(' · ')}</div>` : ''
 }
 
-function renderWongBakerScale(plan: string): string {
-  const score = extractWongBakerScore(plan)
+function renderWongBakerScale(score: number | null | undefined): string {
   const selectedFace = wongBakerFace(score)
   if (!selectedFace) return ''
 
   return `<p class="pain-scale"><strong>Escala Wong-Baker:</strong> ${selectedFace.score}/10 — ${valueOrDash(selectedFace.meaning)}</p>`
+}
+
+function renderPlanServices(nota: NotaEnfermeria): string {
+  const servicios = nota.serviciosPlanificados || []
+  if (!servicios.length) return ''
+
+  const rows = servicios.map(servicio => (
+    `<li><strong>${valueOrDash(servicio.codigo)}</strong> — ${valueOrDash(servicio.nombre)}</li>`
+  )).join('')
+  return `<div class="planned-services"><strong>Servicios planificados:</strong><ul>${rows}</ul></div>`
 }
 
 function renderCarePlan(plans: PlanCuidadoNota[] | undefined, key: 'analysis' | 'plan' | 'intervention'): string {
@@ -112,7 +121,9 @@ export function printNotaSoapie(nota: NotaEnfermeria, patient: Patient): boolean
     ? `${analysisText ? textBlock(analysisText) : ''}${carePlanAnalysis}`
     : textBlock(nota.analisis)
   const planContent = removeWongBakerMarker(nota.plan || '')
-  const painScale = renderWongBakerScale(nota.plan || '')
+  const painScale = renderWongBakerScale(
+    nota.wongBakerScore ?? extractWongBakerScore(nota.plan || ''),
+  )
   const logoUrl = new URL(`${import.meta.env.BASE_URL}logo.webp`, window.location.href).href
   const html = `<!doctype html>
   <html lang="es">
@@ -142,6 +153,8 @@ export function printNotaSoapie(nota: NotaEnfermeria, patient: Patient): boolean
         .vital-line { font-size: 7pt; margin-top: 1.5mm; white-space: nowrap; }
         .status { color: #475569; font-size: 7pt; }
         .pain-scale { margin: 1mm 0; }
+        .planned-services { margin-top: 1.5mm; }
+        .planned-services ul { margin: 0.5mm 0 0 4mm; padding-left: 3mm; }
         .empty { color: #64748b; font-style: italic; }
         .signature { break-inside: avoid; margin-top: 14mm; }
         .signature-info { font-size: 8pt; margin-bottom: 14mm; text-align: center; }
@@ -170,7 +183,7 @@ export function printNotaSoapie(nota: NotaEnfermeria, patient: Patient): boolean
           ${soapRow('S', textBlock(nota.subjetivo))}
           ${soapRow('O', objectiveContent)}
           ${soapRow('A', analysisContent)}
-          ${soapRow('P', `${textBlock(planContent)}${painScale}`)}
+          ${soapRow('P', `${textBlock(planContent)}${painScale}${renderPlanServices(nota)}`)}
           ${soapRow('I', textBlock(nota.intervencion))}
           ${soapRow('E', textBlock(nota.evaluacion))}
         </tbody>

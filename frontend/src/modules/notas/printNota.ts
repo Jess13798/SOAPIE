@@ -168,6 +168,12 @@ export function printNota(nota: NotaEnfermeria, patient: Patient, noteNumber: nu
       <h2 class="block-title">Plan de cuidados NANDA / NOC / NIC</h2>
       ${renderCarePlan(nota)}
       ${section('P · Plan', nota.plan)}
+      ${nota.serviciosPlanificados?.length
+        ? section(
+          'Servicios planificados',
+          nota.serviciosPlanificados.map(servicio => `${servicio.codigo} — ${servicio.nombre}`).join('\n'),
+        )
+        : ''}
       ${section('I · Intervención', nota.intervencion)}
       ${section('E · Evaluación', nota.evaluacion)}
       <div class="signing">

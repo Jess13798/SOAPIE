@@ -34,4 +34,31 @@ router.get('/catalogos/nanda-noc-nic', async (req, res) => {
     }
 });
 
+router.get('/catalogos/servicios', async (req, res) => {
+    const buscar = typeof req.query.buscar === 'string' ? req.query.buscar.trim() : '';
+    if (buscar.length < 2 || buscar.length > 100) {
+        return res.status(400).json({
+            success: false,
+            mensaje: 'La búsqueda debe tener entre 2 y 100 caracteres.',
+        });
+    }
+
+    try {
+        const datos = await catalogosModule.buscarServicios(buscar);
+        res.json(datos);
+    } catch (err) {
+        console.error('Error en /api/catalogos/servicios:', err);
+        if (err?.number === 208) {
+            return res.status(503).json({
+                success: false,
+                mensaje: 'No está disponible la tabla dbo.FactCatalogoServicios en la base de datos.',
+            });
+        }
+        res.status(500).json({
+            success: false,
+            mensaje: 'No se pudo consultar el catálogo de servicios. Revisa el registro del servidor.',
+        });
+    }
+});
+
 module.exports = router;
