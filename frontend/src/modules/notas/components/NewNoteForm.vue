@@ -80,6 +80,12 @@
       :permite-editar-analisis="permiteEditarAnalisisAnterior"
     />
 
+    <ServicioPlanSelector
+      v-if="activeTab === 'p'"
+      v-model="serviciosPlanificados"
+      :disabled="isReadOnly"
+    />
+
     <p
       v-if="planFueHeredado && activeTab === 'a'"
       class="border-b border-sky-100 bg-sky-50 px-4 py-1.5 text-[11px] font-semibold text-sky-800"
@@ -127,12 +133,13 @@
 <script setup lang="ts">
 import { ref, reactive, watch, computed } from 'vue'
 import { Save, CheckCircle, AlertCircle } from 'lucide-vue-next'
-import type { Patient, NotaEnfermeria, PlanCuidadoNota } from '@/types'
+import type { Patient, NotaEnfermeria, PlanCuidadoNota, ServicioPlanificado } from '@/types'
 import NoteShiftBar from './NoteShiftBar.vue'
 import VitalsGrid from './VitalsGrid.vue'
 import SoapieEditor from './SoapieEditor.vue'
 import SoapieCarePlanSelector from './SoapieCarePlanSelector.vue'
-import { appendWongBakerMarker, extractWongBakerScore, removeWongBakerMarker, type WongBakerScore } from '../wongBaker'
+import ServicioPlanSelector from './ServicioPlanSelector.vue'
+import { extractWongBakerScore, removeWongBakerMarker, type WongBakerScore } from '../wongBaker'
 import { CAMPOS_OBLIGATORIOS_POR_DEFECTO, type RangoVital } from '../vitalesConfig'
 import {
   NIC_BLOQUE_TITULO,
@@ -204,7 +211,9 @@ const form = reactive(defaultForm())
 // Sección SOAPIE activa. La maneja SoapieEditor (v-model:section) y la usa el
 // selector de plan de cuidados para saber a qué sección agregar el NANDA/NOC/NIC.
 const activeTab = ref<'s' | 'o' | 'a' | 'p' | 'i' | 'e'>('s')
-const painScore = ref<WongBakerScore | null>(extractWongBakerScore(props.initialNota?.plan || ''))
+const painScore = ref<WongBakerScore | null>(
+  props.initialNota?.wongBakerScore ?? extractWongBakerScore(props.initialNota?.plan || ''),
+)
 // El textarea de Análisis solo se muestra si la nota traía un análisis previo;
 // en notas nuevas el Análisis se arma con los diagnósticos NANDA seleccionados.
 const permiteEditarAnalisisAnterior = ref(
@@ -213,6 +222,9 @@ const permiteEditarAnalisisAnterior = ref(
 const planFueHeredado = ref(!props.initialNota && Boolean(props.notaAnterior?.planCuidados?.length))
 const planCuidados = ref<PlanCuidadoNota[]>(
   props.initialNota ? hidratarPlanCuidados(props.initialNota) : heredarPlanCuidados(props.notaAnterior),
+)
+const serviciosPlanificados = ref<ServicioPlanificado[]>(
+  props.initialNota?.serviciosPlanificados ? [...props.initialNota.serviciosPlanificados] : [],
 )
 const draftId = ref(props.initialNota?.id || `n${Date.now()}`)
 
@@ -307,7 +319,7 @@ watch(() => props.initialNota, (newNote) => {
     form.a = textoLibre(newNote.analisis || "", 'DIAGNOSTICOS NANDA')
     permiteEditarAnalisisAnterior.value = Boolean(form.a)
     form.p = textoLibre(removeWongBakerMarker(newNote.plan || ""), NOC_BLOQUE_TITULO)
-    painScore.value = extractWongBakerScore(newNote.plan || '')
+    painScore.value = newNote.wongBakerScore ?? extractWongBakerScore(newNote.plan || '')
     form.i = textoLibre(newNote.intervencion || "", NIC_BLOQUE_TITULO)
     form.e = textoLibre(newNote.evaluacion || "", NOC_EVALUACION_BLOQUE_TITULO)
     form.antecedentes = newNote.antecedentes || ""
@@ -316,10 +328,12 @@ watch(() => props.initialNota, (newNote) => {
     form.laboratorio = newNote.laboratorio || ""
     form.imagen = newNote.imagen || ""
     planCuidados.value = hidratarPlanCuidados(newNote)
+    serviciosPlanificados.value = [...(newNote.serviciosPlanificados || [])]
   }
   else {
     draftId.value = `n${Date.now()}`
     planCuidados.value = heredarPlanCuidados(props.notaAnterior)
+    serviciosPlanificados.value = []
     planFueHeredado.value = Boolean(props.notaAnterior?.planCuidados?.length)
   }
   
@@ -405,6 +419,7 @@ function editableStateFromForm() {
     intervencion: normalizedText(form.i),
     evaluacion: normalizedText(form.e),
     planCuidados: normalizedPlan(planCuidados.value),
+    serviciosPlanificados: serviciosPlanificados.value.map(item => item.id).sort((a, b) => a - b),
   }
 }
 
@@ -415,10 +430,11 @@ function editableStateFromNota(nota: NotaEnfermeria) {
     objetivo: normalizedText(nota.objetivo),
     analisis: normalizedText(textoLibre(nota.analisis || '', 'DIAGNOSTICOS NANDA')),
     plan: normalizedText(textoLibre(removeWongBakerMarker(nota.plan || ''), 'RESULTADOS NOC ESPERADOS Y NIC PLANIFICADAS')),
-    painScore: extractWongBakerScore(nota.plan || ''),
+    painScore: nota.wongBakerScore ?? extractWongBakerScore(nota.plan || ''),
     intervencion: normalizedText(textoLibre(nota.intervencion || '', 'INTERVENCIONES NIC REALIZADAS')),
     evaluacion: normalizedText(textoLibre(nota.evaluacion || '', 'EVALUACION DE RESULTADOS NOC')),
     planCuidados: normalizedPlan(hidratarPlanCuidados(nota)),
+    serviciosPlanificados: (nota.serviciosPlanificados || []).map(item => item.id).sort((a, b) => a - b),
   }
 }
 
@@ -620,7 +636,8 @@ function handleSubmit(shouldSign = false) {
     subjetivo: form.s,
     objetivo: form.o,
     analisis: bloqueEstructurado(form.a, 'DIAGNOSTICOS NANDA', lineasDiagnosticosNanda()),
-    plan: appendWongBakerMarker(normalizedText(form.p), painScore.value),
+    plan: normalizedText(removeWongBakerMarker(form.p)),
+    wongBakerScore: painScore.value,
     intervencion: normalizedText(form.i),
     evaluacion: normalizedText(form.e),
     antecedentes: form.antecedentes,
@@ -629,6 +646,7 @@ function handleSubmit(shouldSign = false) {
     laboratorio: form.laboratorio,
     imagen: form.imagen,
     planCuidados: planCuidados.value,
+    serviciosPlanificados: serviciosPlanificados.value,
     enfermera: props.initialNota?.enfermera || nombreEnfermeraActual.value,
     isFirmada: shouldSign || props.initialNota?.isFirmada
   }

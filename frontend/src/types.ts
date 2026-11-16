@@ -90,6 +90,12 @@ export interface PlanCuidadoNota {
   }>
 }
 
+export interface ServicioPlanificado {
+  id: number
+  codigo: string
+  nombre: string
+}
+
 export interface SignoVitalHistorial {
   IdSignoVital: string | number
   Fecha_Hora: string
@@ -120,12 +126,14 @@ export interface NotaEnfermeria {
   tipo: 'valoracion' | 'evolucion' | 'medicacion' | 'procedimiento' | 'incidencia'
   signosVitales?: SignosVitales
   planCuidados?: PlanCuidadoNota[]
+  serviciosPlanificados?: ServicioPlanificado[]
   estadoGuardado?: 'guardada' | 'temporal' | 'cambios-pendientes'
   historialTemporalSignosVitales?: SignoVitalHistorial[]
   subjetivo: string
   objetivo: string
   analisis: string
   plan: string
+  wongBakerScore?: 0 | 2 | 4 | 6 | 8 | 10 | null
   intervencion: string
   evaluacion: string
   antecedentes?: string

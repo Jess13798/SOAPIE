@@ -423,6 +423,12 @@ export interface NandaConInterrelaciones {
     nic: CatalogoNic[]
 }
 
+export interface ServicioCatalogo {
+    id: number
+    codigo: string
+    nombre: string
+}
+
 export const catalogosService = {
     getMedicosPorEspecialidad(especialidadId: string | number): Promise<Medico[]> {
         return request<Medico[]>(`/medicos?especialidadId=${encodeURIComponent(especialidadId)}`)
@@ -435,5 +441,9 @@ export const catalogosService = {
     buscarNandaNocNic(buscar = ''): Promise<NandaConInterrelaciones[]> {
         const query = buscar ? `?buscar=${encodeURIComponent(buscar)}` : ''
         return request<NandaConInterrelaciones[]>(`/catalogos/nanda-noc-nic${query}`)
+    },
+
+    buscarServicios(buscar: string): Promise<ServicioCatalogo[]> {
+        return request<ServicioCatalogo[]>(`/catalogos/servicios?buscar=${encodeURIComponent(buscar)}`)
     },
 }

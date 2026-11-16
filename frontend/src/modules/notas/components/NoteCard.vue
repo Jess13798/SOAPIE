@@ -88,6 +88,11 @@
             <span class="h-3 w-3 rounded-full" :class="painFace.color"></span>
             Escala Wong-Baker: {{ painFace.score }}/10 — {{ painFace.meaning }}
           </p>
+          <ul v-if="nota.serviciosPlanificados?.length" class="mt-2 space-y-1 text-xs text-slate-600">
+            <li v-for="servicio in nota.serviciosPlanificados" :key="servicio.id">
+              <strong class="mr-1 text-sky-800">{{ servicio.codigo }}</strong>{{ servicio.nombre }}
+            </li>
+          </ul>
         </div>
 
          <div>
@@ -131,7 +136,9 @@ const props = defineProps<{
 
 const patient = computed(() => props.pacientes?.find((p: Patient) => String(p.id) === String(props.nota.pacienteId)))
 const planText = computed(() => removeWongBakerMarker(props.nota.plan || ''))
-const painFace = computed(() => wongBakerFace(extractWongBakerScore(props.nota.plan || '')))
+const painFace = computed(() => wongBakerFace(
+  props.nota.wongBakerScore ?? extractWongBakerScore(props.nota.plan || ''),
+))
 
 const tipoLabels: Record<string, string> = {
   valoracion: 'Valoracion',
