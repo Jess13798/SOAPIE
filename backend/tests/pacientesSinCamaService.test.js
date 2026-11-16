@@ -62,20 +62,6 @@ test('moverPacienteDeCama pasa el payload completo al repositorio', async (t) =>
     assert.deepEqual(repo.mock.calls[0].arguments[0], payload);
 });
 
-test('obtenerAuditoriaCamas delega los filtros al repositorio', async (t) => {
-    silenciarErrores(t);
-    const filtros = { fechaDesde: '2026-10-01', accion: 'ASIGNAR', limit: 50 };
-    const repo = t.mock.method(pacientesSinCamaRepository, 'getAuditoriaCamas', async () => ([
-        { IdAuditoria: 1, Accion: 'ASIGNAR', Usuario: 'jperez' },
-    ]));
-
-    const datos = await pacientesSinCamaService.obtenerAuditoriaCamas(filtros);
-
-    assert.equal(datos.length, 1);
-    assert.equal(datos[0].Accion, 'ASIGNAR');
-    assert.deepEqual(repo.mock.calls[0].arguments[0], filtros);
-});
-
 test('registrarTransferenciaEstancia delega y propaga el resultado', async (t) => {
     silenciarErrores(t);
     const payload = {

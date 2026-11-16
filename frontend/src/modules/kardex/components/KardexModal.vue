@@ -158,7 +158,7 @@ import { kardexService, type RegistroKardex } from '@/services/api'
 
 const props = defineProps<{
   isOpen: boolean
-  idCuenta: string
+  idCuenta: string | number
   patient: Patient
 }>()
 

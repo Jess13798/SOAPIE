@@ -443,7 +443,7 @@ function editableStateFromNota(nota: NotaEnfermeria) {
 const etiquetasVitals: Record<string, string> = {
   peso: 'PESO', talla: 'TALLA', pCefalico: 'P. CEFÁLICO', pAbdominal: 'P. ABDOMINAL',
   hemoglucotest: 'HEMOGLUCOTEST', presionArterial: 'PRESIÓN ART.', frecuenciaCardiaca: 'FREC. CARD.', frecuenciaRespiratoria: 'FREC. RESP.',
-  temp: 'TEMPERATURA', spo2: 'SATURACIÓN'
+  temp: 'TEMPERATURA', spo2: 'SAT. OXÍGENO'
 }
 
 // Etiquetas por clave del payload, para el mensaje de campos obligatorios.
@@ -451,7 +451,7 @@ const etiquetasVitalesConfig: Record<string, string> = {
   peso: 'PESO', talla: 'TALLA', pCefalico: 'P. CEFÁLICO', pAbdominal: 'P. ABDOMINAL',
   hemoglucotest: 'HEMOGLUCOTEST', presionArterial: 'PRESIÓN ART.',
   frecuenciaCardiaca: 'FREC. CARD.', frecuenciaRespiratoria: 'FREC. RESP.',
-  temperatura: 'TEMPERATURA', saturacionOxigeno: 'SATURACIÓN',
+  temperatura: 'TEMPERATURA', saturacionOxigeno: 'SAT. OXÍGENO',
 }
 
 function validateVitales(isExistingNote: boolean, changedVitalFields: string[]) {

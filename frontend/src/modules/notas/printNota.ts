@@ -28,7 +28,7 @@ function renderVitals(vitals?: SignosVitales): string {
     ['Presión arterial', vitals.presionArterial, 'mmHg'],
     ['Frec. cardiaca', vitals.frecuenciaCardiaca, 'lpm'],
     ['Frec. respiratoria', vitals.frecuenciaRespiratoria, 'rpm'],
-    ['Saturación O₂', vitals.saturacionOxigeno, '%'],
+    ['Saturación de oxígeno', vitals.saturacionOxigeno, '%'],
     ['Peso', vitals.peso, 'kg'],
     ['Talla', vitals.talla, 'cm'],
     ['P. cefálico', vitals.pCefalico, 'cm'],

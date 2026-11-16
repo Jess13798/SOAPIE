@@ -13,7 +13,7 @@
           </div>
           <div>
             <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">{{ soloBasicos ? "Vitales Básicos" : "Historial de Signos Vitales" }}</h3>
-            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">{{ soloBasicos ? "SpO₂, P.A., Temp y Pulso" : "Registros capturados durante esta atención" }}</p>
+            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">{{ soloBasicos ? "Sat. oxígeno, Presión arterial, Temp y Pulso" : "Registros capturados durante esta atención" }}</p>
           </div>
         </div>
         
@@ -109,7 +109,7 @@ const props = defineProps<{
   isOpen: boolean
   idCuenta: string | number
   registrosTemporales?: SignoVitalHistorial[]
-  // Si es true, muestra solo SpO2, PA, Temp y Pulso (vitales básicos).
+  // Si es true, muestra solo Sat. oxígeno, PA, Temp y Pulso (vitales básicos).
   soloBasicos?: boolean
 }>()
 
@@ -131,10 +131,18 @@ function registrosLocales() {
   return props.registrosTemporales || []
 }
 
+// Clave estable: el arreglo puede cambiar de identidad en cada render del padre,
+// pero mientras los registros sean los mismos no debe recargarse el historial.
+const registrosKey = computed(() =>
+  (props.registrosTemporales || [])
+    .map((r) => `${r.IdSignoVital ?? ''}:${r.Fecha_Hora ?? ''}`)
+    .join('|')
+)
+
 const headers = computed(() =>
   props.soloBasicos
-    ? ['FECHA / HORA', 'P. ART', 'F.CARD', 'TEMP', 'SAT', 'ENFERMERA']
-    : ['ID', 'FECHA / HORA', 'PESO', 'TALLA', 'P.CEF', 'P.ABD', 'HEMOG', 'P. ART', 'F.CARD', 'F.RESP', 'TEMP', 'SAT', 'ENFERMERA']
+    ? ['FECHA / HORA', 'Presión arterial', 'F.CARD', 'TEMP', 'Sat. oxígeno', 'ENFERMERA']
+    : ['ID', 'FECHA / HORA', 'PESO', 'TALLA', 'P.CEF', 'P.ABD', 'HEMOG', 'Presión arterial', 'F.CARD', 'F.RESP', 'TEMP', 'Sat. oxígeno', 'ENFERMERA']
 )
 
 const fetchHistory = async (isLoadMore = false) => {
@@ -211,9 +219,13 @@ const formatFecha = (dateStr: string) => {
   })
 }
 
-watch([() => props.isOpen, () => props.idCuenta, () => props.registrosTemporales], ([newVal]) => {
-  if (newVal) fetchHistory()
-})
+watch(
+  [() => props.isOpen, () => props.idCuenta, registrosKey],
+  ([abierto]) => {
+    if (abierto) fetchHistory()
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>

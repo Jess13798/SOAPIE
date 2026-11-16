@@ -36,8 +36,6 @@ src/
       components/             # VitalsOverview, VitalsHistoryModal
     kardex/
       components/             # KardexModal (cuidados y administración de medicamentos)
-    auditoria/
-      components/             # AuditoriaCamasView (rastro de asignación de camas)
 ```
 
 `Dashboard.vue` sigue siendo el orquestador: importa los componentes de cada
