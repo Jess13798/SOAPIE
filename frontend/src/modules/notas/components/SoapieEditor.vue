@@ -92,7 +92,7 @@ const clinicalTabs = [
   { id: 'p', label: 'Plan' },
   { id: 'i', label: 'Intervención' },
   { id: 'e', label: 'Evaluación' },
-] 
+] as const
 
 const soapiePlaceholders: Record<string, string> = {
   s: "Paciente refiere...",
