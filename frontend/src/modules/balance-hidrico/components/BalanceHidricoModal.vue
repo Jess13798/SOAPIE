@@ -199,6 +199,7 @@ const props = defineProps<{
   isOpen: boolean
   idCuenta: string | number
   patient?: Patient
+  idNota?: string | number | null
 }>()
 
 defineEmits<{ close: [] }>()
@@ -286,6 +287,7 @@ const agregarRegistro = async () => {
       idCuenta: props.idCuenta,
       servicioId: (props.patient as any)?.servicioId,
       idEmpleado: sessionStorage.getItem('idEmpleado'),
+      idNota: props.idNota ?? null,
       fecha: new Date().toISOString().slice(0, 10),
       turno: nuevoTurno.value,
       tipo: nuevoTipo.value,

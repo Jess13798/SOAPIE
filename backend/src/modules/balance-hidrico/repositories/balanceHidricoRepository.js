@@ -1,5 +1,5 @@
 const sql = require('mssql');
-const { query } = require('../../../../dbHelper');
+const { query, executeProcedure } = require('../../../../dbHelper');
 
 async function asegurarTabla() {
     await query(`
@@ -27,6 +27,7 @@ async function asegurarTabla() {
 
 async function guardarRegistro(nota) {
     await asegurarTabla();
+    const idNota = nota.idNota ? Number(nota.idNota) : null;
     const idPaciente = nota.pacienteId ? Number(nota.pacienteId) : null;
     const idCuenta = nota.idCuenta ? Number(nota.idCuenta) : null;
     const idServicio = nota.servicioId ? Number(nota.servicioId) : null;
@@ -37,23 +38,19 @@ async function guardarRegistro(nota) {
     const concepto = nota.concepto || '';
     const cantidad = Number(nota.cantidad) || 0;
 
-    const result = await query(
-        `INSERT INTO dbo.BalanceHidrico (IdPaciente, IdCuenta, IdServicio, Fecha, Turno, Tipo, Concepto, Cantidad, IdEmpleado)
-         OUTPUT INSERTED.IdBalance AS IdBalance
-         VALUES (@idPaciente, @idCuenta, @idServicio, @fecha, @turno, @tipo, @concepto, @cantidad, @idEmpleado)`,
-        [
-            { name: 'idPaciente', type: sql.Int, value: idPaciente },
-            { name: 'idCuenta', type: sql.Int, value: idCuenta },
-            { name: 'idServicio', type: sql.Int, value: idServicio },
-            { name: 'fecha', type: sql.Date, value: fecha },
-            { name: 'turno', type: sql.VarChar, value: turno },
-            { name: 'tipo', type: sql.VarChar, value: tipo },
-            { name: 'concepto', type: sql.VarChar, value: concepto },
-            { name: 'cantidad', type: sql.Decimal(8, 2), value: cantidad },
-            { name: 'idEmpleado', type: sql.Int, value: idEmpleado },
-        ]
-    );
-    return { success: true, id: result.recordset[0].IdBalance };
+    const result = await executeProcedure('dbo.usp_GuardarBalanceHidrico', [
+        { name: 'IdNota', type: sql.Int, value: idNota },
+        { name: 'IdPaciente', type: sql.Int, value: idPaciente },
+        { name: 'IdCuenta', type: sql.Int, value: idCuenta },
+        { name: 'IdServicio', type: sql.Int, value: idServicio },
+        { name: 'Fecha', type: sql.Date, value: fecha },
+        { name: 'Turno', type: sql.VarChar(10), value: turno },
+        { name: 'Tipo', type: sql.VarChar(10), value: tipo },
+        { name: 'Concepto', type: sql.VarChar(50), value: concepto },
+        { name: 'Cantidad', type: sql.Decimal(8, 2), value: cantidad },
+        { name: 'IdEmpleado', type: sql.Int, value: idEmpleado },
+    ]);
+    return { success: true, id: result.recordset?.[0]?.IdBalance ?? null };
 }
 
 async function obtenerRegistros(idCuenta, fecha) {

@@ -94,12 +94,22 @@
               <Activity class="h-4 w-4" />
             </button>
 
-            <!-- Balance hídrico: disponible siempre -->
+            <!-- Balance hídrico: disponible al guardar la nota (para registrar IdNota) -->
             <button
+              v-if="nota && !isNaN(Number(nota.id))"
               type="button"
               @click="showBalanceHidrico = true"
               class="flex items-center justify-center w-8 h-8 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm active:scale-95 border border-indigo-700"
               title="Balance Hídrico"
+            >
+              <Droplet class="h-4 w-4" />
+            </button>
+            <button
+              v-else
+              type="button"
+              disabled
+              class="flex items-center justify-center w-8 h-8 rounded-md bg-slate-300 text-slate-400 cursor-not-allowed border border-slate-300"
+              title="Balance disponible al guardar la nota"
             >
               <Droplet class="h-4 w-4" />
             </button>
@@ -190,6 +200,7 @@
     :is-open="showBalanceHidrico"
     :id-cuenta="patient.numCuenta || ''"
     :patient="patient"
+    :id-nota="nota?.id"
     @close="showBalanceHidrico = false"
   />
   <KardexModal
