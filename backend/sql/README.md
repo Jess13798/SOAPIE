@@ -13,7 +13,7 @@ Estos scripts están pensados para la base de pruebas de SQL Server configurada 
 El orden de ejecución respeta las claves foráneas:
 
 1. `catalogo-nanda-noc-nic.sql`: crea los catálogos NANDA, NOC y NIC, y sus interrelaciones.
-2. `nota-enfermeria-core.sql`: crea las notas de enfermería y sus signos vitales.
+2. `001-crear-tablas-notas.sql`: crea las notas de enfermería y sus signos vitales.
 3. `nota-enfermeria-diagnostico-comentario.sql`: crea los diagnósticos asociados a una nota.
 4. `nota-enfermeria-plan-cuidado.sql`: crea las tablas normalizadas de NOC y NIC (con el motivo de la NIC no realizada).
 
@@ -21,7 +21,7 @@ El flujo nuevo usa `NotaEnfermeriaDiagnostico` como relación entre una nota y s
 
 La puntuación opcional Wong-Baker se guarda como `dbo.NotaEnfermeria.WongBakerScore` (`TINYINT`, admite `NULL` o `0, 2, 4, 6, 8, 10`), separada del texto de planificación. La migración del esquema agrega la columna y su restricción de validación de forma idempotente.
 
-Para una prueba de integración, la pestaña P del SOAPIE permite buscar servicios activos en la tabla existente `dbo.FactCatalogoServicios` (máximo 50 resultados por búsqueda). Los servicios elegidos se guardan en `dbo.NotaEnfermeriaPlanServicio`, relacionados con la nota y con `IdProducto`; también se conserva el código y nombre como estaban al seleccionarlos. `nota-enfermeria-plan-servicio.sql` agrega esa relación como migración incremental para bases existentes. `001-crear-tablas-notas.sql` y `nota-enfermeria-core.sql` también incluyen la estructura para bases nuevas.
+Para una prueba de integración, la pestaña P del SOAPIE permite buscar servicios activos en la tabla existente `dbo.FactCatalogoServicios` (máximo 50 resultados por búsqueda). Los servicios elegidos se guardan en `dbo.NotaEnfermeriaPlanServicio`, relacionados con la nota y con `IdProducto`; también se conserva el código y nombre como estaban al seleccionarlos. `nota-enfermeria-plan-servicio.sql` agrega esa relación como migración incremental para bases existentes. `001-crear-tablas-notas.sql` también incluye la estructura para bases nuevas.
 
 ## Migración de datos de una base antigua (manual)
 

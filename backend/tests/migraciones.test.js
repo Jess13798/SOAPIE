@@ -41,7 +41,7 @@ test('listarMigraciones devuelve .sql ordenados', () => {
     assert.ok(archivos.includes('006-kardex.sql'));
     assert.ok(archivos.includes('nota-enfermeria-plan-servicio.sql'));
     assert.ok(
-        archivos.indexOf('nota-enfermeria-core.sql')
+        archivos.indexOf('001-crear-tablas-notas.sql')
         < archivos.indexOf('nota-enfermeria-plan-servicio.sql'),
         'la tabla de servicios planificados debe crearse después de NotaEnfermeria',
     );
@@ -60,7 +60,7 @@ test('separarLotes parte el 001 real (que usa GO)', () => {
 
 test('el esquema de notas persiste la puntuación Wong-Baker como campo nullable validado', () => {
     const sql = fs.readFileSync(
-        path.join(__dirname, '..', 'sql', 'nota-enfermeria-core.sql'),
+        path.join(__dirname, '..', 'sql', '001-crear-tablas-notas.sql'),
         'utf8',
     );
     assert.match(sql, /WongBakerScore\s+TINYINT\s+NULL/i);
@@ -70,7 +70,7 @@ test('el esquema de notas persiste la puntuación Wong-Baker como campo nullable
 
 test('el esquema de notas crea una relación para los servicios planificados', () => {
     const sql = fs.readFileSync(
-        path.join(__dirname, '..', 'sql', 'nota-enfermeria-core.sql'),
+        path.join(__dirname, '..', 'sql', '001-crear-tablas-notas.sql'),
         'utf8',
     );
     assert.match(sql, /CREATE TABLE dbo\.NotaEnfermeriaPlanServicio/i);
