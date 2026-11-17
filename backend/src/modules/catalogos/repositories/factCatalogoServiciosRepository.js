@@ -4,23 +4,20 @@ const { query } = require('../../../../dbHelper');
 async function buscarServicios(buscar) {
     const result = await query(`
         SELECT TOP (50)
-            s.IdProducto AS id,
-            s.Codigo AS codigo,
-            s.Nombre AS nombre,
-            h.PrecioUnitario AS precio
-        FROM dbo.FactCatalogoServicios s
-        INNER JOIN dbo.FactCatalogoServiciosHosp h
-            ON h.IdProducto = s.IdProducto
-        WHERE h.IdTipoFinanciamiento = 2
-          AND (h.Activo = 1 OR h.Activo IS NULL)
+            FactCatalogoServicios.IdProducto AS id,
+            FactCatalogoServicios.Codigo AS codigo,
+            FactCatalogoServicios.Nombre AS nombre,
+            FactCatalogoServicios.IdServicioSubGrupo AS idServicioSubGrupo,
+            FactCatalogoServiciosHosp.PrecioUnitario AS precioUnitario,
+            FactCatalogoServiciosHosp.Activo AS activo
+        FROM dbo.FactCatalogoServiciosHosp, dbo.FactCatalogoServicios
+        WHERE FactCatalogoServiciosHosp.IdTipoFinanciamiento = 2
+          AND FactCatalogoServiciosHosp.IdProducto = FactCatalogoServicios.IdProducto
           AND (
-                s.Codigo LIKE '%' + @buscar + '%'
-                OR s.Nombre LIKE '%' + @buscar + '%'
+                FactCatalogoServicios.Nombre LIKE '%' + @buscar + '%'
+                OR FactCatalogoServicios.Codigo LIKE '%' + @buscar + '%'
           )
-        ORDER BY
-            CASE WHEN s.Codigo LIKE @buscar + '%' THEN 0 ELSE 1 END,
-            s.Nombre,
-            s.IdProducto;
+        ORDER BY FactCatalogoServicios.Nombre;
     `, [
         { name: 'buscar', type: sql.VarChar(100), value: buscar },
     ]);
