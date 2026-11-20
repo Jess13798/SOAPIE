@@ -1,6 +1,7 @@
 const sql = require('mssql');
 const dbHelper = require('../../../../dbHelper');
 const { registrarAuditoria } = require('../../../core/utils/auditoria');
+const facturacionRepository = require('../../facturacion/repositories/facturacionServicioDespachoRepository');
 
 const NOTA_NOT_FOUND = 'NOTA_NOT_FOUND';
 const CARE_PLAN_RELATION_INVALID = 'CARE_PLAN_RELATION_INVALID';
@@ -339,23 +340,29 @@ async function insertarServicioPlanificado(transaction, idNota, idProducto, meta
             const idOrden = spResult.output?.IdOrden;
 
             if (idOrden) {
-                const despachoRequest = transaction.request();
-                despachoRequest.input('idOrdenDespacho', sql.Int, idOrden);
-                despachoRequest.input('idProductoDespacho', sql.Int, idProducto);
-                await despachoRequest.query(`
-                    DECLARE @precio MONEY;
-                    SELECT @precio = PrecioUnitario
+                const precioRequest = transaction.request();
+                precioRequest.input('idProductoDespacho', sql.Int, idProducto);
+                const precioResult = await precioRequest.query(`
+                    SELECT PrecioUnitario
                     FROM dbo.FactCatalogoServiciosHosp
                     WHERE IdProducto = @idProductoDespacho AND IdTipoFinanciamiento = 2;
-
-                    IF @precio IS NULL SET @precio = 0.00;
-
-                    INSERT INTO dbo.FacturacionServicioDespacho (
-                        idOrden, IdProducto, Cantidad, Precio, Total, labConfHIS, grupoHIS, subgrupoHIS
-                    ) VALUES (
-                        @idOrdenDespacho, @idProductoDespacho, 1, @precio, @precio, '', 0, 0
-                    );
                 `);
+                const precio = Number(precioResult.recordset?.[0]?.PrecioUnitario) || 0;
+
+                // Despacho oficial del CPT mediante el procedimiento de SIGH.
+                await facturacionRepository.agregarServicioDespacho({
+                    idOrden,
+                    idProducto,
+                    cantidad: 1,
+                    precio,
+                    total: precio,
+                    labConfHIS: '',
+                    grupoHIS: 0,
+                    subGrupoHIS: 0,
+                    idUsuarioAuditoria: metadata.idEmpleado || 1,
+                    idReceta: metadata.idReceta ?? null,
+                    idDiagnostico: metadata.idDiagnostico ?? null,
+                }, transaction);
 
                 // Registro oficial de auditoría en GalenHos para la orden creada
                 await registrarAuditoria({

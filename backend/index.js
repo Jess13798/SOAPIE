@@ -15,6 +15,7 @@ const medicosRoutes = require('./src/modules/medicos/routes');
 const balanceHidricoRoutes = require('./src/modules/balance-hidrico/routes');
 const kardexRoutes = require('./src/modules/kardex/routes');
 const catalogosRoutes = require('./src/modules/catalogos/routes');
+const facturacionRoutes = require('./src/modules/facturacion/routes');
 
 const { ejecutarMigracionesAlArrancar } = require('./src/core/db/migraciones');
 
@@ -81,6 +82,7 @@ app.use('/api', medicosRoutes);
 app.use('/api', balanceHidricoRoutes);
 app.use('/api', kardexRoutes);
 app.use('/api', catalogosRoutes);
+app.use('/api', facturacionRoutes);
 
 // Fallback SPA: cualquier ruta que no sea /api ni archivo estatico devuelve
 // index.html para que Vue Router resuelva la vista (evita 'Cannot GET /dashboard').

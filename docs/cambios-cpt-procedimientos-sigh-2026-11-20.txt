@@ -120,3 +120,38 @@ B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
     * frontend/src/services/api.ts:
       Método `catalogosService.getIdDiagnosticoPorCodigo(codigo)`.
 ================================================================================
+
+11. INTEGRACIÓN DEL PROCEDIMIENTO FacturacionServicioDespachoAgregar:
+--------------------------------------------------------------------------------
+- Procedimientos utilizados:
+    * dbo.FacturacionServicioDespachoAgregar
+    * dbo.FacturacionServicioDespachoAgregar_Rc (variante sin receta ni
+      diagnóstico, para consumos/recetas)
+- Propósito: registrar el CPT o insumo despachado de una orden oficial de
+  GalenHos en la tabla FacturacionServicioDespacho, reemplazando el INSERT
+  directo que se hacía antes en texto plano.
+- Parámetros (verificados en la BD sigh del servidor GALENHOS2):
+    @idOrden (INT), @IdProducto (INT), @Cantidad (INT), @Precio (MONEY),
+    @Total (MONEY), @labConfHIS (VARCHAR(3)), @grupoHIS (INT),
+    @subGrupoHIS (INT), @IdUsuarioAuditoria (INT),
+    @idReceta (INT, nulo), @idDiagnostico (INT, nulo).
+- Archivos integrados:
+    * backend/src/modules/facturacion/repositories/facturacionServicioDespachoRepository.js:
+      Funciones `agregarServicioDespacho()` y `agregarServicioDespachoRc()`.
+      Validan los datos, calculan el Total cuando no se envía y ejecutan el SP
+      dentro de la transacción activa si se recibe una.
+    * backend/src/modules/facturacion/services/facturacionService.js e index.js:
+      Exportan las funciones del repositorio.
+    * backend/src/modules/facturacion/routes.js:
+      Endpoint `POST /api/facturacion/servicio-despacho` (body con `variante:
+      'rc'` para usar la variante _Rc).
+    * backend/index.js: monta el router de facturación en /api.
+    * backend/src/modules/notas/repositories/notasRepository.js
+      (`insertarServicioPlanificado`): el despacho del CPT planificado ahora se
+      registra con el SP en lugar del INSERT directo.
+    * frontend/src/services/api.ts: `facturacionService.agregarServicioDespacho()`.
+    * backend/src/modules/facturacion/repositories/facturacionServicioDespachoRepository.test.js:
+      5 pruebas unitarias con transacción simulada.
+- Resultado: la orden y su despacho quedan registrados exactamente igual que
+  desde el GalenHos de escritorio, dentro de la misma transacción de la nota.
+================================================================================

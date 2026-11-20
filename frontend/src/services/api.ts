@@ -408,3 +408,36 @@ export const catalogosService = {
         return request<{ success: boolean; datos: any }>(`/tipos-financiamiento/${idTipoFinanciamiento}`)
     },
 }
+
+// ==========================================
+// FACTURACIÓN / DESPACHO DE SERVICIOS (SIGH)
+// ==========================================
+export interface ServicioDespachoPayload {
+    idOrden: number
+    idProducto: number
+    cantidad?: number
+    precio: number
+    total?: number
+    labConfHIS?: string
+    grupoHIS?: number
+    subGrupoHIS?: number
+    idUsuarioAuditoria: number
+    idReceta?: number | null
+    idDiagnostico?: number | null
+}
+
+export const facturacionService = {
+    /**
+     * Registra un CPT/insumo despachado en una orden de servicio.
+     * Backend: dbo.FacturacionServicioDespachoAgregar (o su variante _Rc).
+     */
+    agregarServicioDespacho(
+        datos: ServicioDespachoPayload,
+        variante?: 'rc',
+    ): Promise<{ success: boolean; variante: string; resultado: unknown }> {
+        return request<{ success: boolean; variante: string; resultado: unknown }>(
+            '/facturacion/servicio-despacho',
+            { method: 'POST', body: JSON.stringify({ ...datos, variante }) },
+        )
+    },
+}
