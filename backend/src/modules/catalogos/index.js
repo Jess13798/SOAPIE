@@ -4,4 +4,5 @@ const serviciosRepository = require('./repositories/factCatalogoServiciosReposit
 module.exports = {
     buscarNandaNocNic: nandaNocNicService.buscarCatalogo,
     buscarServicios: serviciosRepository.buscarServicios,
+    obtenerServicioPorFinanciamiento: serviciosRepository.obtenerServicioPorFinanciamiento,
 };

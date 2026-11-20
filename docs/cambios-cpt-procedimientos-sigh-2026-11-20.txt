@@ -1,0 +1,49 @@
+================================================================================
+REGISTRO DE CAMBIOS: INTEGRACIÓN CON PROCEDIMIENTOS ALMACENADOS DE SIGH
+Fecha: 20/11/2026
+Rama: JJRama
+================================================================================
+
+1. DESCRIPCIÓN DEL CAMBIO:
+--------------------------------------------------------------------------------
+Se reemplazaron las consultas directas en texto plano (SELECT) a las tablas
+FactCatalogoServicios y FactCatalogoServiciosHosp para alinearse con los
+procedimientos almacenados nativos que utiliza el sistema hospitalario SIGH / GalenHos.
+
+2. PROCEDIMIENTOS ALMACENADOS UTILIZADOS:
+--------------------------------------------------------------------------------
+A) dbo.FactCatalogoServiciosHospFiltraPorPuntoCargaTipoFinanciamiento
+   - Propósito: Buscar servicios/procedimientos CPT habilitados para un
+     Punto de Carga específico (área/servicio) y Tipo de Financiamiento (SIS = 2).
+   - Parámetros:
+       @idPuntoCarga          (INT, ej. 716)
+       @idTipoFinanciamiento  (INT, ej. 2)
+       @idFiltroTipo          (INT, 1=Código, 2=Nombre)
+       @Filtro                (VARCHAR, texto ingresado)
+       @TipoServicioOfrecido  (INT, 1=Solo CPT)
+
+B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
+   - Propósito: Obtener el registro hospitalario puntual (precios, condición, activo)
+     de un producto según el financiamiento del paciente.
+   - Parámetros:
+       @idProducto            (INT)
+       @IdTipoFinanciamiento  (INT)
+
+3. ARCHIVOS MODIFICADOS:
+--------------------------------------------------------------------------------
+- backend/src/modules/catalogos/repositories/factCatalogoServiciosRepository.js:
+    * Se implementó `buscarServicios(buscar, idPuntoCarga, idTipoFinanciamiento)`
+      invocando executeProcedure('dbo.FactCatalogoServiciosHospFiltraPorPuntoCargaTipoFinanciamiento').
+    * Se implementó `obtenerServicioPorFinanciamiento(idProducto, idTipoFinanciamiento)`
+      invocando executeProcedure('dbo.FactCatalogoServiciosXidTipoFinanciamiento').
+    * Mantiene compatibilidad total con la respuesta del frontend:
+      { id, codigo, nombre, precioUnitario, activo, idPuntoCarga, seUsaSinPrecio }.
+
+- backend/src/modules/catalogos/index.js:
+    * Se exportó la nueva función `obtenerServicioPorFinanciamiento`.
+
+4. VALIDACIÓN:
+--------------------------------------------------------------------------------
+- Suite de pruebas unitarias (`npm test`): 96 tests aprobados (0 fallos).
+- Compatibilidad del frontend verificada sin necesidad de alterar componentes Vue.
+================================================================================
