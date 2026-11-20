@@ -148,10 +148,17 @@ B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
     * backend/index.js: monta el router de facturación en /api.
     * backend/src/modules/notas/repositories/notasRepository.js
       (`insertarServicioPlanificado`): el despacho del CPT planificado ahora se
-      registra con el SP en lugar del INSERT directo.
+      registra con el SP en lugar del INSERT directo. El `idDiagnostico` se
+      resuelve una vez por nota como el diagnóstico principal de la atención
+      (subclasificación 'D'), igual que en el ejemplo real de GalenHos; si la
+      atención no tiene diagnósticos, se envía NULL.
     * frontend/src/services/api.ts: `facturacionService.agregarServicioDespacho()`.
     * backend/src/modules/facturacion/repositories/facturacionServicioDespachoRepository.test.js:
       5 pruebas unitarias con transacción simulada.
+- Verificación contra la BD sigh (20/11/2026): el despacho real de la orden
+  1336130 (cuenta 620981, producto 51650) usa precio/total 5.85, labConfHIS '',
+  grupos 0, idReceta NULL e idDiagnostico 9056 (N39.0 'D'). El web replica ese
+  mismo registro.
 - Resultado: la orden y su despacho quedan registrados exactamente igual que
   desde el GalenHos de escritorio, dentro de la misma transacción de la nota.
 ================================================================================

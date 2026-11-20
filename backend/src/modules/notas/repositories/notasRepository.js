@@ -184,8 +184,21 @@ async function guardarNotaCompleta(nota) {
             DELETE FROM dbo.NotaEnfermeriaPlanServicio
             WHERE IdNotaEnfermeria = @idNotaPlanServicio;
         `);
+
+        // GalenHos despacha cada CPT contra el diagnóstico principal de la
+        // atención (el de subclasificación 'D'). Se resuelve una sola vez por
+        // nota y se comparte entre todos los servicios planificados.
+        let idDiagnosticoPrincipal = null;
+        if (nota.idCuenta && nota.serviciosPlanificados.length > 0) {
+            try {
+                idDiagnosticoPrincipal = await obtenerIdDiagnosticoPrincipal(transaction, nota.idCuenta);
+            } catch {
+                // Si la atención no tiene diagnósticos registrados, el despacho
+                // se hace con idDiagnostico NULL como antes.
+            }
+        }
         for (const idProducto of nota.serviciosPlanificados) {
-            await insertarServicioPlanificado(transaction, idNota, idProducto, nota);
+            await insertarServicioPlanificado(transaction, idNota, idProducto, nota, idDiagnosticoPrincipal);
         }
 
         const carePlanRequest = transaction.request();
@@ -289,7 +302,30 @@ async function saveDiagnosis(transaction, idNota, idNANDA, comentario) {
     `);
 }
 
-async function insertarServicioPlanificado(transaction, idNota, idProducto, metadata = {}) {
+async function obtenerIdDiagnosticoPrincipal(transaction, idCuenta) {
+    const request = transaction.request();
+    request.input('idCuentaDiagnostico', sql.Int, idCuenta);
+    const result = await request.query(`
+        SELECT TOP (1) ad.IdDiagnostico
+        FROM dbo.Atenciones AS a
+        INNER JOIN dbo.AtencionesDiagnosticos AS ad
+            ON ad.IdAtencion = a.IdAtencion
+        INNER JOIN dbo.SubclasificacionDiagnosticos AS s
+            ON s.IdSubclasificacionDx = ad.IdSubclasificacionDx
+        WHERE a.IdCuentaAtencion = @idCuentaDiagnostico
+        ORDER BY
+            CASE s.Codigo
+                WHEN 'D' THEN 1
+                WHEN 'R' THEN 2
+                WHEN 'P' THEN 3
+                ELSE 4
+            END,
+            ad.IdDiagnostico;
+    `);
+    return result.recordset?.[0]?.IdDiagnostico ?? null;
+}
+
+async function insertarServicioPlanificado(transaction, idNota, idProducto, metadata = {}, idDiagnosticoPrincipal = null) {
     const request = transaction.request();
     request.input('idNotaPlanServicio', sql.Int, idNota);
     request.input('idProductoPlanServicio', sql.Int, idProducto);
@@ -361,7 +397,7 @@ async function insertarServicioPlanificado(transaction, idNota, idProducto, meta
                     subGrupoHIS: 0,
                     idUsuarioAuditoria: metadata.idEmpleado || 1,
                     idReceta: metadata.idReceta ?? null,
-                    idDiagnostico: metadata.idDiagnostico ?? null,
+                    idDiagnostico: metadata.idDiagnostico ?? idDiagnosticoPrincipal ?? null,
                 }, transaction);
 
                 // Registro oficial de auditoría en GalenHos para la orden creada
