@@ -54,3 +54,15 @@ B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
 - Consulta directamente: dbo.FactCatalogoServiciosXidTipoFinanciamiento
 - Expuesto en Frontend: catalogosService.obtenerServicioPorFinanciamiento(idProducto, idTipoFinanciamiento)
 ================================================================================
+
+6. INTEGRACIÓN DEL PROCEDIMIENTO RetornaFechaServidorSQL:
+--------------------------------------------------------------------------------
+- Procedimiento utilizado: dbo.RetornaFechaServidorSQL
+- Propósito: Obtener la fecha y hora oficial del servidor de base de datos SQL Server
+  para evitar desfases por relojes locales descalibrados de los clientes.
+- Archivos integrados:
+    * backend/src/core/utils/date.js: Función `obtenerFechaServidorSQL()` con fallback
+      seguro a Date local en caso de desconexión.
+    * backend/src/modules/catalogos/routes.js: Endpoint `GET /api/fecha-servidor`.
+    * frontend/src/services/api.ts: Método `catalogosService.getFechaServidor()`.
+================================================================================

@@ -92,4 +92,22 @@ router.get('/catalogos/servicios/:idProducto/financiamiento', async (req, res) =
     }
 });
 
+const { obtenerFechaServidorSQL } = require('../../core/utils/date');
+
+// Obtener fecha y hora oficial del servidor SQL Server
+router.get('/fecha-servidor', async (req, res) => {
+    try {
+        const fecha = await obtenerFechaServidorSQL();
+        res.json({
+            success: true,
+            fechaHoraSQL: fecha.toISOString(),
+            fecha: fecha.toISOString().split('T')[0],
+            hora: fecha.toISOString().substring(11, 16),
+        });
+    } catch (err) {
+        console.error('Error en /api/fecha-servidor:', err);
+        res.status(500).json({ success: false, mensaje: 'Error al obtener la fecha del servidor SQL.' });
+    }
+});
+
 module.exports = router;
