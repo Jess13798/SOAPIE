@@ -106,3 +106,17 @@ B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
     * frontend/src/services/api.ts:
       Método `catalogosService.getTipoFinanciamiento(idTipoFinanciamiento)`.
 ================================================================================
+
+10. INTEGRACIÓN DEL PROCEDIMIENTO DevuelveIdDIagnostico:
+--------------------------------------------------------------------------------
+- Procedimiento utilizado: dbo.DevuelveIdDIagnostico
+- Propósito: Obtener el IdDiagnostico oficial de GalenHos/SIGH a partir de su
+  código CIE (ejemplo: 'N39.0  ').
+- Archivos integrados:
+    * backend/src/modules/diagnosticos/repositories/diagnosticosRepository.js:
+      Función `devuelveIdDiagnostico(codigoCIE)`.
+    * backend/src/modules/diagnosticos/routes.js:
+      Soporte en `GET /api/diagnosticos?codigo=...`.
+    * frontend/src/services/api.ts:
+      Método `catalogosService.getIdDiagnosticoPorCodigo(codigo)`.
+================================================================================

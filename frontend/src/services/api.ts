@@ -383,6 +383,10 @@ export const catalogosService = {
         return request<Diagnostico[]>(`/diagnosticos?idCuentaAtencion=${encodeURIComponent(idCuentaAtencion)}`)
     },
 
+    getIdDiagnosticoPorCodigo(codigo: string): Promise<{ success: boolean; codigo: string; idDiagnostico: number }> {
+        return request<{ success: boolean; codigo: string; idDiagnostico: number }>(`/diagnosticos?codigo=${encodeURIComponent(codigo)}`)
+    },
+
     buscarNandaNocNic(buscar = ''): Promise<NandaConInterrelaciones[]> {
         const query = buscar ? `?buscar=${encodeURIComponent(buscar)}` : ''
         return request<NandaConInterrelaciones[]>(`/catalogos/nanda-noc-nic${query}`)

@@ -6,4 +6,5 @@ const diagnosticosService = require('./services/diagnosticosService');
 
 module.exports = {
     obtenerDiagnosticos: diagnosticosService.obtenerDiagnosticos,
+    obtenerIdDiagnosticoPorCodigo: diagnosticosService.obtenerIdDiagnosticoPorCodigo,
 };
