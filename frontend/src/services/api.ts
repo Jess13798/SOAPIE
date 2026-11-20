@@ -391,4 +391,8 @@ export const catalogosService = {
     buscarServicios(buscar: string): Promise<ServicioCatalogo[]> {
         return request<ServicioCatalogo[]>(`/catalogos/servicios?buscar=${encodeURIComponent(buscar)}`)
     },
+
+    obtenerServicioPorFinanciamiento(idProducto: number, idTipoFinanciamiento = 2): Promise<any> {
+        return request<any>(`/catalogos/servicios/${idProducto}/financiamiento?idTipoFinanciamiento=${idTipoFinanciamiento}`)
+    },
 }

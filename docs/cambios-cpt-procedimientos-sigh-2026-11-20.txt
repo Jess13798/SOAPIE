@@ -47,3 +47,10 @@ B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
 - Suite de pruebas unitarias (`npm test`): 96 tests aprobados (0 fallos).
 - Compatibilidad del frontend verificada sin necesidad de alterar componentes Vue.
 ================================================================================
+
+5. INTEGRACIÓN DEL PROCEDIMIENTO FactCatalogoServiciosXidTipoFinanciamiento:
+--------------------------------------------------------------------------------
+- Ruta API agregada: GET /api/catalogos/servicios/:idProducto/financiamiento
+- Consulta directamente: dbo.FactCatalogoServiciosXidTipoFinanciamiento
+- Expuesto en Frontend: catalogosService.obtenerServicioPorFinanciamiento(idProducto, idTipoFinanciamiento)
+================================================================================

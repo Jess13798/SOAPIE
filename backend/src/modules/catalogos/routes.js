@@ -61,4 +61,35 @@ router.get('/catalogos/servicios', async (req, res) => {
     }
 });
 
+router.get('/catalogos/servicios/:idProducto/financiamiento', async (req, res) => {
+    const idProducto = parseInt(req.params.idProducto, 10);
+    const idTipoFinanciamiento = req.query.idTipoFinanciamiento 
+        ? parseInt(req.query.idTipoFinanciamiento, 10) 
+        : 2;
+
+    if (isNaN(idProducto) || isNaN(idTipoFinanciamiento)) {
+        return res.status(400).json({
+            success: false,
+            mensaje: 'Los identificadores de producto y financiamiento deben ser numéricos.',
+        });
+    }
+
+    try {
+        const datos = await catalogosModule.obtenerServicioPorFinanciamiento(idProducto, idTipoFinanciamiento);
+        if (!datos) {
+            return res.status(404).json({
+                success: false,
+                mensaje: 'No se encontró la configuración hospitalaria para el servicio y financiamiento especificados.',
+            });
+        }
+        res.json(datos);
+    } catch (err) {
+        console.error('Error en /api/catalogos/servicios/:idProducto/financiamiento:', err);
+        res.status(500).json({
+            success: false,
+            mensaje: 'No se pudo consultar la configuración del servicio. Revisa el registro del servidor.',
+        });
+    }
+});
+
 module.exports = router;
