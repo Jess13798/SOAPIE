@@ -399,4 +399,8 @@ export const catalogosService = {
     getFechaServidor(): Promise<{ success: boolean; fechaHoraSQL: string; fecha: string; hora: string }> {
         return request<{ success: boolean; fechaHoraSQL: string; fecha: string; hora: string }>('/fecha-servidor')
     },
+
+    getTipoFinanciamiento(idTipoFinanciamiento = 2): Promise<{ success: boolean; datos: any }> {
+        return request<{ success: boolean; datos: any }>(`/tipos-financiamiento/${idTipoFinanciamiento}`)
+    },
 }

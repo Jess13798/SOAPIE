@@ -5,4 +5,5 @@ module.exports = {
     buscarNandaNocNic: nandaNocNicService.buscarCatalogo,
     buscarServicios: serviciosRepository.buscarServicios,
     obtenerServicioPorFinanciamiento: serviciosRepository.obtenerServicioPorFinanciamiento,
+    obtenerTipoFinanciamientoPorId: serviciosRepository.obtenerTipoFinanciamientoPorId,
 };

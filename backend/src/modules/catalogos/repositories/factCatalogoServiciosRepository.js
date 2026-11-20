@@ -44,7 +44,20 @@ async function obtenerServicioPorFinanciamiento(idProducto, idTipoFinanciamiento
     return result.recordset?.[0] || null;
 }
 
+/**
+ * 3. Consultar los datos del Tipo de Financiamiento en GalenHos/SIGH.
+ * Utiliza: dbo.TiposFinanciamientoSeleccionarPorId
+ */
+async function obtenerTipoFinanciamientoPorId(idTipoFinanciamiento = 2) {
+    const result = await executeProcedure('dbo.TiposFinanciamientoSeleccionarPorId', [
+        { name: 'IdTipoFinanciamiento', type: sql.Int, value: Number(idTipoFinanciamiento) },
+    ]);
+
+    return result.recordset?.[0] || null;
+}
+
 module.exports = {
     buscarServicios,
     obtenerServicioPorFinanciamiento,
+    obtenerTipoFinanciamientoPorId,
 };

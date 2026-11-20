@@ -110,4 +110,22 @@ router.get('/fecha-servidor', async (req, res) => {
     }
 });
 
+// Obtener datos del Tipo de Financiamiento (dbo.TiposFinanciamientoSeleccionarPorId)
+router.get('/tipos-financiamiento/:idTipoFinanciamiento', async (req, res) => {
+    const id = parseInt(req.params.idTipoFinanciamiento, 10);
+    if (isNaN(id)) {
+        return res.status(400).json({ success: false, mensaje: 'El ID de financiamiento debe ser numérico.' });
+    }
+    try {
+        const datos = await catalogosModule.obtenerTipoFinanciamientoPorId(id);
+        if (!datos) {
+            return res.status(404).json({ success: false, mensaje: 'Tipo de financiamiento no encontrado.' });
+        }
+        res.json({ success: true, datos });
+    } catch (err) {
+        console.error('Error en /api/tipos-financiamiento:', err);
+        res.status(500).json({ success: false, mensaje: 'Error al consultar el tipo de financiamiento.' });
+    }
+});
+
 module.exports = router;

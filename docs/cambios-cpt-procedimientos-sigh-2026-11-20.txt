@@ -92,3 +92,17 @@ B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
     * backend/src/core/utils/auditoria.js: Función `registrarAuditoria()`.
     * backend/src/modules/notas/repositories/notasRepository.js: Invocación en `insertarServicioPlanificado`.
 ================================================================================
+
+9. INTEGRACIÓN DEL PROCEDIMIENTO TiposFinanciamientoSeleccionarPorId:
+--------------------------------------------------------------------------------
+- Procedimiento utilizado: dbo.TiposFinanciamientoSeleccionarPorId
+- Propósito: Consultar la información del tipo de financiamiento institucional
+  (IdTipoFinanciamiento = 2 por defecto, SIS / Hospitalización).
+- Archivos integrados:
+    * backend/src/modules/catalogos/repositories/factCatalogoServiciosRepository.js:
+      Función `obtenerTipoFinanciamientoPorId(idTipoFinanciamiento)`.
+    * backend/src/modules/catalogos/routes.js:
+      Endpoint `GET /api/tipos-financiamiento/:idTipoFinanciamiento`.
+    * frontend/src/services/api.ts:
+      Método `catalogosService.getTipoFinanciamiento(idTipoFinanciamiento)`.
+================================================================================
