@@ -81,3 +81,14 @@ B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
 - Resultado: Si el sistema web falla o se consulta en el GalenHos de escritorio,
   la orden y el procedimiento CPT aparecen registrados en la atención del paciente.
 ================================================================================
+
+8. INTEGRACIÓN DEL PROCEDIMIENTO AuditoriaAgregarV:
+--------------------------------------------------------------------------------
+- Procedimiento utilizado: dbo.AuditoriaAgregarV
+- Propósito: Registrar en la tabla oficial de Auditoria de SIGH/GalenHos la creación
+  de cada orden de servicio (@Tabla='FactOrdenServicio', @Accion='A', @idListItem=103),
+  guardando el ID del empleado, fecha/hora y nombre de máquina.
+- Archivos integrados:
+    * backend/src/core/utils/auditoria.js: Función `registrarAuditoria()`.
+    * backend/src/modules/notas/repositories/notasRepository.js: Invocación en `insertarServicioPlanificado`.
+================================================================================

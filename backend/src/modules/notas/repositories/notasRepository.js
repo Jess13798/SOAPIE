@@ -1,5 +1,6 @@
 const sql = require('mssql');
 const dbHelper = require('../../../../dbHelper');
+const { registrarAuditoria } = require('../../../core/utils/auditoria');
 
 const NOTA_NOT_FOUND = 'NOTA_NOT_FOUND';
 const CARE_PLAN_RELATION_INVALID = 'CARE_PLAN_RELATION_INVALID';
@@ -355,6 +356,16 @@ async function insertarServicioPlanificado(transaction, idNota, idProducto, meta
                         @idOrdenDespacho, @idProductoDespacho, 1, @precio, @precio, '', 0, 0
                     );
                 `);
+
+                // Registro oficial de auditoría en GalenHos para la orden creada
+                await registrarAuditoria({
+                    idEmpleado: metadata.idEmpleado,
+                    accion: 'A',
+                    idRegistro: idOrden,
+                    tabla: 'FactOrdenServicio',
+                    idListItem: 103,
+                    observaciones: `CPT ${idProducto} generado desde nota enfermeria`,
+                }, transaction);
             }
         } catch {
             // Si la base de datos es de prueba o no tiene el SP instalado, no rompe el guardado de la nota
