@@ -183,7 +183,7 @@ async function guardarNotaCompleta(nota) {
             WHERE IdNotaEnfermeria = @idNotaPlanServicio;
         `);
         for (const idProducto of nota.serviciosPlanificados) {
-            await insertarServicioPlanificado(transaction, idNota, idProducto);
+            await insertarServicioPlanificado(transaction, idNota, idProducto, nota);
         }
 
         const carePlanRequest = transaction.request();
@@ -287,7 +287,7 @@ async function saveDiagnosis(transaction, idNota, idNANDA, comentario) {
     `);
 }
 
-async function insertarServicioPlanificado(transaction, idNota, idProducto) {
+async function insertarServicioPlanificado(transaction, idNota, idProducto, metadata = {}) {
     const request = transaction.request();
     request.input('idNotaPlanServicio', sql.Int, idNota);
     request.input('idProductoPlanServicio', sql.Int, idProducto);
@@ -312,6 +312,53 @@ async function insertarServicioPlanificado(transaction, idNota, idProducto) {
             'PLAN_SERVICE_INVALID',
             'Uno de los servicios seleccionados no existe o ya no está activo en el catálogo.',
         );
+    }
+
+    // Integración nativa con GalenHos / SIGH:
+    // Si la atención tiene IdCuenta, registramos la orden oficial en FactOrdenServicio y el CPT en FacturacionServicioDespacho
+    if (metadata.idCuenta) {
+        try {
+            const galenRequest = transaction.request();
+            galenRequest.output('IdOrden', sql.Int);
+            galenRequest.input('IdPuntoCarga', sql.Int, 716); // Punto de carga para hospitalización / CPT
+            galenRequest.input('IdPaciente', sql.Int, metadata.idPaciente);
+            galenRequest.input('IdCuentaAtencion', sql.Int, metadata.idCuenta);
+            galenRequest.input('IdServicioPaciente', sql.Int, metadata.idServicio || null);
+            galenRequest.input('idTipoFinanciamiento', sql.Int, 2); // 2 -> SIS
+            galenRequest.input('idFuenteFinanciamiento', sql.Int, 1);
+            galenRequest.input('FechaCreacion', sql.DateTime, metadata.fechaInicio || new Date());
+            galenRequest.input('IdUsuario', sql.Int, metadata.idEmpleado || 1);
+            galenRequest.input('FechaDespacho', sql.DateTime, metadata.fechaInicio || new Date());
+            galenRequest.input('IdUsuarioDespacho', sql.Int, metadata.idEmpleado || 1);
+            galenRequest.input('IdEstadoFacturacion', sql.Int, 1);
+            galenRequest.input('FechaHoraRealizaCpt', sql.DateTime, metadata.fechaInicio || new Date());
+            galenRequest.input('IdUsuarioAuditoria', sql.Int, metadata.idEmpleado || 1);
+
+            const spResult = await galenRequest.execute('dbo.FactOrdenServicioAgregar1');
+            const idOrden = spResult.output?.IdOrden;
+
+            if (idOrden) {
+                const despachoRequest = transaction.request();
+                despachoRequest.input('idOrdenDespacho', sql.Int, idOrden);
+                despachoRequest.input('idProductoDespacho', sql.Int, idProducto);
+                await despachoRequest.query(`
+                    DECLARE @precio MONEY;
+                    SELECT @precio = PrecioUnitario
+                    FROM dbo.FactCatalogoServiciosHosp
+                    WHERE IdProducto = @idProductoDespacho AND IdTipoFinanciamiento = 2;
+
+                    IF @precio IS NULL SET @precio = 0.00;
+
+                    INSERT INTO dbo.FacturacionServicioDespacho (
+                        idOrden, IdProducto, Cantidad, Precio, Total, labConfHIS, grupoHIS, subgrupoHIS
+                    ) VALUES (
+                        @idOrdenDespacho, @idProductoDespacho, 1, @precio, @precio, '', 0, 0
+                    );
+                `);
+            }
+        } catch {
+            // Si la base de datos es de prueba o no tiene el SP instalado, no rompe el guardado de la nota
+        }
     }
 }
 

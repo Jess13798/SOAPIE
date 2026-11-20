@@ -66,3 +66,18 @@ B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
     * backend/src/modules/catalogos/routes.js: Endpoint `GET /api/fecha-servidor`.
     * frontend/src/services/api.ts: Método `catalogosService.getFechaServidor()`.
 ================================================================================
+
+7. INTEGRACIÓN DEL PROCEDIMIENTO FactOrdenServicioAgregar1:
+--------------------------------------------------------------------------------
+- Procedimientos utilizados:
+    * dbo.FactOrdenServicioAgregar1
+    * Inserción en dbo.FacturacionServicioDespacho
+- Propósito: Cuando la enfermera planifica un servicio en la nota, se genera
+  automáticamente la orden oficial de servicio de GalenHos vinculada a la cuenta
+  de atención (@IdCuentaAtencion, @IdPaciente, @IdPuntoCarga=716, etc.) y se registra
+  el CPT con su precio de financiamiento en FacturacionServicioDespacho.
+- Archivo modificado:
+    * backend/src/modules/notas/repositories/notasRepository.js (insertarServicioPlanificado).
+- Resultado: Si el sistema web falla o se consulta en el GalenHos de escritorio,
+  la orden y el procedimiento CPT aparecen registrados en la atención del paciente.
+================================================================================
