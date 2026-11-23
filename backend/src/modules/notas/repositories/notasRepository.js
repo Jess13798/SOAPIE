@@ -2,6 +2,7 @@ const sql = require('mssql');
 const dbHelper = require('../../../../dbHelper');
 const { registrarAuditoria } = require('../../../core/utils/auditoria');
 const facturacionRepository = require('../../facturacion/repositories/facturacionServicioDespachoRepository');
+const cuentasAtencionRepository = require('../../facturacion/repositories/facturacionCuentasAtencionRepository');
 
 const NOTA_NOT_FOUND = 'NOTA_NOT_FOUND';
 const CARE_PLAN_RELATION_INVALID = 'CARE_PLAN_RELATION_INVALID';
@@ -434,6 +435,37 @@ async function insertarServicioPlanificado(transaction, idNota, idProducto, meta
                     idListItem: 103,
                     observaciones: `CPT ${idProducto} generado desde nota enfermeria`,
                 }, transaction);
+
+                // Actualizar los consumos acumulados por punto de carga en FacturacionCuentasAtencionPtos (716 = CPT)
+                // para que el saldo en pantalla de GalenHos refleje de inmediato el nuevo consumo.
+                if (precio > 0) {
+                    try {
+                        const ptosRequest = transaction.request();
+                        ptosRequest.input('idCuentaConsumo', sql.Int, metadata.idCuenta);
+                        ptosRequest.input('idPtoCargaConsumo', sql.Int, 716);
+                        const ptosResult = await ptosRequest.query(`
+                            SELECT TotalConsumos
+                            FROM dbo.FacturacionCuentasAtencionPtos WITH (UPDLOCK, HOLDLOCK)
+                            WHERE IdCuentaAtencion = @idCuentaConsumo
+                              AND idPuntoCarga = @idPtoCargaConsumo;
+                        `);
+
+                        const existePto = ptosResult.recordset && ptosResult.recordset.length > 0;
+                        const totalActual = existePto ? Number(ptosResult.recordset[0].TotalConsumos) || 0 : 0;
+                        const nuevoTotal = totalActual + precio;
+
+                        await cuentasAtencionRepository.actualizarCuentasAtencionPtos({
+                            esNueva: !existePto,
+                            idCuentaAtencion: metadata.idCuenta,
+                            idPuntoCarga: 716,
+                            totalConsumos: nuevoTotal,
+                            totalPagos: 0,
+                            totalPagosReembolso: 0,
+                        }, transaction);
+                    } catch {
+                        // En caso de tablas no migradas en BD de prueba, no bloquea el guardado de la nota
+                    }
+                }
             }
         } catch {
             // Si la base de datos es de prueba o no tiene el SP instalado, no rompe el guardado de la nota

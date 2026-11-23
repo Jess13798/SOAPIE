@@ -160,7 +160,9 @@ B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
   grupos 0, idReceta NULL e idDiagnostico 9056 (N39.0 'D'). El web replica ese
   mismo registro.
 - Resultado: la orden y su despacho quedan registrados exactamente igual que
-  desde el GalenHos de escritorio, dentro de la misma transacción de la nota.
+  desde el GalenHos de escritorio, dentro de la misma transacción de la nota,
+  y el saldo acumulado en FacturacionCuentasAtencionPtos (Punto de Carga 716)
+  se actualiza automáticamente para que GalenHos lo muestre al instante.
 ================================================================================
 
 12. INTEGRACIÓN DE PROCEDIMIENTOS DE CUENTAS DE ATENCIÓN Y PUNTOS DE CARGA:
