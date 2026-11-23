@@ -61,4 +61,71 @@ router.get('/catalogos/servicios', async (req, res) => {
     }
 });
 
+router.get('/catalogos/servicios/:idProducto/financiamiento', async (req, res) => {
+    const idProducto = parseInt(req.params.idProducto, 10);
+    const idTipoFinanciamiento = req.query.idTipoFinanciamiento 
+        ? parseInt(req.query.idTipoFinanciamiento, 10) 
+        : 2;
+
+    if (isNaN(idProducto) || isNaN(idTipoFinanciamiento)) {
+        return res.status(400).json({
+            success: false,
+            mensaje: 'Los identificadores de producto y financiamiento deben ser numéricos.',
+        });
+    }
+
+    try {
+        const datos = await catalogosModule.obtenerServicioPorFinanciamiento(idProducto, idTipoFinanciamiento);
+        if (!datos) {
+            return res.status(404).json({
+                success: false,
+                mensaje: 'No se encontró la configuración hospitalaria para el servicio y financiamiento especificados.',
+            });
+        }
+        res.json(datos);
+    } catch (err) {
+        console.error('Error en /api/catalogos/servicios/:idProducto/financiamiento:', err);
+        res.status(500).json({
+            success: false,
+            mensaje: 'No se pudo consultar la configuración del servicio. Revisa el registro del servidor.',
+        });
+    }
+});
+
+const { obtenerFechaServidorSQL } = require('../../core/utils/date');
+
+// Obtener fecha y hora oficial del servidor SQL Server
+router.get('/fecha-servidor', async (req, res) => {
+    try {
+        const fecha = await obtenerFechaServidorSQL();
+        res.json({
+            success: true,
+            fechaHoraSQL: fecha.toISOString(),
+            fecha: fecha.toISOString().split('T')[0],
+            hora: fecha.toISOString().substring(11, 16),
+        });
+    } catch (err) {
+        console.error('Error en /api/fecha-servidor:', err);
+        res.status(500).json({ success: false, mensaje: 'Error al obtener la fecha del servidor SQL.' });
+    }
+});
+
+// Obtener datos del Tipo de Financiamiento (dbo.TiposFinanciamientoSeleccionarPorId)
+router.get('/tipos-financiamiento/:idTipoFinanciamiento', async (req, res) => {
+    const id = parseInt(req.params.idTipoFinanciamiento, 10);
+    if (isNaN(id)) {
+        return res.status(400).json({ success: false, mensaje: 'El ID de financiamiento debe ser numérico.' });
+    }
+    try {
+        const datos = await catalogosModule.obtenerTipoFinanciamientoPorId(id);
+        if (!datos) {
+            return res.status(404).json({ success: false, mensaje: 'Tipo de financiamiento no encontrado.' });
+        }
+        res.json({ success: true, datos });
+    } catch (err) {
+        console.error('Error en /api/tipos-financiamiento:', err);
+        res.status(500).json({ success: false, mensaje: 'Error al consultar el tipo de financiamiento.' });
+    }
+});
+
 module.exports = router;

@@ -383,6 +383,10 @@ export const catalogosService = {
         return request<Diagnostico[]>(`/diagnosticos?idCuentaAtencion=${encodeURIComponent(idCuentaAtencion)}`)
     },
 
+    getIdDiagnosticoPorCodigo(codigo: string): Promise<{ success: boolean; codigo: string; idDiagnostico: number }> {
+        return request<{ success: boolean; codigo: string; idDiagnostico: number }>(`/diagnosticos?codigo=${encodeURIComponent(codigo)}`)
+    },
+
     buscarNandaNocNic(buscar = ''): Promise<NandaConInterrelaciones[]> {
         const query = buscar ? `?buscar=${encodeURIComponent(buscar)}` : ''
         return request<NandaConInterrelaciones[]>(`/catalogos/nanda-noc-nic${query}`)
@@ -390,5 +394,101 @@ export const catalogosService = {
 
     buscarServicios(buscar: string): Promise<ServicioCatalogo[]> {
         return request<ServicioCatalogo[]>(`/catalogos/servicios?buscar=${encodeURIComponent(buscar)}`)
+    },
+
+    obtenerServicioPorFinanciamiento(idProducto: number, idTipoFinanciamiento = 2): Promise<any> {
+        return request<any>(`/catalogos/servicios/${idProducto}/financiamiento?idTipoFinanciamiento=${idTipoFinanciamiento}`)
+    },
+
+    getFechaServidor(): Promise<{ success: boolean; fechaHoraSQL: string; fecha: string; hora: string }> {
+        return request<{ success: boolean; fechaHoraSQL: string; fecha: string; hora: string }>('/fecha-servidor')
+    },
+
+    getTipoFinanciamiento(idTipoFinanciamiento = 2): Promise<{ success: boolean; datos: any }> {
+        return request<{ success: boolean; datos: any }>(`/tipos-financiamiento/${idTipoFinanciamiento}`)
+    },
+}
+
+// ==========================================
+// FACTURACIÓN / DESPACHO DE SERVICIOS (SIGH)
+// ==========================================
+export interface ServicioDespachoPayload {
+    idOrden: number
+    idProducto: number
+    cantidad?: number
+    precio: number
+    total?: number
+    labConfHIS?: string
+    grupoHIS?: number
+    subGrupoHIS?: number
+    idUsuarioAuditoria: number
+    idReceta?: number | null
+    idDiagnostico?: number | null
+}
+
+export const facturacionService = {
+    /**
+     * Registra un CPT/insumo despachado en una orden de servicio.
+     * Backend: dbo.FacturacionServicioDespachoAgregar (o su variante _Rc).
+     */
+    agregarServicioDespacho(
+        datos: ServicioDespachoPayload,
+        variante?: 'rc',
+    ): Promise<{ success: boolean; variante: string; resultado: unknown }> {
+        return request<{ success: boolean; variante: string; resultado: unknown }>(
+            '/facturacion/servicio-despacho',
+            { method: 'POST', body: JSON.stringify({ ...datos, variante }) },
+        )
+    },
+
+    /**
+     * Consulta los consumos y pagos por punto de carga de una cuenta de atención.
+     * SP: dbo.FacturacionCuentasAtencionPtosXIdCuenta
+     */
+    getCuentasAtencionPtos(idCuenta: number): Promise<{ success: boolean; idCuenta: number; datos: any[] }> {
+        return request<{ success: boolean; idCuenta: number; datos: any[] }>(`/facturacion/cuentas/${idCuenta}/puntos-carga`)
+    },
+
+    /**
+     * Actualiza o inserta el acumulado de consumos/pagos por punto de carga.
+     * SP: dbo.FacturacionCuentasAtencionPtosActualizar
+     */
+    actualizarCuentasAtencionPtos(payload: {
+        esNueva?: boolean
+        idCuentaAtencion: number
+        idPuntoCarga: number
+        totalConsumos?: number
+        totalPagos?: number
+        totalPagosReembolso?: number
+    }): Promise<{ success: boolean; resultado: unknown }> {
+        return request<{ success: boolean; resultado: unknown }>(
+            '/facturacion/cuentas/puntos-carga',
+            { method: 'POST', body: JSON.stringify(payload) },
+        )
+    },
+
+    /**
+     * Actualiza los importes globales de la cuenta de atención.
+     * SP: dbo.FacturacionCuentasAtencionActualizaImportes
+     */
+    actualizarImportesCuenta(payload: {
+        idCuentaAtencion: number
+        totalExonerado?: number
+        totalAsegurado?: number
+        totalPagado?: number
+        totalPorPagar?: number
+    }): Promise<{ success: boolean; resultado: unknown }> {
+        return request<{ success: boolean; resultado: unknown }>(
+            '/facturacion/cuentas/actualiza-importes',
+            { method: 'POST', body: JSON.stringify(payload) },
+        )
+    },
+
+    /**
+     * Consulta comprobantes de pago de la cuenta de atención.
+     * SP: dbo.FacturacionCajaComprobantesPagoConsultarXIdCuentaAtencion
+     */
+    getComprobantesPago(idCuenta: number): Promise<{ success: boolean; idCuenta: number; datos: any[] }> {
+        return request<{ success: boolean; idCuenta: number; datos: any[] }>(`/facturacion/cuentas/${idCuenta}/comprobantes-pago`)
     },
 }

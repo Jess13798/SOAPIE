@@ -2,7 +2,7 @@
 // Encapsula la consulta SQL y deja el servicio libre de detalles de infraestructura.
 
 const sql = require('mssql');
-const { query } = require('../../../../dbHelper');
+const { query, executeProcedure } = require('../../../../dbHelper');
 
 async function getDiagnosticosByCuenta(idCuentaAtencion) {
     if (!idCuentaAtencion) return [];
@@ -40,6 +40,21 @@ async function getDiagnosticosByCuenta(idCuentaAtencion) {
     return result.recordset || [];
 }
 
+/**
+ * Consulta el IdDiagnostico correspondiente a un código CIE (ej: 'N39.0')
+ * utilizando el procedimiento almacenado oficial de SIGH/GalenHos.
+ * Utiliza: dbo.DevuelveIdDIagnostico
+ */
+async function devuelveIdDiagnostico(codigoCIE) {
+    if (!codigoCIE) return 0;
+    const codigoFormateado = String(codigoCIE).trim().padEnd(7, ' ');
+    const result = await executeProcedure('dbo.DevuelveIdDIagnostico', [
+        { name: 'Codigo', type: sql.Char(7), value: codigoFormateado },
+    ]);
+    return result.recordset?.[0]?.iddiagnostico ?? 0;
+}
+
 module.exports = {
     getDiagnosticosByCuenta,
+    devuelveIdDiagnostico,
 };

@@ -1,5 +1,7 @@
 const sql = require('mssql');
 const dbHelper = require('../../../../dbHelper');
+const { registrarAuditoria } = require('../../../core/utils/auditoria');
+const facturacionRepository = require('../../facturacion/repositories/facturacionServicioDespachoRepository');
 
 const NOTA_NOT_FOUND = 'NOTA_NOT_FOUND';
 const CARE_PLAN_RELATION_INVALID = 'CARE_PLAN_RELATION_INVALID';
@@ -182,8 +184,46 @@ async function guardarNotaCompleta(nota) {
             DELETE FROM dbo.NotaEnfermeriaPlanServicio
             WHERE IdNotaEnfermeria = @idNotaPlanServicio;
         `);
+
+        // GalenHos despacha cada CPT contra el diagnóstico principal de la
+        // atención (el de subclasificación 'D'). Se resuelve una sola vez por
+        // nota y se comparte entre todos los servicios planificados.
+        let idDiagnosticoPrincipal = null;
+        if (nota.idCuenta && nota.serviciosPlanificados.length > 0) {
+            try {
+                idDiagnosticoPrincipal = await obtenerIdDiagnosticoPrincipal(transaction, nota.idCuenta);
+            } catch {
+                // Si la atención no tiene diagnósticos registrados, el despacho
+                // se hace con idDiagnostico NULL como antes.
+            }
+        }
         for (const idProducto of nota.serviciosPlanificados) {
-            await insertarServicioPlanificado(transaction, idNota, idProducto);
+            await insertarServicioPlanificado(transaction, idNota, idProducto, nota, idDiagnosticoPrincipal);
+        }
+
+        // Vincular balances hídricos que se hayan creado en la misma atención
+        // mientras la nota aún no tenía IdNota generado (evita duplicados o nulos).
+        if (nota.idPaciente) {
+            try {
+                const balanceRequest = transaction.request();
+                balanceRequest.input('idNotaBalance', sql.Int, idNota);
+                balanceRequest.input('idPacienteBalance', sql.Int, nota.idPaciente);
+                balanceRequest.input('idCuentaBalance', sql.Int, nota.idCuenta || null);
+                balanceRequest.input('fechaNotaBalance', sql.Date, fechaHoraInicio || new Date());
+                await balanceRequest.query(`
+                    IF OBJECT_ID(N'dbo.BalanceHidrico', N'U') IS NOT NULL
+                    BEGIN
+                        UPDATE dbo.BalanceHidrico
+                        SET IdNota = @idNotaBalance
+                        WHERE IdPaciente = @idPacienteBalance
+                          AND (IdCuenta = @idCuentaBalance OR (@idCuentaBalance IS NULL AND IdCuenta IS NULL))
+                          AND Fecha = @fechaNotaBalance
+                          AND IdNota IS NULL;
+                    END
+                `);
+            } catch {
+                // No rompe la nota si la tabla de balance aún no existe
+            }
         }
 
         const carePlanRequest = transaction.request();
@@ -287,7 +327,30 @@ async function saveDiagnosis(transaction, idNota, idNANDA, comentario) {
     `);
 }
 
-async function insertarServicioPlanificado(transaction, idNota, idProducto) {
+async function obtenerIdDiagnosticoPrincipal(transaction, idCuenta) {
+    const request = transaction.request();
+    request.input('idCuentaDiagnostico', sql.Int, idCuenta);
+    const result = await request.query(`
+        SELECT TOP (1) ad.IdDiagnostico
+        FROM dbo.Atenciones AS a
+        INNER JOIN dbo.AtencionesDiagnosticos AS ad
+            ON ad.IdAtencion = a.IdAtencion
+        INNER JOIN dbo.SubclasificacionDiagnosticos AS s
+            ON s.IdSubclasificacionDx = ad.IdSubclasificacionDx
+        WHERE a.IdCuentaAtencion = @idCuentaDiagnostico
+        ORDER BY
+            CASE s.Codigo
+                WHEN 'D' THEN 1
+                WHEN 'R' THEN 2
+                WHEN 'P' THEN 3
+                ELSE 4
+            END,
+            ad.IdDiagnostico;
+    `);
+    return result.recordset?.[0]?.IdDiagnostico ?? null;
+}
+
+async function insertarServicioPlanificado(transaction, idNota, idProducto, metadata = {}, idDiagnosticoPrincipal = null) {
     const request = transaction.request();
     request.input('idNotaPlanServicio', sql.Int, idNota);
     request.input('idProductoPlanServicio', sql.Int, idProducto);
@@ -312,6 +375,69 @@ async function insertarServicioPlanificado(transaction, idNota, idProducto) {
             'PLAN_SERVICE_INVALID',
             'Uno de los servicios seleccionados no existe o ya no está activo en el catálogo.',
         );
+    }
+
+    // Integración nativa con GalenHos / SIGH:
+    // Si la atención tiene IdCuenta, registramos la orden oficial en FactOrdenServicio y el CPT en FacturacionServicioDespacho
+    if (metadata.idCuenta) {
+        try {
+            const galenRequest = transaction.request();
+            galenRequest.output('IdOrden', sql.Int);
+            galenRequest.input('IdPuntoCarga', sql.Int, 716); // Punto de carga para hospitalización / CPT
+            galenRequest.input('IdPaciente', sql.Int, metadata.idPaciente);
+            galenRequest.input('IdCuentaAtencion', sql.Int, metadata.idCuenta);
+            galenRequest.input('IdServicioPaciente', sql.Int, metadata.idServicio || null);
+            galenRequest.input('idTipoFinanciamiento', sql.Int, 2); // 2 -> SIS
+            galenRequest.input('idFuenteFinanciamiento', sql.Int, 1);
+            galenRequest.input('FechaCreacion', sql.DateTime, metadata.fechaInicio || new Date());
+            galenRequest.input('IdUsuario', sql.Int, metadata.idEmpleado || 1);
+            galenRequest.input('FechaDespacho', sql.DateTime, metadata.fechaInicio || new Date());
+            galenRequest.input('IdUsuarioDespacho', sql.Int, metadata.idEmpleado || 1);
+            galenRequest.input('IdEstadoFacturacion', sql.Int, 1);
+            galenRequest.input('FechaHoraRealizaCpt', sql.DateTime, metadata.fechaInicio || new Date());
+            galenRequest.input('IdUsuarioAuditoria', sql.Int, metadata.idEmpleado || 1);
+
+            const spResult = await galenRequest.execute('dbo.FactOrdenServicioAgregar1');
+            const idOrden = spResult.output?.IdOrden;
+
+            if (idOrden) {
+                const precioRequest = transaction.request();
+                precioRequest.input('idProductoDespacho', sql.Int, idProducto);
+                const precioResult = await precioRequest.query(`
+                    SELECT PrecioUnitario
+                    FROM dbo.FactCatalogoServiciosHosp
+                    WHERE IdProducto = @idProductoDespacho AND IdTipoFinanciamiento = 2;
+                `);
+                const precio = Number(precioResult.recordset?.[0]?.PrecioUnitario) || 0;
+
+                // Despacho oficial del CPT mediante el procedimiento de SIGH.
+                await facturacionRepository.agregarServicioDespacho({
+                    idOrden,
+                    idProducto,
+                    cantidad: 1,
+                    precio,
+                    total: precio,
+                    labConfHIS: '',
+                    grupoHIS: 0,
+                    subGrupoHIS: 0,
+                    idUsuarioAuditoria: metadata.idEmpleado || 1,
+                    idReceta: metadata.idReceta ?? null,
+                    idDiagnostico: metadata.idDiagnostico ?? idDiagnosticoPrincipal ?? null,
+                }, transaction);
+
+                // Registro oficial de auditoría en GalenHos para la orden creada
+                await registrarAuditoria({
+                    idEmpleado: metadata.idEmpleado,
+                    accion: 'A',
+                    idRegistro: idOrden,
+                    tabla: 'FactOrdenServicio',
+                    idListItem: 103,
+                    observaciones: `CPT ${idProducto} generado desde nota enfermeria`,
+                }, transaction);
+            }
+        } catch {
+            // Si la base de datos es de prueba o no tiene el SP instalado, no rompe el guardado de la nota
+        }
     }
 }
 

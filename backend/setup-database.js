@@ -6,7 +6,7 @@ const { sql, dbConfig } = require('./database');
 
 const scripts = [
     'catalogo-nanda-noc-nic.sql',
-    'nota-enfermeria-core.sql',
+    '001-crear-tablas-notas.sql',
     'nota-enfermeria-diagnostico-comentario.sql',
     'nota-enfermeria-plan-cuidado.sql',
     'nota-enfermeria-plan-servicio.sql',

@@ -12,6 +12,16 @@ async function obtenerDiagnosticos(idCuentaAtencion) {
     }
 }
 
+async function obtenerIdDiagnosticoPorCodigo(codigoCIE) {
+    try {
+        return await diagnosticosRepository.devuelveIdDiagnostico(codigoCIE);
+    } catch (error) {
+        console.error('Error en diagnosticosService.obtenerIdDiagnosticoPorCodigo:', error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     obtenerDiagnosticos,
+    obtenerIdDiagnosticoPorCodigo,
 };
