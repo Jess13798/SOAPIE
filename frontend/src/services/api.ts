@@ -491,4 +491,33 @@ export const facturacionService = {
     getComprobantesPago(idCuenta: number): Promise<{ success: boolean; idCuenta: number; datos: any[] }> {
         return request<{ success: boolean; idCuenta: number; datos: any[] }>(`/facturacion/cuentas/${idCuenta}/comprobantes-pago`)
     },
+
+    /**
+     * Obtiene los datos de una orden de servicio oficial de GalenHos.
+     * SP: dbo.FactOrdenServicioSeleccionarPorId
+     */
+    getOrdenServicio(idOrden: number): Promise<{ success: boolean; orden: any }> {
+        return request<{ success: boolean; orden: any }>(`/facturacion/ordenes/${idOrden}`)
+    },
+
+    /**
+     * Anula una orden de servicio de CPT en GalenHos (cambio a IdEstadoFacturacion = 9,
+     * financiamientos a 9, auditoría 'E' y descuento de saldos).
+     */
+    anularOrdenServicio(idOrden: number, payload: { idEmpleado?: number; observaciones?: string } = {}): Promise<{
+        success: boolean
+        idOrden: number
+        idEstadoFacturacion: number
+        montoDescontado: number
+    }> {
+        return request<{
+            success: boolean
+            idOrden: number
+            idEstadoFacturacion: number
+            montoDescontado: number
+        }>(`/facturacion/ordenes/${idOrden}/anular`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        })
+    },
 }

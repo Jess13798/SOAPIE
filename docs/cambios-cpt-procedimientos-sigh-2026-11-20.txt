@@ -192,3 +192,31 @@ B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
     * backend/src/modules/facturacion/repositories/facturacionCuentasAtencionRepository.test.js:
       Pruebas unitarias de integración de los procedimientos y validaciones.
 ================================================================================
+
+13. INTEGRACIÓN DE PROCEDIMIENTOS PARA ANULACIÓN / ELIMINACIÓN DE CPT:
+--------------------------------------------------------------------------------
+- Procedimientos utilizados:
+    * dbo.FactOrdenServicioModificar (actualiza IdEstadoFacturacion = 9 'Anulado')
+    * dbo.FacturacionServicioFinanciamientosActualizaIdEstadoFacturacion (estado 9)
+    * dbo.AuditoriaAgregarV (Acción 'E' con IdRegistro = IdOrden)
+    * dbo.FacturacionServicioDespachoFiltraPorIdOrden
+    * dbo.FactOrdenServicioSeleccionarPorId
+    * dbo.FacturacionCuentasAtencionPtosEliminarXcuenta
+- Propósito: Replicar el flujo exacto de GalenHos cuando se anula o elimina un CPT.
+  GalenHos no elimina físicamente la orden, sino que la marca en estado 9 (Anulado),
+  actualiza los financiamientos, registra la auditoría con 'E' y descuenta el saldo
+  acumulado de la cuenta de atención y punto de carga.
+- Archivos integrados:
+    * backend/src/modules/facturacion/repositories/facturacionAnulacionRepository.js:
+      Función `anularOrdenServicio({ idOrden, idEmpleado, observaciones }, transaction)`
+      y funciones auxiliares de consulta de orden y despacho.
+    * backend/src/modules/facturacion/services/facturacionService.js e index.js:
+      Reexportan los métodos de anulación.
+    * backend/src/modules/facturacion/routes.js:
+      - GET  /api/facturacion/ordenes/:idOrden
+      - POST /api/facturacion/ordenes/:idOrden/anular
+    * frontend/src/services/api.ts:
+      Métodos `getOrdenServicio` y `anularOrdenServicio`.
+    * backend/src/modules/facturacion/repositories/facturacionAnulacionRepository.test.js:
+      Pruebas unitarias de la secuencia de anulación oficial de GalenHos.
+================================================================================
