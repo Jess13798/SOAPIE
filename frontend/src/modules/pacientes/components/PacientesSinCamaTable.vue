@@ -27,7 +27,7 @@
     </div>
 
     <!-- Tabla -->
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto max-h-[140px] overflow-y-auto">
       <table class="w-full min-w-[920px] table-fixed text-left border-collapse">
         <colgroup>
           <col class="w-[12%]" />
@@ -43,7 +43,7 @@
             <th class="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
               <div class="flex items-center gap-1">
                 <Hash class="h-3.5 w-3.5" />
-                <span>Cuenta</span>
+                <span>N° Cuenta</span>
               </div>
             </th>
             <th class="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">

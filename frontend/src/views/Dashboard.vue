@@ -52,10 +52,11 @@
       </header>
 
       <!-- Content Area -->
-      <div class="flex-1 overflow-y-auto p-4 lg:p-6 bg-slate-50">
+      <div class="flex-1 flex flex-col min-h-0 overflow-hidden p-3 lg:p-4 bg-slate-50">
         <!-- Pacientes view -->
-        <div v-if="activeView === 'pacientes'" class="grid grid-cols-1 gap-6">
+        <div v-if="activeView === 'pacientes'" class="flex-1 flex flex-col min-h-0">
           <PatientListView 
+            class="flex-1 min-h-0"
             :pacientes="pacientes" 
             :selected-id="String(selectedPatient?.id)"
             :notas="notas"
