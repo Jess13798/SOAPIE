@@ -162,3 +162,31 @@ B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
 - Resultado: la orden y su despacho quedan registrados exactamente igual que
   desde el GalenHos de escritorio, dentro de la misma transacción de la nota.
 ================================================================================
+
+12. INTEGRACIÓN DE PROCEDIMIENTOS DE CUENTAS DE ATENCIÓN Y PUNTOS DE CARGA:
+--------------------------------------------------------------------------------
+- Procedimientos utilizados:
+    * dbo.FacturacionCuentasAtencionPtosXIdCuenta
+    * dbo.FacturacionCuentasAtencionPtosActualizar
+    * dbo.FacturacionCuentasAtencionActualizaImportes
+    * dbo.FacturacionCajaComprobantesPagoConsultarXIdCuentaAtencion
+- Propósito: Replicar el flujo contable y de saldos de GalenHos que actualiza los
+  consumos acumulados por punto de carga (ej. punto 716 hospitalización / CPT)
+  y los totales de la cuenta de atención (asegurado, exonerado, pagado, por pagar).
+- Archivos integrados:
+    * backend/src/modules/facturacion/repositories/facturacionCuentasAtencionRepository.js:
+      Funciones `consultarCuentasAtencionPtos`, `actualizarCuentasAtencionPtos`,
+      `actualizarImportesCuenta`, `consultarComprobantesPagoPorCuenta`.
+    * backend/src/modules/facturacion/services/facturacionService.js e index.js:
+      Reexportan los métodos del repositorio.
+    * backend/src/modules/facturacion/routes.js:
+      - GET  /api/facturacion/cuentas/:idCuenta/puntos-carga
+      - POST /api/facturacion/cuentas/puntos-carga
+      - POST /api/facturacion/cuentas/actualiza-importes
+      - GET  /api/facturacion/cuentas/:idCuenta/comprobantes-pago
+    * frontend/src/services/api.ts:
+      Métodos agregados a `facturacionService`: `getCuentasAtencionPtos`,
+      `actualizarCuentasAtencionPtos`, `actualizarImportesCuenta`, `getComprobantesPago`.
+    * backend/src/modules/facturacion/repositories/facturacionCuentasAtencionRepository.test.js:
+      Pruebas unitarias de integración de los procedimientos y validaciones.
+================================================================================

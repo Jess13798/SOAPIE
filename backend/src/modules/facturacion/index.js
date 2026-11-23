@@ -1,8 +1,12 @@
-// Export central del módulo de facturación (procedimientos SIGH).
+// Módulo de Facturación Hospitalaria (GalenHos / SIGH).
+// Reexporta los repositorios, servicios y utilidades del dominio.
 
 const facturacionService = require('./services/facturacionService');
+const facturacionServicioDespachoRepository = require('./repositories/facturacionServicioDespachoRepository');
+const facturacionCuentasAtencionRepository = require('./repositories/facturacionCuentasAtencionRepository');
 
 module.exports = {
-    agregarServicioDespacho: facturacionService.agregarServicioDespacho,
-    agregarServicioDespachoRc: facturacionService.agregarServicioDespachoRc,
+    ...facturacionService,
+    facturacionServicioDespachoRepository,
+    facturacionCuentasAtencionRepository,
 };

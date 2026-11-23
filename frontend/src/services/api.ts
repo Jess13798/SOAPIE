@@ -440,4 +440,55 @@ export const facturacionService = {
             { method: 'POST', body: JSON.stringify({ ...datos, variante }) },
         )
     },
+
+    /**
+     * Consulta los consumos y pagos por punto de carga de una cuenta de atención.
+     * SP: dbo.FacturacionCuentasAtencionPtosXIdCuenta
+     */
+    getCuentasAtencionPtos(idCuenta: number): Promise<{ success: boolean; idCuenta: number; datos: any[] }> {
+        return request<{ success: boolean; idCuenta: number; datos: any[] }>(`/facturacion/cuentas/${idCuenta}/puntos-carga`)
+    },
+
+    /**
+     * Actualiza o inserta el acumulado de consumos/pagos por punto de carga.
+     * SP: dbo.FacturacionCuentasAtencionPtosActualizar
+     */
+    actualizarCuentasAtencionPtos(payload: {
+        esNueva?: boolean
+        idCuentaAtencion: number
+        idPuntoCarga: number
+        totalConsumos?: number
+        totalPagos?: number
+        totalPagosReembolso?: number
+    }): Promise<{ success: boolean; resultado: unknown }> {
+        return request<{ success: boolean; resultado: unknown }>(
+            '/facturacion/cuentas/puntos-carga',
+            { method: 'POST', body: JSON.stringify(payload) },
+        )
+    },
+
+    /**
+     * Actualiza los importes globales de la cuenta de atención.
+     * SP: dbo.FacturacionCuentasAtencionActualizaImportes
+     */
+    actualizarImportesCuenta(payload: {
+        idCuentaAtencion: number
+        totalExonerado?: number
+        totalAsegurado?: number
+        totalPagado?: number
+        totalPorPagar?: number
+    }): Promise<{ success: boolean; resultado: unknown }> {
+        return request<{ success: boolean; resultado: unknown }>(
+            '/facturacion/cuentas/actualiza-importes',
+            { method: 'POST', body: JSON.stringify(payload) },
+        )
+    },
+
+    /**
+     * Consulta comprobantes de pago de la cuenta de atención.
+     * SP: dbo.FacturacionCajaComprobantesPagoConsultarXIdCuentaAtencion
+     */
+    getComprobantesPago(idCuenta: number): Promise<{ success: boolean; idCuenta: number; datos: any[] }> {
+        return request<{ success: boolean; idCuenta: number; datos: any[] }>(`/facturacion/cuentas/${idCuenta}/comprobantes-pago`)
+    },
 }
