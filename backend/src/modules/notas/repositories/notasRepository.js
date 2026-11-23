@@ -201,6 +201,31 @@ async function guardarNotaCompleta(nota) {
             await insertarServicioPlanificado(transaction, idNota, idProducto, nota, idDiagnosticoPrincipal);
         }
 
+        // Vincular balances hídricos que se hayan creado en la misma atención
+        // mientras la nota aún no tenía IdNota generado (evita duplicados o nulos).
+        if (nota.idPaciente) {
+            try {
+                const balanceRequest = transaction.request();
+                balanceRequest.input('idNotaBalance', sql.Int, idNota);
+                balanceRequest.input('idPacienteBalance', sql.Int, nota.idPaciente);
+                balanceRequest.input('idCuentaBalance', sql.Int, nota.idCuenta || null);
+                balanceRequest.input('fechaNotaBalance', sql.Date, fechaHoraInicio || new Date());
+                await balanceRequest.query(`
+                    IF OBJECT_ID(N'dbo.BalanceHidrico', N'U') IS NOT NULL
+                    BEGIN
+                        UPDATE dbo.BalanceHidrico
+                        SET IdNota = @idNotaBalance
+                        WHERE IdPaciente = @idPacienteBalance
+                          AND (IdCuenta = @idCuentaBalance OR (@idCuentaBalance IS NULL AND IdCuenta IS NULL))
+                          AND Fecha = @fechaNotaBalance
+                          AND IdNota IS NULL;
+                    END
+                `);
+            } catch {
+                // No rompe la nota si la tabla de balance aún no existe
+            }
+        }
+
         const carePlanRequest = transaction.request();
         carePlanRequest.input('idNotaCarePlan', sql.Int, idNota);
         await carePlanRequest.query(`

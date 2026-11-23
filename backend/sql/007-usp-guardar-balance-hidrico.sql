@@ -1,5 +1,7 @@
 -- Migración: procedimiento almacenado para guardar Balance Hídrico con IdNota.
 -- Se aplica automáticamente al arrancar (migraciones.js).
+-- Soporta actualización si ya existe un registro con el mismo concepto/turno
+-- para evitar duplicados.
 
 IF OBJECT_ID(N'dbo.usp_GuardarBalanceHidrico', N'P') IS NOT NULL
     DROP PROCEDURE dbo.usp_GuardarBalanceHidrico;
@@ -52,12 +54,43 @@ BEGIN
     IF @IdPaciente IS NULL
         THROW 51006, 'El paciente es obligatorio.', 1;
 
-    INSERT INTO dbo.BalanceHidrico
-        (IdPaciente, IdCuenta, IdServicio, Fecha, Turno, Tipo,
-         Concepto, Cantidad, IdEmpleado, FechaHora, IdNota)
-    OUTPUT INSERTED.IdBalance
-    VALUES
-        (@IdPaciente, @IdCuenta, @IdServicio, @Fecha, @Turno, @Tipo,
-         @Concepto, @Cantidad, @IdEmpleado, GETDATE(), @IdNota);
+    DECLARE @IdExistente INT = NULL;
+
+    SELECT TOP (1) @IdExistente = IdBalance
+    FROM dbo.BalanceHidrico
+    WHERE IdPaciente = @IdPaciente
+      AND ISNULL(IdCuenta, 0) = ISNULL(@IdCuenta, 0)
+      AND Fecha = @Fecha
+      AND Turno = @Turno
+      AND Tipo = @Tipo
+      AND Concepto = @Concepto
+      AND (
+          (@IdNota IS NOT NULL AND IdNota = @IdNota)
+          OR (@IdNota IS NOT NULL AND IdNota IS NULL)
+          OR (@IdNota IS NULL AND IdNota IS NULL)
+      )
+    ORDER BY CASE WHEN IdNota IS NOT NULL THEN 1 ELSE 2 END, IdBalance DESC;
+
+    IF @IdExistente IS NOT NULL
+    BEGIN
+        UPDATE dbo.BalanceHidrico
+        SET Cantidad = @Cantidad,
+            IdEmpleado = COALESCE(@IdEmpleado, IdEmpleado),
+            IdServicio = COALESCE(@IdServicio, IdServicio),
+            IdNota = COALESCE(@IdNota, IdNota),
+            FechaHora = GETDATE()
+        OUTPUT INSERTED.IdBalance
+        WHERE IdBalance = @IdExistente;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.BalanceHidrico
+            (IdPaciente, IdCuenta, IdServicio, Fecha, Turno, Tipo,
+             Concepto, Cantidad, IdEmpleado, FechaHora, IdNota)
+        OUTPUT INSERTED.IdBalance
+        VALUES
+            (@IdPaciente, @IdCuenta, @IdServicio, @Fecha, @Turno, @Tipo,
+             @Concepto, @Cantidad, @IdEmpleado, GETDATE(), @IdNota);
+    END
 END
 GO
