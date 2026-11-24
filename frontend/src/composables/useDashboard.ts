@@ -39,7 +39,9 @@ export function useDashboard({
     pacientes: '',
     notas: 'Notas de Enfermeria',
     'nueva-nota': 'Nueva Nota de Enfermeria',
-    vitales: 'Signos Vitales',
+    vitales: 'Hoja de Funciones Vitales',
+    kardex: 'Kardex de Enfermeria',
+    'balance-hidrico': 'Balance Hidrico',
   }
 
   const totalNotesForSelected = computed(() => {

@@ -104,6 +104,46 @@
           :notas="notas"
         />
 
+        <!-- Kardex -->
+        <div v-if="activeView === 'kardex'" class="flex flex-1 flex-col min-h-0">
+          <KardexModal
+            v-if="selectedPatient && selectedPatient.numCuenta"
+            :is-open="true"
+            :id-cuenta="selectedPatient.numCuenta"
+            :patient="selectedPatient"
+            @close="activeView = 'pacientes'"
+          />
+          <ModuleEmptyState
+            v-else
+            title="Kardex de Enfermería"
+            :message="selectedPatient
+              ? 'El paciente seleccionado no tiene una atención activa (cuenta).'
+              : 'Selecciona un paciente para abrir el Kardex de enfermería.'"
+            :icon="ClipboardList"
+            @go-pacientes="activeView = 'pacientes'"
+          />
+        </div>
+
+        <!-- Balance hídrico -->
+        <div v-if="activeView === 'balance-hidrico'" class="flex flex-1 flex-col min-h-0">
+          <BalanceHidricoModal
+            v-if="selectedPatient && selectedPatient.numCuenta"
+            :is-open="true"
+            :id-cuenta="selectedPatient.numCuenta"
+            :patient="selectedPatient"
+            @close="activeView = 'pacientes'"
+          />
+          <ModuleEmptyState
+            v-else
+            title="Balance Hídrico"
+            :message="selectedPatient
+              ? 'El paciente seleccionado no tiene una atención activa (cuenta).'
+              : 'Selecciona un paciente para abrir la hoja de Balance Hídrico.'"
+            :icon="Droplet"
+            @go-pacientes="activeView = 'pacientes'"
+          />
+        </div>
+
       </div>
     </main>
 
@@ -171,11 +211,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Menu, X } from 'lucide-vue-next'
+import { Menu, X, ClipboardList, Droplet } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
 import type { PacienteBusqueda } from '@/services/api'
 import AppSidebar from '@/components/AppSidebar.vue'
 import SuccessModal from '@/components/SuccessModal.vue'
+import ModuleEmptyState from '@/components/ModuleEmptyState.vue'
 import PatientListView from '@/modules/pacientes/components/PatientListView.vue'
 import BedModal from '@/modules/pacientes/components/BedModal.vue'
 import TotalBedsModal from '@/modules/pacientes/components/TotalBedsModal.vue'
@@ -185,6 +226,8 @@ import NewNoteForm from '@/modules/notas/components/NewNoteForm.vue'
 import NotesHistoryPanel from '@/modules/notas/components/NotesHistoryPanel.vue'
 import VitalsHistoryModal from '@/modules/vitales/components/VitalsHistoryModal.vue'
 import VitalsOverview from '@/modules/vitales/components/VitalsOverview.vue'
+import KardexModal from '@/modules/kardex/components/KardexModal.vue'
+import BalanceHidricoModal from '@/modules/balance-hidrico/components/BalanceHidricoModal.vue'
 
 import { usePatients } from '@/modules/pacientes/composables/usePatients'
 import { useBedModals } from '@/modules/pacientes/composables/useBedModals'

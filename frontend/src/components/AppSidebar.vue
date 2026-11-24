@@ -80,7 +80,8 @@ import { useRouter } from 'vue-router'
 import { limpiarSesion } from '@/services/api'
 import { 
   Users,
-  Activity, LogOut, Menu, ChevronLeft
+  Activity, LogOut, Menu, ChevronLeft,
+  ClipboardList, Droplet
 } from 'lucide-vue-next'
 
 // --- LÃGICA DE COLAPSO ---
@@ -101,7 +102,9 @@ const emit = defineEmits<{
 
 const navItems = [
   { view: 'pacientes', label: 'Pacientes', icon: Users },
-  { view: 'vitales', label: 'Signos Vitales', icon: Activity },
+  { view: 'vitales', label: 'Hoja de Funciones Vitales', icon: Activity },
+  { view: 'kardex', label: 'Kardex', icon: ClipboardList },
+  { view: 'balance-hidrico', label: 'Balance Hídrico', icon: Droplet },
 ]
 
 function handleNavClick(view: string) {
