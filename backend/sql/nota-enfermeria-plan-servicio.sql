@@ -10,6 +10,7 @@ BEGIN TRY
             IdProducto INT NOT NULL,
             CodigoServicio VARCHAR(20) NOT NULL,
             NombreServicio VARCHAR(255) NOT NULL,
+            IdOrden INT NULL,
             CONSTRAINT PK_NotaEnfermeriaPlanServicio
                 PRIMARY KEY (IdNotaEnfermeria, IdProducto),
             CONSTRAINT FK_NotaEnfermeriaPlanServicio_Nota
@@ -19,6 +20,11 @@ BEGIN TRY
                 FOREIGN KEY (IdProducto)
                 REFERENCES dbo.FactCatalogoServicios (IdProducto)
         );
+    END;
+    ELSE IF COL_LENGTH(N'dbo.NotaEnfermeriaPlanServicio', N'IdOrden') IS NULL
+    BEGIN
+        ALTER TABLE dbo.NotaEnfermeriaPlanServicio
+        ADD IdOrden INT NULL;
     END;
 
     COMMIT TRANSACTION;

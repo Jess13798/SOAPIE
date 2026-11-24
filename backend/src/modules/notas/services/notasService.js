@@ -505,11 +505,15 @@ async function obtenerNotas() {
             }
 
             if (row.PlanServicioId != null) {
-                addUnique(nota.serviciosPlanificados, {
+                const servicioItem = {
                     id: row.PlanServicioId,
                     codigo: row.PlanServicioCodigo,
                     nombre: row.PlanServicioNombre,
-                }, 'id');
+                };
+                if (row.PlanServicioIdOrden != null) {
+                    servicioItem.idOrden = Number(row.PlanServicioIdOrden);
+                }
+                addUnique(nota.serviciosPlanificados, servicioItem, 'id');
             }
 
             if (row.PlanIdNANDA == null) continue;
