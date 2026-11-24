@@ -1,4 +1,4 @@
-// Rutas del módulo de facturación (despacho de servicios CPT y cuentas de atención).
+// Rutas del módulo de facturación (despacho de servicios CPT, cuentas de atención y anulación).
 // Se monta en /api, por eso la ruta conserva su nombre completo.
 // Requiere los procedimientos nativos de SIGH en la base de datos sigh de GalenHos.
 
@@ -90,6 +90,46 @@ router.get('/facturacion/cuentas/:idCuenta/comprobantes-pago', async (req, res) 
         res.status(status).json({
             success: false,
             mensaje: status === 400 ? err.message : 'Error al consultar los comprobantes de pago de la cuenta.',
+        });
+    }
+});
+
+// Consultar orden de servicio oficial de GalenHos
+router.get('/facturacion/ordenes/:idOrden', async (req, res) => {
+    const { idOrden } = req.params;
+    try {
+        const orden = await facturacionModule.obtenerOrdenServicioPorId(idOrden);
+        if (!orden) {
+            return res.status(404).json({ success: false, mensaje: 'Orden de servicio no encontrada.' });
+        }
+        res.json({ success: true, orden });
+    } catch (err) {
+        console.error('Error en GET /api/facturacion/ordenes/:idOrden:', err);
+        const status = err?.code === 'FACTURACION_INVALID_INPUT' ? 400 : 500;
+        res.status(status).json({
+            success: false,
+            mensaje: status === 400 ? err.message : 'Error al consultar la orden de servicio.',
+        });
+    }
+});
+
+// Anular orden de servicio de CPT (IdEstadoFacturacion = 9)
+router.post('/facturacion/ordenes/:idOrden/anular', async (req, res) => {
+    const { idOrden } = req.params;
+    const { idEmpleado, observaciones } = req.body || {};
+    try {
+        const resultado = await facturacionModule.anularOrdenServicio({
+            idOrden,
+            idEmpleado,
+            observaciones,
+        });
+        res.json(resultado);
+    } catch (err) {
+        console.error('Error en POST /api/facturacion/ordenes/:idOrden/anular:', err);
+        const status = err?.code === 'FACTURACION_INVALID_INPUT' || err?.code === 'ORDEN_NOT_FOUND' ? 400 : 500;
+        res.status(status).json({
+            success: false,
+            mensaje: status === 400 ? err.message : 'Error al anular la orden de servicio.',
         });
     }
 });

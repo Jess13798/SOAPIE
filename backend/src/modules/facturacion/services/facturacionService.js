@@ -4,6 +4,7 @@
 
 const facturacionRepository = require('../repositories/facturacionServicioDespachoRepository');
 const cuentasAtencionRepository = require('../repositories/facturacionCuentasAtencionRepository');
+const facturacionAnulacionRepository = require('../repositories/facturacionAnulacionRepository');
 
 async function agregarServicioDespacho(datos) {
     try {
@@ -59,6 +60,33 @@ async function consultarComprobantesPagoPorCuenta(idCuenta) {
     }
 }
 
+async function anularOrdenServicio(datos) {
+    try {
+        return await facturacionAnulacionRepository.anularOrdenServicio(datos);
+    } catch (error) {
+        console.error('Error en facturacionService.anularOrdenServicio:', error.message);
+        throw error;
+    }
+}
+
+async function obtenerOrdenServicioPorId(idOrden) {
+    try {
+        return await facturacionAnulacionRepository.obtenerOrdenServicioPorId(idOrden);
+    } catch (error) {
+        console.error('Error en facturacionService.obtenerOrdenServicioPorId:', error.message);
+        throw error;
+    }
+}
+
+async function obtenerDespachoPorIdOrden(idOrden) {
+    try {
+        return await facturacionAnulacionRepository.obtenerDespachoPorIdOrden(idOrden);
+    } catch (error) {
+        console.error('Error en facturacionService.obtenerDespachoPorIdOrden:', error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     agregarServicioDespacho,
     agregarServicioDespachoRc,
@@ -66,4 +94,7 @@ module.exports = {
     actualizarCuentasAtencionPtos,
     actualizarImportesCuenta,
     consultarComprobantesPagoPorCuenta,
+    anularOrdenServicio,
+    obtenerOrdenServicioPorId,
+    obtenerDespachoPorIdOrden,
 };

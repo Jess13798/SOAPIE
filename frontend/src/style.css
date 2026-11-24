@@ -59,17 +59,12 @@ input::-webkit-credentials-auto-fill-button {
   right: 0;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
