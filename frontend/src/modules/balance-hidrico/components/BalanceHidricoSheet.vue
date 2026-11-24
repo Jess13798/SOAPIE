@@ -178,7 +178,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { Droplet } from 'lucide-vue-next'
 import { notasService } from '@/services/api'
 import type { Patient, SignoVitalHistorial } from '@/types'
