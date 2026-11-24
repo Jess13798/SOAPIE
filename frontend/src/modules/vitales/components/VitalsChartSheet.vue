@@ -1,26 +1,21 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-[110] flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="$emit('close')"></div>
-
-    <div class="relative w-full max-w-6xl transform overflow-hidden rounded-xl bg-white shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
-      <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-        <div class="flex items-center gap-3">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600 shadow-sm text-white">
-            <Activity class="h-5 w-5" />
-          </div>
-          <div>
-            <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Gráfica de Vitales Básicos</h3>
-            <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">Sat. oxígeno, Presión arterial, Temp y Pulso — por fecha y hora</p>
-          </div>
+  <section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <!-- Header -->
+    <header class="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
+      <div class="flex items-center gap-3">
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600 shadow-sm text-white">
+          <Activity class="h-5 w-5" />
         </div>
-        <button @click="$emit('close')" class="rounded-md p-1.5 bg-slate-200 text-slate-600 hover:bg-red-500 hover:text-white transition-all shadow-sm">
-          <X class="h-4 w-4 stroke-[3px]" />
-        </button>
+        <div>
+          <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight leading-none">Hoja Gráfica de Funciones Vitales</h3>
+          <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase">Sat. oxígeno, Presión arterial, Temp y Pulso — por fecha y hora</p>
+        </div>
       </div>
+      <slot name="actions" />
+    </header>
 
-      <!-- Body -->
-      <div class="flex-1 min-h-0 overflow-auto p-4">
+    <!-- Body -->
+    <div class="min-h-0 flex-1 overflow-auto p-4">
         <div class="flex gap-4">
           <!-- Left panel: fixed data -->
           <div class="w-44 shrink-0 border border-slate-200 rounded-lg bg-slate-50 p-3 text-[11px]">
@@ -94,30 +89,20 @@
           </div>
         </div>
       </div>
-
-      <div class="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-end">
-        <button @click="$emit('close')" class="px-5 py-2 rounded-lg bg-red-600 text-white text-xs font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-md active:scale-95">
-          Cerrar
-        </button>
-      </div>
-    </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
-import { Activity, X } from 'lucide-vue-next'
+import { ref, onMounted, computed } from 'vue'
+import { Activity } from 'lucide-vue-next'
 import { notasService } from '@/services/api'
 import type { Patient, SignoVitalHistorial } from '@/types'
 
 const props = defineProps<{
-  isOpen: boolean
   idCuenta: string | number
   patient?: Patient
   registrosTemporales?: SignoVitalHistorial[]
 }>()
-
-defineEmits<{ close: [] }>()
 
 const history = ref<SignoVitalHistorial[]>([])
 const loading = ref(false)
@@ -214,5 +199,7 @@ const fetchHistory = async () => {
   }
 }
 
-watch(() => props.isOpen, (v) => { if (v) fetchHistory() }, { immediate: true })
+onMounted(() => {
+  void fetchHistory()
+})
 </script>

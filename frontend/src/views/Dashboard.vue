@@ -97,21 +97,30 @@
           @save="onSaveNote"
         />
 
-        <!-- Vitals overview -->
-        <VitalsOverview
-          v-if="activeView === 'vitales'"
-          :pacientes="pacientes"
-          :notas="notas"
-        />
+        <!-- Hoja gráfica de funciones vitales -->
+        <div v-if="activeView === 'vitales'" class="flex flex-1 flex-col min-h-0">
+          <VitalsChartSheet
+            v-if="selectedPatient && selectedPatient.numCuenta"
+            :id-cuenta="selectedPatient.numCuenta"
+            :patient="selectedPatient"
+          />
+          <ModuleEmptyState
+            v-else
+            title="Hoja Gráfica de Funciones Vitales"
+            :message="selectedPatient
+              ? 'El paciente seleccionado no tiene una atención activa (cuenta).'
+              : 'Selecciona un paciente para abrir la hoja gráfica de funciones vitales.'"
+            :icon="Activity"
+            @go-pacientes="activeView = 'pacientes'"
+          />
+        </div>
 
         <!-- Kardex -->
         <div v-if="activeView === 'kardex'" class="flex flex-1 flex-col min-h-0">
-          <KardexModal
+          <KardexSheet
             v-if="selectedPatient && selectedPatient.numCuenta"
-            :is-open="true"
             :id-cuenta="selectedPatient.numCuenta"
             :patient="selectedPatient"
-            @close="activeView = 'pacientes'"
           />
           <ModuleEmptyState
             v-else
@@ -126,12 +135,10 @@
 
         <!-- Balance hídrico -->
         <div v-if="activeView === 'balance-hidrico'" class="flex flex-1 flex-col min-h-0">
-          <BalanceHidricoModal
+          <BalanceHidricoSheet
             v-if="selectedPatient && selectedPatient.numCuenta"
-            :is-open="true"
             :id-cuenta="selectedPatient.numCuenta"
             :patient="selectedPatient"
-            @close="activeView = 'pacientes'"
           />
           <ModuleEmptyState
             v-else
@@ -211,7 +218,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Menu, X, ClipboardList, Droplet } from 'lucide-vue-next'
+import { Menu, X, ClipboardList, Droplet, Activity } from 'lucide-vue-next'
 import type { Patient, NotaEnfermeria } from '@/types'
 import type { PacienteBusqueda } from '@/services/api'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -225,9 +232,9 @@ import NewNoteModal from '@/modules/notas/components/NewNoteModal.vue'
 import NewNoteForm from '@/modules/notas/components/NewNoteForm.vue'
 import NotesHistoryPanel from '@/modules/notas/components/NotesHistoryPanel.vue'
 import VitalsHistoryModal from '@/modules/vitales/components/VitalsHistoryModal.vue'
-import VitalsOverview from '@/modules/vitales/components/VitalsOverview.vue'
-import KardexModal from '@/modules/kardex/components/KardexModal.vue'
-import BalanceHidricoModal from '@/modules/balance-hidrico/components/BalanceHidricoModal.vue'
+import VitalsChartSheet from '@/modules/vitales/components/VitalsChartSheet.vue'
+import KardexSheet from '@/modules/kardex/components/KardexSheet.vue'
+import BalanceHidricoSheet from '@/modules/balance-hidrico/components/BalanceHidricoSheet.vue'
 
 import { usePatients } from '@/modules/pacientes/composables/usePatients'
 import { useBedModals } from '@/modules/pacientes/composables/useBedModals'
