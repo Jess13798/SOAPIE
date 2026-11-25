@@ -94,6 +94,7 @@ export interface ServicioPlanificado {
   id: number
   codigo: string
   nombre: string
+  idOrden?: number | null
 }
 
 export interface SignoVitalHistorial {

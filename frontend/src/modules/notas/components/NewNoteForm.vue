@@ -84,6 +84,7 @@
       v-if="activeTab === 'p'"
       v-model="serviciosPlanificados"
       :disabled="isReadOnly"
+      :id-empleado="props.initialNota?.idEmpleado || undefined"
     />
 
     <p

@@ -180,6 +180,44 @@ async function guardarNotaCompleta(nota) {
             `);
         }
 
+        // Consultar servicios planificados existentes para detectar cuáles se eliminaron
+        // o conservar los IdOrden ya creados en GalenHos (evita duplicar órdenes y permite anular)
+        const serviciosExistentesReq = transaction.request();
+        serviciosExistentesReq.input('idNotaServiciosExistentes', sql.Int, idNota);
+        let serviciosPrevios = [];
+        try {
+            const resPrev = await serviciosExistentesReq.query(`
+                SELECT IdProducto, IdOrden
+                FROM dbo.NotaEnfermeriaPlanServicio
+                WHERE IdNotaEnfermeria = @idNotaServiciosExistentes;
+            `);
+            serviciosPrevios = resPrev.recordset || [];
+        } catch {
+            // En bases donde la tabla aún no existe o está migrando
+        }
+
+        const mapaPrevios = new Map();
+        for (const prev of serviciosPrevios) {
+            mapaPrevios.set(Number(prev.IdProducto), prev.IdOrden ? Number(prev.IdOrden) : null);
+        }
+
+        const productosNuevosSet = new Set(nota.serviciosPlanificados.map(id => Number(id)));
+
+        // Anular en GalenHos las órdenes de servicios CPT que fueron retirados del plan
+        for (const [idProdPrev, idOrdenPrev] of mapaPrevios.entries()) {
+            if (!productosNuevosSet.has(idProdPrev) && idOrdenPrev) {
+                try {
+                    await facturacionAnulacionRepository.anularOrdenServicio({
+                        idOrden: idOrdenPrev,
+                        idEmpleado: nota.idEmpleado || 1,
+                        observaciones: `CPT ${idProdPrev} eliminado de nota SOAPIE ${idNota}`,
+                    }, transaction);
+                } catch (errAnul) {
+                    console.error(`Error al anular orden ${idOrdenPrev} en GalenHos:`, errAnul.message);
+                }
+            }
+        }
+
         const serviciosRequest = transaction.request();
         serviciosRequest.input('idNotaPlanServicio', sql.Int, idNota);
         await serviciosRequest.query(`
@@ -200,7 +238,8 @@ async function guardarNotaCompleta(nota) {
             }
         }
         for (const idProducto of nota.serviciosPlanificados) {
-            await insertarServicioPlanificado(transaction, idNota, idProducto, nota, idDiagnosticoPrincipal);
+            const idOrdenExistente = mapaPrevios.get(Number(idProducto)) || null;
+            await insertarServicioPlanificado(transaction, idNota, idProducto, nota, idDiagnosticoPrincipal, idOrdenExistente);
         }
 
         // Vincular balances hídricos que se hayan creado en la misma atención
@@ -352,36 +391,11 @@ async function obtenerIdDiagnosticoPrincipal(transaction, idCuenta) {
     return result.recordset?.[0]?.IdDiagnostico ?? null;
 }
 
-async function insertarServicioPlanificado(transaction, idNota, idProducto, metadata = {}, idDiagnosticoPrincipal = null) {
-    const request = transaction.request();
-    request.input('idNotaPlanServicio', sql.Int, idNota);
-    request.input('idProductoPlanServicio', sql.Int, idProducto);
-    const result = await request.query(`
-        INSERT INTO dbo.NotaEnfermeriaPlanServicio (
-            IdNotaEnfermeria, IdProducto, CodigoServicio, NombreServicio
-        )
-        SELECT
-            @idNotaPlanServicio,
-            servicio.IdProducto,
-            servicio.Codigo,
-            servicio.Nombre
-        FROM dbo.FactCatalogoServicios AS servicio
-        WHERE servicio.IdProducto = @idProductoPlanServicio
-          AND servicio.idEstado = 1;
+async function insertarServicioPlanificado(transaction, idNota, idProducto, metadata = {}, idDiagnosticoPrincipal = null, idOrdenExistente = null) {
+    let idOrdenAsignado = idOrdenExistente;
 
-        SELECT @@ROWCOUNT AS FilasInsertadas;
-    `);
-
-    if (result.recordset[0].FilasInsertadas !== 1) {
-        throw createRepositoryError(
-            'PLAN_SERVICE_INVALID',
-            'Uno de los servicios seleccionados no existe o ya no está activo en el catálogo.',
-        );
-    }
-
-    // Integración nativa con GalenHos / SIGH:
-    // Si la atención tiene IdCuenta, registramos la orden oficial en FactOrdenServicio y el CPT en FacturacionServicioDespacho
-    if (metadata.idCuenta) {
+    // Si la atención tiene IdCuenta y aún no tenía IdOrden, generamos la orden oficial en GalenHos
+    if (metadata.idCuenta && !idOrdenAsignado) {
         try {
             const galenRequest = transaction.request();
             galenRequest.output('IdOrden', sql.Int);
@@ -403,6 +417,7 @@ async function insertarServicioPlanificado(transaction, idNota, idProducto, meta
             const idOrden = spResult.output?.IdOrden;
 
             if (idOrden) {
+                idOrdenAsignado = idOrden;
                 const precioRequest = transaction.request();
                 precioRequest.input('idProductoDespacho', sql.Int, idProducto);
                 const precioResult = await precioRequest.query(`
@@ -438,7 +453,6 @@ async function insertarServicioPlanificado(transaction, idNota, idProducto, meta
                 }, transaction);
 
                 // Actualizar los consumos acumulados por punto de carga en FacturacionCuentasAtencionPtos (716 = CPT)
-                // para que el saldo en pantalla de GalenHos refleje de inmediato el nuevo consumo.
                 if (precio > 0) {
                     try {
                         const ptosRequest = transaction.request();
@@ -471,6 +485,34 @@ async function insertarServicioPlanificado(transaction, idNota, idProducto, meta
         } catch {
             // Si la base de datos es de prueba o no tiene el SP instalado, no rompe el guardado de la nota
         }
+    }
+
+    const request = transaction.request();
+    request.input('idNotaPlanServicio', sql.Int, idNota);
+    request.input('idProductoPlanServicio', sql.Int, idProducto);
+    request.input('idOrdenPlanServicio', sql.Int, idOrdenAsignado || null);
+    const result = await request.query(`
+        INSERT INTO dbo.NotaEnfermeriaPlanServicio (
+            IdNotaEnfermeria, IdProducto, CodigoServicio, NombreServicio, IdOrden
+        )
+        SELECT
+            @idNotaPlanServicio,
+            servicio.IdProducto,
+            servicio.Codigo,
+            servicio.Nombre,
+            @idOrdenPlanServicio
+        FROM dbo.FactCatalogoServicios AS servicio
+        WHERE servicio.IdProducto = @idProductoPlanServicio
+          AND servicio.idEstado = 1;
+
+        SELECT @@ROWCOUNT AS FilasInsertadas;
+    `);
+
+    if (result.recordset[0].FilasInsertadas !== 1) {
+        throw createRepositoryError(
+            'PLAN_SERVICE_INVALID',
+            'Uno de los servicios seleccionados no existe o ya no está activo en el catálogo.',
+        );
     }
 }
 
@@ -636,7 +678,8 @@ const NOTAS_QUERY = `
         cuidado.NICMotivo AS PlanNICMotivo,
         servicioPlan.IdProducto AS PlanServicioId,
         servicioPlan.CodigoServicio AS PlanServicioCodigo,
-        servicioPlan.NombreServicio AS PlanServicioNombre
+        servicioPlan.NombreServicio AS PlanServicioNombre,
+        servicioPlan.IdOrden AS PlanServicioIdOrden
     FROM dbo.NotaEnfermeria AS n
     LEFT JOIN dbo.Empleados AS e
         ON e.IdEmpleado = n.IdEmpleado
@@ -750,6 +793,28 @@ async function deleteNotaById(idNota) {
     await transaction.begin();
 
     try {
+        // Anular en GalenHos todos los CPTs asociados a esta nota antes de eliminarlos
+        try {
+            const ordenesRequest = transaction.request();
+            ordenesRequest.input('idNotaOrdenes', sql.Int, idNota);
+            const ordenesResult = await ordenesRequest.query(`
+                SELECT IdOrden
+                FROM dbo.NotaEnfermeriaPlanServicio
+                WHERE IdNotaEnfermeria = @idNotaOrdenes AND IdOrden IS NOT NULL;
+            `);
+            for (const row of (ordenesResult.recordset || [])) {
+                if (row.IdOrden) {
+                    await facturacionAnulacionRepository.anularOrdenServicio({
+                        idOrden: Number(row.IdOrden),
+                        idEmpleado: 1,
+                        observaciones: `Eliminación total de nota SOAPIE ${idNota}`,
+                    }, transaction);
+                }
+            }
+        } catch (errOrdenes) {
+            console.error('Error anulando órdenes asociadas a nota eliminada:', errOrdenes.message);
+        }
+
         const request = transaction.request();
         request.input('idNota', sql.Int, idNota);
         await request.query(`

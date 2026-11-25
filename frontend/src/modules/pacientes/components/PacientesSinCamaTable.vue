@@ -27,7 +27,7 @@
     </div>
 
     <!-- Tabla -->
-    <div class="overflow-x-auto max-h-[140px] overflow-y-auto">
+    <div class="overflow-x-auto max-h-[140px] overflow-y-auto custom-scrollbar">
       <table class="w-full min-w-[920px] table-fixed text-left border-collapse">
         <colgroup>
           <col class="w-[12%]" />
@@ -38,13 +38,10 @@
           <col class="w-[20%]" />
           <col class="w-[15%]" />
         </colgroup>
-        <thead>
+        <thead class="sticky top-0 z-10">
           <tr class="bg-sky-700 text-white">
             <th class="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-              <div class="flex items-center gap-1">
-                <Hash class="h-3.5 w-3.5" />
-                <span>N° Cuenta</span>
-              </div>
+              <span>N° Cuenta</span>
             </th>
             <th class="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
               <div class="flex items-center gap-1">
@@ -135,7 +132,7 @@
 
 <script setup lang="ts">
 import {
-  Hash, User, CalendarDays, Clock3, Timer, BriefcaseMedical, Settings2
+  User, CalendarDays, Clock3, Timer, BriefcaseMedical, Settings2
 } from 'lucide-vue-next'
 import type { PacienteBusqueda, PacienteSinCama, Servicio } from '@/services/api'
 import ServiceCombobox from '@/modules/pacientes/components/ServiceCombobox.vue'

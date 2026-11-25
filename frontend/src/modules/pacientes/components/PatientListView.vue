@@ -90,7 +90,7 @@
 
             <!-- Table (desktop) -->
             <div class="hidden md:flex flex-col flex-1 min-h-0 overflow-x-auto">
-              <div class="flex-1 min-h-0 overflow-y-auto">
+              <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
               <table class="w-full min-w-[900px] table-fixed text-left border-collapse">
                 <colgroup>
                   <col class="w-[20%]" />

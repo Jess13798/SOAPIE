@@ -18,13 +18,16 @@
         <span>
           <strong class="mr-2 text-sky-800">{{ servicio.codigo }}</strong>
           <span class="text-slate-800">{{ servicio.nombre }}</span>
+          <span v-if="servicio.idOrden" class="ml-2 rounded bg-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-sky-900" title="Orden registrada en GalenHos">
+            Orden #{{ servicio.idOrden }}
+          </span>
         </span>
         <button
           type="button"
           class="shrink-0 font-semibold text-red-700 hover:underline disabled:opacity-50"
           :disabled="disabled"
           :aria-label="`Quitar ${servicio.codigo} ${servicio.nombre}`"
-          @click="quitar(servicio.id)"
+          @click="quitar(servicio)"
         >
           Quitar
         </button>
@@ -76,18 +79,20 @@
 
 <script setup lang="ts">
 import { onUnmounted, ref, watch } from 'vue'
-import { catalogosService, type ServicioCatalogo } from '@/services/api'
+import { catalogosService, facturacionService, type ServicioCatalogo } from '@/services/api'
 import type { ServicioPlanificado } from '@/types'
 import { agregarServicioPlanificado, quitarServicioPlanificado } from '../serviciosPlanificados'
 
 const props = defineProps<{
   disabled?: boolean
+  idEmpleado?: number | string
 }>()
 const seleccionados = defineModel<ServicioPlanificado[]>({ required: true })
 
 const buscar = ref('')
 const servicios = ref<ServicioCatalogo[]>([])
 const loading = ref(false)
+const eliminandoId = ref<number | null>(null)
 const error = ref('')
 let timer: ReturnType<typeof setTimeout> | undefined
 let solicitudActual = 0
@@ -100,8 +105,12 @@ function agregar(servicio: ServicioCatalogo) {
   seleccionados.value = agregarServicioPlanificado(seleccionados.value, servicio)
 }
 
-function quitar(id: number) {
-  seleccionados.value = quitarServicioPlanificado(seleccionados.value, id)
+function quitar(servicio: ServicioPlanificado) {
+  error.value = ''
+  // En pantalla solo se retira de la lista visual (en memoria).
+  // La anulación en la base de datos de GalenHos ocurre cuando se GUARDA la nota
+  // (o si se cancela/elimina la nota guardada), nunca mientras solo se está llenando el formulario.
+  seleccionados.value = quitarServicioPlanificado(seleccionados.value, servicio.id)
 }
 
 watch(buscar, (value) => {
