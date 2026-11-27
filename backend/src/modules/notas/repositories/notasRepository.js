@@ -10,7 +10,15 @@ const facturacionFinanciamientosRepository = require('../../facturacion/reposito
 const facturacionPagosRepository = require('../../facturacion/repositories/facturacionPagosRepository');
 const cuentasAtencionRepository = require('../../facturacion/repositories/facturacionCuentasAtencionRepository');
 
-const ID_PUNTO_CARGA_CPT = 1; // GalenHos registra los CPT como "Consumo en el Servicio"
+const ID_PUNTO_CARGA_FALLBACK = 716; // Hospitalización Medicina por defecto si no viene servicio
+
+function resolverPuntoCargaServicio(idServicio) {
+    if (!idServicio) return ID_PUNTO_CARGA_FALLBACK;
+    const num = Number(idServicio);
+    // En GalenHos, el Punto de Carga de hospitalización es IdServicio + 500
+    // (Pediatría 213 -> 713, Medicina 216 -> 716, Cirugía 218 -> 718, etc.)
+    return num > 0 ? num + 500 : ID_PUNTO_CARGA_FALLBACK;
+}
 const ID_TIPO_FINANCIAMIENTO_FALLBACK = 16; // Estrategia, igual que GalenHos
 
 const NOTA_NOT_FOUND = 'NOTA_NOT_FOUND';
@@ -286,7 +294,14 @@ async function guardarNotaCompleta(nota) {
         for (const servicio of nota.serviciosPlanificados) {
             const idProd = typeof servicio === 'object' && servicio !== null ? Number(servicio.id) : Number(servicio);
             const servicioPrevio = mapaPrevios.get(idProd) || null;
-            await insertarServicioPlanificado(transaction, idNota, servicio, nota, servicioPrevio, financiamientoCuenta);
+            await insertarServicioPlanificado(
+                transaction,
+                idNota,
+                servicio,
+                { ...nota, idServicio: servicioId || nota.idServicio },
+                servicioPrevio,
+                financiamientoCuenta,
+            );
         }
 
         // Vincular balances hídricos que se hayan creado en la misma atención
@@ -504,12 +519,12 @@ async function obtenerDiagnosticoAtencion(transaction, idCuenta, idAtencionDiagn
     return result.recordset?.[0] ?? null;
 }
 
-async function actualizarConsumosCpt(transaction, idCuenta, delta) {
+async function actualizarConsumosCpt(transaction, idCuenta, delta, idPuntoCarga = ID_PUNTO_CARGA_FALLBACK) {
     if (!idCuenta || !delta) return;
 
     const request = transaction.request();
     request.input('idCuentaConsumo', sql.Int, idCuenta);
-    request.input('idPtoCargaConsumo', sql.Int, ID_PUNTO_CARGA_CPT);
+    request.input('idPtoCargaConsumo', sql.Int, idPuntoCarga);
     const result = await request.query(`
         SELECT TotalConsumos, TotalPagos, TotalPagosReembolso
         FROM dbo.FacturacionCuentasAtencionPtos WITH (UPDLOCK, HOLDLOCK)
@@ -522,7 +537,7 @@ async function actualizarConsumosCpt(transaction, idCuenta, delta) {
     await cuentasAtencionRepository.actualizarCuentasAtencionPtos({
         esNueva: !registro,
         idCuentaAtencion: idCuenta,
-        idPuntoCarga: ID_PUNTO_CARGA_CPT,
+        idPuntoCarga: idPuntoCarga,
         totalConsumos: Math.max(0, (Number(registro?.TotalConsumos) || 0) + delta),
         totalPagos: Number(registro?.TotalPagos) || 0,
         totalPagosReembolso: Number(registro?.TotalPagosReembolso) || 0,
@@ -598,10 +613,12 @@ async function actualizarServicioCptExistente(transaction, idOrden, idProducto, 
     }
 
     if (cantidadCambio && estado !== 4) {
+        const idPuntoCarga = resolverPuntoCargaServicio(metadata?.idServicio);
         await actualizarConsumosCpt(
             transaction,
             metadata.idCuenta,
             precio * (cantidad - cantidadAnterior),
+            idPuntoCarga,
         );
     }
     await registrarAuditoria({
@@ -680,9 +697,10 @@ async function insertarServicioPlanificado(transaction, idNota, servicio, metada
                 `CPT ${idProducto} sin precio válido para el financiamiento ${idTipoFinanciamiento}; no se crea la orden.`,
             );
         } else {
+            const idPuntoCarga = resolverPuntoCargaServicio(metadata.idServicio);
             const galenRequest = transaction.request();
             galenRequest.output('IdOrden', sql.Int);
-            galenRequest.input('IdPuntoCarga', sql.Int, ID_PUNTO_CARGA_CPT);
+            galenRequest.input('IdPuntoCarga', sql.Int, idPuntoCarga);
             galenRequest.input('IdPaciente', sql.Int, metadata.idPaciente);
             galenRequest.input('IdCuentaAtencion', sql.Int, metadata.idCuenta);
             galenRequest.input('IdServicioPaciente', sql.Int, metadata.idServicio || null);
@@ -773,12 +791,13 @@ async function insertarServicioPlanificado(transaction, idNota, servicio, metada
                 throwOnError: true,
             }, transaction);
 
-            // Actualizar saldos por punto de carga (1 = Consumo en el Servicio)
+            // Actualizar saldos por punto de carga
             if (precio > 0) {
                 await actualizarConsumosCpt(
                     transaction,
                     metadata.idCuenta,
                     precio * cantidad,
+                    idPuntoCarga,
                 );
             }
         }
