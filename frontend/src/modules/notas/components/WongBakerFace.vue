@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "notas". -->
+
 <template>
   <svg
     viewBox="0 0 24 24"

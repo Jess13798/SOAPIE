@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "notas". -->
+
 <template>
   <!-- min-h-full: el formulario ocupa al menos toda la altura del modal, así el
        pie con Firmar/Guardar queda siempre abajo (mt-auto) y el contenido no
@@ -77,21 +79,15 @@
       v-model:pain-score="painScore"
       :form="form"
       :read-only="isReadOnly"
-      :permite-editar-analisis="permiteEditarAnalisisAnterior"
+      :permite-editar-analisis="true"
     />
 
     <ServicioPlanSelector
       v-if="activeTab === 'p'"
       v-model="serviciosPlanificados"
       :disabled="isReadOnly"
+      :id-cuenta-atencion="props.initialNota?.idCuenta || props.selectedPatient?.numCuenta"
     />
-
-    <p
-      v-if="planFueHeredado && activeTab === 'a'"
-      class="border-b border-sky-100 bg-sky-50 px-4 py-1.5 text-[11px] font-semibold text-sky-800"
-    >
-      Diagnósticos heredados de la nota anterior: revíselos antes de guardar.
-    </p>
 
     <SoapieCarePlanSelector
       v-if="activeTab === 'a'"
@@ -124,7 +120,7 @@
       </template>
       <div v-else class="flex items-center gap-2 px-4 py-2 text-xs font-black text-slate-400 bg-slate-100 rounded-lg uppercase tracking-widest italic">
         <CheckCircle class="h-4 w-4 text-emerald-500" />
-        Nota Firmada (Solo Lectura)
+        {{ initialNota?.isFirmada ? 'Nota Firmada (Solo Lectura)' : 'Nota Pendiente (Solo Lectura)' }}
       </div>
     </footer>
   </div>
@@ -147,7 +143,6 @@ import {
   NOC_EVALUACION_BLOQUE_TITULO,
   NOC_META_MARCADOR,
   NOC_RESULTADO_MARCADOR,
-  heredarPlanCuidados,
   hidratarPlanCuidados,
   lineasIntervenciones,
 } from '../planCuidados'
@@ -214,14 +209,10 @@ const activeTab = ref<'s' | 'o' | 'a' | 'p' | 'i' | 'e'>('s')
 const painScore = ref<WongBakerScore | null>(
   props.initialNota?.wongBakerScore ?? extractWongBakerScore(props.initialNota?.plan || ''),
 )
-// El textarea de Análisis solo se muestra si la nota traía un análisis previo;
-// en notas nuevas el Análisis se arma con los diagnósticos NANDA seleccionados.
-const permiteEditarAnalisisAnterior = ref(
-  Boolean(textoLibre(props.initialNota?.analisis || '', 'DIAGNOSTICOS NANDA')),
-)
-const planFueHeredado = ref(!props.initialNota && Boolean(props.notaAnterior?.planCuidados?.length))
+// En una nota nueva el Análisis comienza vacío. Los datos de la nota anterior
+// no se heredan; el buscador NANDA es una ayuda opcional.
 const planCuidados = ref<PlanCuidadoNota[]>(
-  props.initialNota ? hidratarPlanCuidados(props.initialNota) : heredarPlanCuidados(props.notaAnterior),
+  props.initialNota ? hidratarPlanCuidados(props.initialNota) : [],
 )
 const serviciosPlanificados = ref<ServicioPlanificado[]>(
   props.initialNota?.serviciosPlanificados ? [...props.initialNota.serviciosPlanificados] : [],
@@ -317,7 +308,6 @@ watch(() => props.initialNota, (newNote) => {
     form.s = newNote.subjetivo || ""
     form.o = newNote.objetivo || ""
     form.a = textoLibre(newNote.analisis || "", 'DIAGNOSTICOS NANDA')
-    permiteEditarAnalisisAnterior.value = Boolean(form.a)
     form.p = textoLibre(removeWongBakerMarker(newNote.plan || ""), NOC_BLOQUE_TITULO)
     painScore.value = newNote.wongBakerScore ?? extractWongBakerScore(newNote.plan || '')
     form.i = textoLibre(newNote.intervencion || "", NIC_BLOQUE_TITULO)
@@ -332,9 +322,30 @@ watch(() => props.initialNota, (newNote) => {
   }
   else {
     draftId.value = `n${Date.now()}`
-    planCuidados.value = heredarPlanCuidados(props.notaAnterior)
+    form.peso = ""
+    form.talla = ""
+    form.pCefalico = ""
+    form.pAbdominal = ""
+    form.hemoglucotest = ""
+    form.presionArterial = ""
+    form.frecuenciaCardiaca = ""
+    form.frecuenciaRespiratoria = ""
+    form.temp = ""
+    form.spo2 = ""
+    form.s = ""
+    form.o = ""
+    form.a = ""
+    form.p = ""
+    form.i = ""
+    form.e = ""
+    form.antecedentes = ""
+    form.diagnosticos = ""
+    form.farmacia = ""
+    form.laboratorio = ""
+    form.imagen = ""
+    painScore.value = null
+    planCuidados.value = []
     serviciosPlanificados.value = []
-    planFueHeredado.value = Boolean(props.notaAnterior?.planCuidados?.length)
   }
   
 }, { deep: true })
@@ -408,6 +419,16 @@ function normalizedPlan(items: PlanCuidadoNota[] = []) {
   })).sort((a, b) => a.idNANDA - b.idNANDA)
 }
 
+function normalizedServicios(items: ServicioPlanificado[] = []) {
+  return items
+    .map(item => ({
+      id: item.id,
+      cantidad: item.cantidad || 1,
+      idAtencionDiagnostico: item.idAtencionDiagnostico ?? null,
+    }))
+    .sort((a, b) => a.id - b.id)
+}
+
 function editableStateFromForm() {
   return {
     vitals: vitalStateFromForm(),
@@ -419,7 +440,7 @@ function editableStateFromForm() {
     intervencion: normalizedText(form.i),
     evaluacion: normalizedText(form.e),
     planCuidados: normalizedPlan(planCuidados.value),
-    serviciosPlanificados: serviciosPlanificados.value.map(item => item.id).sort((a, b) => a - b),
+    serviciosPlanificados: normalizedServicios(serviciosPlanificados.value),
   }
 }
 
@@ -434,7 +455,7 @@ function editableStateFromNota(nota: NotaEnfermeria) {
     intervencion: normalizedText(textoLibre(nota.intervencion || '', 'INTERVENCIONES NIC REALIZADAS')),
     evaluacion: normalizedText(textoLibre(nota.evaluacion || '', 'EVALUACION DE RESULTADOS NOC')),
     planCuidados: normalizedPlan(hidratarPlanCuidados(nota)),
-    serviciosPlanificados: (nota.serviciosPlanificados || []).map(item => item.id).sort((a, b) => a - b),
+    serviciosPlanificados: normalizedServicios(nota.serviciosPlanificados || []),
   }
 }
 

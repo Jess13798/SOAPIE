@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "pacientes". -->
+
 <template>
   <Teleport to="body">
     <div v-if="isOpen && patient" class="fixed inset-0 z-50 flex items-center justify-center">
@@ -160,10 +162,10 @@
             <div class="flex justify-end gap-2 pt-1">
               <button
                 @click="submit"
-                :disabled="!formCompleto"
+                :disabled="!formCompleto || isSubmitting"
                 class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-emerald-400"
               >
-                Guardar transferencia
+                {{ isSubmitting ? 'Guardando transferencia...' : 'Guardar transferencia' }}
               </button>
               <button
                 @click="$emit('close')"
@@ -189,6 +191,7 @@ const props = defineProps<{
   isOpen: boolean
   patient: Patient | null
   servicios?: { IdServicio: number; Nombre: string }[]
+  isSubmitting?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -305,7 +308,7 @@ function resetForm() {
 }
 
 function submit() {
-  if (!props.patient || !servicioDestino.value) return
+  if (!props.patient || !servicioDestino.value || props.isSubmitting) return
   const fecha = formatFechaSQL()
   const hora = formatHoraCorta()
   emit('confirm', {

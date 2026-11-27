@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "pacientes". -->
+
 <template>
   <div class="flex flex-col gap-6">
     <!-- Patient Info Card -->

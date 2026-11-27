@@ -1,7 +1,20 @@
+// Propósito: Acceso a datos del módulo "notas".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const notasRepository = require('./notasRepository');
 const notasService = require('../services/notasService');
+
+function guardarNota(nota) {
+    return notasService.guardarNota(nota, '300');
+}
+
+/**
+ * Implementa la operación "notePayload".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function notePayload(overrides = {}) {
     const payload = {
@@ -39,7 +52,7 @@ function notePayload(overrides = {}) {
 }
 
 test('guardarNota rejects a note without a valid patient id', async () => {
-    await assert.rejects(notasService.guardarNota({
+    await assert.rejects(guardarNota({
         fecha: '2026-10-09',
         hora: '12:00',
     }), { code: 'NOTAS_INVALID_INPUT' });
@@ -52,7 +65,7 @@ test('guardarNota normalizes selections and persists the SOAPIE payload', async 
         return { id: 81, vitalesRegistrados: true };
     });
 
-    const result = await notasService.guardarNota(notePayload({
+    const result = await guardarNota(notePayload({
         id: 'draft-1',
         turno: 'noche',
         subjetivo: 'Refiere dolor',
@@ -99,6 +112,25 @@ test('guardarNota normalizes selections and persists the SOAPIE payload', async 
     ]);
 });
 
+test('guardarNota usa el IdEmpleado autenticado y no el enviado por el cliente', async (context) => {
+    let savedNote;
+    context.mock.method(notasRepository, 'guardarNotaCompleta', async (note) => {
+        savedNote = note;
+        return { id: 82, vitalesRegistrados: true };
+    });
+
+    await notasService.guardarNota(notePayload({ idEmpleado: '999' }), '300');
+
+    assert.equal(savedNote.idEmpleado, 300);
+});
+
+test('guardarNota requiere una identidad de empleado autenticada', async () => {
+    await assert.rejects(
+        notasService.guardarNota(notePayload()),
+        { code: 'NOTAS_INVALID_INPUT' },
+    );
+});
+
 test('guardarNota conserva el motivo de una NIC no realizada', async (context) => {
     let savedNote;
     context.mock.method(notasRepository, 'guardarNotaCompleta', async (note) => {
@@ -106,7 +138,7 @@ test('guardarNota conserva el motivo de una NIC no realizada', async (context) =
         return { id: 81, vitalesRegistrados: true };
     });
 
-    await notasService.guardarNota(notePayload({
+    await guardarNota(notePayload({
         planCuidados: [{
             idNANDA: 1,
             nocIds: [],
@@ -121,7 +153,7 @@ test('guardarNota conserva el motivo de una NIC no realizada', async (context) =
 });
 
 test('guardarNota rejects a performed NIC that was not planned', async () => {
-    await assert.rejects(notasService.guardarNota(notePayload({
+    await assert.rejects(guardarNota(notePayload({
         planCuidados: [{ idNANDA: 1, nocIds: [], nicIds: [20], nicRealizadasIds: [21] }],
     })), { code: 'NOTAS_INVALID_INPUT' });
 });
@@ -133,7 +165,7 @@ test('guardarNota drops NOC values that do not belong to selected NOC ids', asyn
         return { id: 81, vitalesRegistrados: true };
     });
 
-    await notasService.guardarNota(notePayload({
+    await guardarNota(notePayload({
         planCuidados: [{
             idNANDA: 1,
             nocIds: [10],
@@ -149,14 +181,14 @@ test('guardarNota drops NOC values that do not belong to selected NOC ids', asyn
 
 test('guardarNota rejects oxygen saturation above 100 percent', async (context) => {
     const save = context.mock.method(notasRepository, 'guardarNotaCompleta', async () => 81);
-    await assert.rejects(notasService.guardarNota(notePayload({
+    await assert.rejects(guardarNota(notePayload({
         signosVitales: { saturacionOxigeno: '101' },
     })), { code: 'NOTAS_INVALID_INPUT' });
     assert.equal(save.mock.callCount(), 0);
 });
 
 test('guardarNota rejects pressure with diastolic value greater than systolic', async () => {
-    await assert.rejects(notasService.guardarNota(notePayload({
+    await assert.rejects(guardarNota(notePayload({
         signosVitales: { presionArterial: '70/80' },
     })), { code: 'NOTAS_INVALID_INPUT' });
 });
@@ -168,7 +200,7 @@ test('guardarNota accepts decimal vital values with two fractional digits', asyn
         return { id: 81, vitalesRegistrados: true };
     });
 
-    await notasService.guardarNota(notePayload({
+    await guardarNota(notePayload({
         signosVitales: { peso: '0.29' },
     }));
 
@@ -176,14 +208,14 @@ test('guardarNota accepts decimal vital values with two fractional digits', asyn
 });
 
 test('guardarNota rejects decimal vital values with more than two fractional digits', async () => {
-    await assert.rejects(notasService.guardarNota(notePayload({
+    await assert.rejects(guardarNota(notePayload({
         signosVitales: { peso: '0.291' },
     })), { code: 'NOTAS_INVALID_INPUT' });
 });
 
 test('guardarNota requires every vital sign when creating a note', async (context) => {
     const save = context.mock.method(notasRepository, 'guardarNotaCompleta', async () => 81);
-    await assert.rejects(notasService.guardarNota(notePayload({
+    await assert.rejects(guardarNota(notePayload({
         signosVitales: { peso: '' },
     })), { code: 'NOTAS_INVALID_INPUT' });
     assert.equal(save.mock.callCount(), 0);
@@ -196,7 +228,7 @@ test('guardarNota allows SOAPIE edits without a complete new vital-sign set', as
         return { id: 81, vitalesRegistrados: false };
     });
 
-    const result = await notasService.guardarNota(notePayload({
+    const result = await guardarNota(notePayload({
         id: '81',
         signosVitales: {
             peso: '',
@@ -231,7 +263,7 @@ test('guardarNota allows SOAPIE edits without a complete new vital-sign set', as
 });
 
 test('guardarNota rejects comments longer than the database column limit', async () => {
-    await assert.rejects(notasService.guardarNota(notePayload({
+    await assert.rejects(guardarNota(notePayload({
         planCuidados: [{ idNANDA: 1, comentario: 'x'.repeat(1001) }],
     })), { code: 'NOTAS_INVALID_INPUT' });
 });

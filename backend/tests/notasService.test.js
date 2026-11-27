@@ -9,9 +9,18 @@ const assert = require('node:assert/strict');
 // guarda una referencia al MISMO objeto del repositorio, reemplazar sus métodos
 // con t.mock.method afecta al servicio.
 const notasRepository = require('../src/modules/notas/repositories/notasRepository');
-const notasService = require('../src/modules/notas/services/notasService');
+const notasServiceModule = require('../src/modules/notas/services/notasService');
+const notasService = {
+    ...notasServiceModule,
+    guardarNota: (nota) => notasServiceModule.guardarNota(nota, '300'),
+};
 
 // Silencia los console.error que los servicios emiten en los caminos de error.
+/**
+ * Implementa la operación "silenciarErrores".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function silenciarErrores(t) {
     t.mock.method(console, 'error', () => {});
 }
@@ -19,6 +28,11 @@ function silenciarErrores(t) {
 // Los signos vitales son obligatorios al CREAR una nota (no al editarla), así
 // que las notas nuevas de prueba llevan los diez campos y todas las secciones
 // SOAPIE que el servicio exige.
+/**
+ * Implementa la operación "notaSoapieCompleta".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function notaSoapieCompleta(extra = {}) {
     return {
         pacienteId: '3',
@@ -66,6 +80,11 @@ test('obtenerNotas mapea las filas de la BD al formato del frontend', async (t) 
                 PlanServicioId: 712,
                 PlanServicioCodigo: '00100',
                 PlanServicioNombre: 'ANESTESIA DE PRUEBA',
+                PlanServicioCantidad: 3,
+                PlanServicioIdAtencionDiagnostico: 88,
+                PlanServicioCodigoCIE10: 'R19.8',
+                PlanServicioIdOrden: 1234,
+                PlanServicioEstadoFacturacion: 1,
                 Intervencion: 'medicacion',
                 Evaluacion: 'estable',
             },
@@ -89,6 +108,11 @@ test('obtenerNotas mapea las filas de la BD al formato del frontend', async (t) 
         id: 712,
         codigo: '00100',
         nombre: 'ANESTESIA DE PRUEBA',
+        cantidad: 3,
+        idAtencionDiagnostico: 88,
+        codigoCIE10: 'R19.8',
+        estadoFacturacion: 1,
+        idOrden: 1234,
     }]);
     assert.equal(n.isFirmada, false, 'sin Fecha_Hora_Fin no esta firmada');
     assert.equal(n.fechaFirmada, '');
@@ -138,9 +162,25 @@ test('obtenerNotas devuelve [] si la consulta no trae recordset', async (t) => {
 
 test('guardarNota crea una nota nueva y persiste los signos vitales', async (t) => {
     silenciarErrores(t);
-    const guardarCompleta = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => ({ id: 55, vitalesRegistrados: true }));
+    const serviciosGuardados = [{
+        id: 712,
+        codigo: '00100',
+        nombre: 'ANESTESIA DE PRUEBA',
+        cantidad: 2,
+        idAtencionDiagnostico: 88,
+        codigoCIE10: 'R19.8',
+        idOrden: 1234,
+        estadoFacturacion: 1,
+    }];
+    const guardarCompleta = t.mock.method(
+        notasRepository,
+        'guardarNotaCompleta',
+        async () => ({ id: 55, vitalesRegistrados: true, serviciosPlanificados: serviciosGuardados }),
+    );
 
-    const resultado = await notasService.guardarNota(notaSoapieCompleta());
+    const resultado = await notasService.guardarNota(notaSoapieCompleta({
+        serviciosPlanificados: [{ id: 712 }],
+    }));
 
     assert.equal(resultado.success, true);
     assert.equal(resultado.id, 55, 'devuelve el id generado por la BD');
@@ -151,6 +191,7 @@ test('guardarNota crea una nota nueva y persiste los signos vitales', async (t) 
     assert.equal(payload.idNota, null, 'sin id se trata como nota nueva');
     assert.equal(payload.subjetivo, 'sin dolor');
     assert.equal(payload.signosVitales.peso, 70, 'convierte los vitales a número');
+    assert.deepEqual(resultado.serviciosPlanificados, serviciosGuardados);
 });
 
 test('guardarNota persiste Wong-Baker como un puntaje separado del plan', async (t) => {
@@ -171,7 +212,7 @@ test('guardarNota persiste Wong-Baker como un puntaje separado del plan', async 
     assert.equal(payload.wongBakerScore, 6);
 });
 
-test('guardarNota normaliza y deduplica servicios planificados por IdProducto', async (t) => {
+test('guardarNota normaliza y deduplica CPT con cantidad y diagnóstico', async (t) => {
     silenciarErrores(t);
     let payloadGuardado;
     t.mock.method(notasRepository, 'guardarNotaCompleta', async (payload) => {
@@ -180,10 +221,33 @@ test('guardarNota normaliza y deduplica servicios planificados por IdProducto', 
     });
 
     await notasService.guardarNota(notaSoapieCompleta({
-        serviciosPlanificados: [{ id: '712' }, { id: 712 }, { id: '913' }],
+        serviciosPlanificados: [
+            { id: '712', cantidad: '2', idAtencionDiagnostico: '88' },
+            { id: 712, cantidad: 5, idAtencionDiagnostico: 90 },
+            { id: '913' },
+        ],
     }));
 
-    assert.deepEqual(payloadGuardado.serviciosPlanificados, [712, 913]);
+    assert.deepEqual(payloadGuardado.serviciosPlanificados, [
+        { id: 712, cantidad: 2, idAtencionDiagnostico: 88 },
+        { id: 913, cantidad: 1, idAtencionDiagnostico: null },
+    ]);
+});
+
+test('guardarNota rechaza cantidades y diagnósticos CPT inválidos', async (t) => {
+    silenciarErrores(t);
+    const guardar = t.mock.method(notasRepository, 'guardarNotaCompleta', async () => 60);
+    for (const servicio of [
+        { id: 712, cantidad: 0 },
+        { id: 712, cantidad: 1.5 },
+        { id: 712, idAtencionDiagnostico: 'no-es-id' },
+    ]) {
+        await assert.rejects(
+            notasService.guardarNota(notaSoapieCompleta({ serviciosPlanificados: [servicio] })),
+            { code: 'NOTAS_INVALID_INPUT' },
+        );
+    }
+    assert.equal(guardar.mock.callCount(), 0);
 });
 
 test('guardarNota rechaza servicios planificados con IdProducto inválido', async (t) => {

@@ -20,6 +20,18 @@ export const CAMPOS_SIGNOS_VITALES: string[] = config.campos
 // Servicios sin configuración: se exigen todos (comportamiento histórico).
 export const CAMPOS_OBLIGATORIOS_POR_DEFECTO: string[] = config.porDefecto.obligatorios
 
+/**
+
+
+ * Implementa la operación "camposObligatoriosDeServicio".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 export function camposObligatoriosDeServicio(idServicio?: string | null): string[] {
   const id = String(idServicio ?? '').trim()
   const c = id && config.porServicio ? config.porServicio[id] : undefined
@@ -29,11 +41,31 @@ export function camposObligatoriosDeServicio(idServicio?: string | null): string
 // Rangos (min/max) configurados para el servicio. Sirven para validar y para
 // mostrar el rango permitido en la pantalla. Si no hay configuración, se usan
 // los límites técnicos de porDefecto.
+/**
+
+ * Implementa la operación "rangosDeServicio".
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+ */
+
 export function rangosDeServicio(idServicio?: string | null): Record<string, RangoVital> {
   const id = String(idServicio ?? '').trim()
   const c = id && config.porServicio ? config.porServicio[id] : undefined
   return (c && c.rangos) || config.porDefecto.rangos || {}
 }
+
+/**
+
+
+ * Implementa la operación "rangoDeServicio".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 export function rangoDeServicio(idServicio: string | null | undefined, campo: string): RangoVital | null {
   const r = rangosDeServicio(idServicio)
@@ -42,6 +74,14 @@ export function rangoDeServicio(idServicio: string | null | undefined, campo: st
 
 // El formulario usa claves cortas para temperatura y saturación; el resto
 // coincide con el nombre del payload.
+/**
+
+ * Implementa la operación "claveConfiguracionVital".
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+ */
+
 export function claveConfiguracionVital(claveFormulario: string): string {
   if (claveFormulario === 'temp') return 'temperatura'
   if (claveFormulario === 'spo2') return 'saturacionOxigeno'

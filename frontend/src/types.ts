@@ -1,3 +1,6 @@
+// Propósito: Implementación del archivo types.ts.
+// Responsable de mantener separadas las reglas de este archivo.
+
 export interface Patient {
   id: string
   idEspecialidad?: string
@@ -94,6 +97,11 @@ export interface ServicioPlanificado {
   id: number
   codigo: string
   nombre: string
+  cantidad: number
+  idAtencionDiagnostico?: number | null
+  codigoCIE10?: string | null
+  idOrden?: number | null
+  estadoFacturacion?: number | null
 }
 
 export interface SignoVitalHistorial {

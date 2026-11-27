@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "notas". -->
+
 <template>
   <div class="rounded-xl border border-border bg-card shadow-sm overflow-hidden mb-6">
     <!-- Header -->

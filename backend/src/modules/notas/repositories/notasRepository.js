@@ -1,16 +1,34 @@
+// Propósito: Acceso a datos del módulo "notas".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const sql = require('mssql');
 const dbHelper = require('../../../../dbHelper');
+const facturacionAnulacionRepository = require('../../facturacion/repositories/facturacionAnulacionRepository');
 const { registrarAuditoria } = require('../../../core/utils/auditoria');
 const facturacionRepository = require('../../facturacion/repositories/facturacionServicioDespachoRepository');
+const cuentasAtencionRepository = require('../../facturacion/repositories/facturacionCuentasAtencionRepository');
 
 const NOTA_NOT_FOUND = 'NOTA_NOT_FOUND';
+const NOTA_NO_AUTORIZADA = 'NOTA_NO_AUTORIZADA';
 const CARE_PLAN_RELATION_INVALID = 'CARE_PLAN_RELATION_INVALID';
+
+/**
+ * Implementa la operación "createRepositoryError".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function createRepositoryError(code, message) {
     const error = new Error(message);
     error.code = code;
     return error;
 }
+
+/**
+ * Implementa la operación "bindNota".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function bindNota(request, nota) {
     request.input('idCuenta', sql.Int, nota.idCuenta);
@@ -29,6 +47,12 @@ function bindNota(request, nota) {
     request.input('evaluacion', sql.NVarChar(sql.MAX), nota.evaluacion);
 }
 
+/**
+ * Implementa la operación "bindVitales".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function bindVitales(request, signosVitales, metadata) {
     request.input('idPacienteVital', sql.Int, metadata.idPaciente);
     request.input('idCuentaVital', sql.Int, metadata.idCuenta);
@@ -45,6 +69,12 @@ function bindVitales(request, signosVitales, metadata) {
     request.input('temperatura', sql.Decimal(4, 2), signosVitales.temperatura);
     request.input('saturacion', sql.Int, signosVitales.saturacionOxigeno);
 }
+
+/**
+ * Implementa la operación "guardarNotaCompleta".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function guardarNotaCompleta(nota) {
     const pool = await dbHelper.getPool();
@@ -68,7 +98,6 @@ async function guardarNotaCompleta(nota) {
                 UPDATE dbo.NotaEnfermeria
                 SET IdCuenta = @idCuenta,
                     IdPaciente = @idPaciente,
-                    IdEmpleado = @idEmpleado,
                     Fecha_Hora_Fin = @fechaFin,
                     Subjetivo = @subjetivo,
                     Objetivo = @objetivo,
@@ -80,11 +109,16 @@ async function guardarNotaCompleta(nota) {
                 OUTPUT INSERTED.IdServicio AS IdServicio,
                        INSERTED.Fecha_Hora_Inicio AS FechaHoraInicio,
                        INSERTED.Fecha_Hora_Fin AS FechaHoraFin
-                WHERE IdNotaEnfermeria = @idNota;
+                WHERE IdNotaEnfermeria = @idNota
+                  AND IdEmpleado = @idEmpleado
+                  AND Fecha_Hora_Fin IS NULL;
             `);
 
             if (updateResult.rowsAffected[0] === 0) {
-                throw createRepositoryError(NOTA_NOT_FOUND, 'La nota SOAPIE solicitada no existe.');
+                throw createRepositoryError(
+                    NOTA_NO_AUTORIZADA,
+                    'Solo la enfermera que creó la nota puede editarla o firmarla.',
+                );
             }
             // El servicio no se toca al editar: la nota pertenece al servicio
             // donde se escribió, aunque el paciente ya se haya trasladado.
@@ -178,6 +212,53 @@ async function guardarNotaCompleta(nota) {
             `);
         }
 
+        // Consultar servicios planificados existentes para detectar cuáles se eliminaron
+        // o conservar los IdOrden ya creados en GalenHos (evita duplicar órdenes y permite anular)
+        const serviciosExistentesReq = transaction.request();
+        serviciosExistentesReq.input('idNotaServiciosExistentes', sql.Int, idNota);
+        const resPrev = await serviciosExistentesReq.query(`
+            SELECT
+                servicioPlan.IdProducto,
+                servicioPlan.IdOrden,
+                servicioPlan.Cantidad,
+                servicioPlan.IdAtencionDiagnostico,
+                servicioPlan.CodigoCIE10,
+                orden.IdEstadoFacturacion
+            FROM dbo.NotaEnfermeriaPlanServicio AS servicioPlan
+            LEFT JOIN dbo.FactOrdenServicio AS orden
+                ON orden.IdOrden = servicioPlan.IdOrden
+            WHERE servicioPlan.IdNotaEnfermeria = @idNotaServiciosExistentes;
+        `);
+        const serviciosPrevios = resPrev.recordset || [];
+
+        const mapaPrevios = new Map();
+        for (const prev of serviciosPrevios) {
+            mapaPrevios.set(Number(prev.IdProducto), {
+                idOrden: prev.IdOrden ? Number(prev.IdOrden) : null,
+                cantidad: Number(prev.Cantidad) || 1,
+                idAtencionDiagnostico: prev.IdAtencionDiagnostico == null
+                    ? null
+                    : Number(prev.IdAtencionDiagnostico),
+                codigoCIE10: prev.CodigoCIE10 || null,
+                estadoFacturacion: prev.IdEstadoFacturacion == null
+                    ? null
+                    : Number(prev.IdEstadoFacturacion),
+            });
+        }
+
+        const productosNuevosSet = new Set(nota.serviciosPlanificados.map(servicio => Number(servicio.id)));
+
+        // Anular en GalenHos las órdenes de servicios CPT que fueron retirados del plan
+        for (const [idProdPrev, servicioPrevio] of mapaPrevios.entries()) {
+            if (!productosNuevosSet.has(idProdPrev) && servicioPrevio.idOrden) {
+                await facturacionAnulacionRepository.anularOrdenServicio({
+                    idOrden: servicioPrevio.idOrden,
+                    idEmpleado: nota.idEmpleado || 1,
+                    observaciones: `CPT ${idProdPrev} eliminado de nota SOAPIE ${idNota}`,
+                }, transaction);
+            }
+        }
+
         const serviciosRequest = transaction.request();
         serviciosRequest.input('idNotaPlanServicio', sql.Int, idNota);
         await serviciosRequest.query(`
@@ -185,20 +266,9 @@ async function guardarNotaCompleta(nota) {
             WHERE IdNotaEnfermeria = @idNotaPlanServicio;
         `);
 
-        // GalenHos despacha cada CPT contra el diagnóstico principal de la
-        // atención (el de subclasificación 'D'). Se resuelve una sola vez por
-        // nota y se comparte entre todos los servicios planificados.
-        let idDiagnosticoPrincipal = null;
-        if (nota.idCuenta && nota.serviciosPlanificados.length > 0) {
-            try {
-                idDiagnosticoPrincipal = await obtenerIdDiagnosticoPrincipal(transaction, nota.idCuenta);
-            } catch {
-                // Si la atención no tiene diagnósticos registrados, el despacho
-                // se hace con idDiagnostico NULL como antes.
-            }
-        }
-        for (const idProducto of nota.serviciosPlanificados) {
-            await insertarServicioPlanificado(transaction, idNota, idProducto, nota, idDiagnosticoPrincipal);
+        for (const servicio of nota.serviciosPlanificados) {
+            const servicioPrevio = mapaPrevios.get(Number(servicio.id)) || null;
+            await insertarServicioPlanificado(transaction, idNota, servicio, nota, servicioPrevio);
         }
 
         // Vincular balances hídricos que se hayan creado en la misma atención
@@ -264,6 +334,45 @@ async function guardarNotaCompleta(nota) {
             }
         }
 
+        const serviciosGuardadosRequest = transaction.request();
+        serviciosGuardadosRequest.input('idNotaServiciosGuardados', sql.Int, idNota);
+        const serviciosGuardadosResult = await serviciosGuardadosRequest.query(`
+            SELECT
+                servicioPlan.IdProducto,
+                servicioPlan.CodigoServicio,
+                servicioPlan.NombreServicio,
+                COALESCE(despachoPlan.Cantidad, servicioPlan.Cantidad) AS Cantidad,
+                COALESCE(despachoPlan.idDiagnostico, servicioPlan.IdAtencionDiagnostico) AS IdAtencionDiagnostico,
+                COALESCE(diagnostico.CodigoCIE10, servicioPlan.CodigoCIE10) AS CodigoCIE10,
+                servicioPlan.IdOrden,
+                orden.IdEstadoFacturacion
+            FROM dbo.NotaEnfermeriaPlanServicio AS servicioPlan
+            LEFT JOIN dbo.FactOrdenServicio AS orden
+                ON orden.IdOrden = servicioPlan.IdOrden
+            LEFT JOIN dbo.FacturacionServicioDespacho AS despachoPlan
+                ON despachoPlan.idOrden = servicioPlan.IdOrden
+               AND despachoPlan.IdProducto = servicioPlan.IdProducto
+            LEFT JOIN dbo.AtencionesDiagnosticos AS diagnosticoAtencion
+                ON diagnosticoAtencion.IdAtencionDiagnostico = despachoPlan.idDiagnostico
+            LEFT JOIN dbo.Diagnosticos AS diagnostico
+                ON diagnostico.IdDiagnostico = diagnosticoAtencion.IdDiagnostico
+            WHERE servicioPlan.IdNotaEnfermeria = @idNotaServiciosGuardados;
+        `);
+        const serviciosPlanificados = (serviciosGuardadosResult.recordset || []).map(servicio => ({
+            id: Number(servicio.IdProducto),
+            codigo: servicio.CodigoServicio,
+            nombre: servicio.NombreServicio,
+            cantidad: Number(servicio.Cantidad) || 1,
+            idAtencionDiagnostico: servicio.IdAtencionDiagnostico == null
+                ? null
+                : Number(servicio.IdAtencionDiagnostico),
+            codigoCIE10: servicio.CodigoCIE10 || null,
+            idOrden: servicio.IdOrden == null ? null : Number(servicio.IdOrden),
+            estadoFacturacion: servicio.IdEstadoFacturacion == null
+                ? null
+                : Number(servicio.IdEstadoFacturacion),
+        }));
+
         await transaction.commit();
         return {
             id: idNota,
@@ -271,12 +380,19 @@ async function guardarNotaCompleta(nota) {
             servicioId,
             fechaHoraInicio,
             fechaHoraFin,
+            serviciosPlanificados,
         };
     } catch (error) {
         await transaction.rollback();
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "sameVitales".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function sameVitales(existing, current) {
     const fields = [
@@ -302,9 +418,20 @@ function sameVitales(existing, current) {
     }) && (existing.Presion_Arterial || null) === (current.presionArterial || null);
 }
 
+/**
+ * Implementa la operación "hasVitalValues".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function hasVitalValues(vitals) {
     return Object.values(vitals).some(value => value !== null && value !== undefined && value !== '');
 }
+
+/**
+ * Implementa la operación "saveDiagnosis".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
 
 async function saveDiagnosis(transaction, idNota, idNANDA, comentario) {
     const request = transaction.request();
@@ -327,17 +454,26 @@ async function saveDiagnosis(transaction, idNota, idNANDA, comentario) {
     `);
 }
 
-async function obtenerIdDiagnosticoPrincipal(transaction, idCuenta) {
+async function obtenerDiagnosticoAtencion(transaction, idCuenta, idAtencionDiagnostico) {
     const request = transaction.request();
     request.input('idCuentaDiagnostico', sql.Int, idCuenta);
+    request.input('idAtencionDiagnostico', sql.Int, idAtencionDiagnostico ?? null);
     const result = await request.query(`
-        SELECT TOP (1) ad.IdDiagnostico
+        SELECT TOP (1)
+            ad.IdAtencionDiagnostico,
+            d.CodigoCIE10
         FROM dbo.Atenciones AS a
         INNER JOIN dbo.AtencionesDiagnosticos AS ad
             ON ad.IdAtencion = a.IdAtencion
         INNER JOIN dbo.SubclasificacionDiagnosticos AS s
             ON s.IdSubclasificacionDx = ad.IdSubclasificacionDx
+        INNER JOIN dbo.Diagnosticos AS d
+            ON d.IdDiagnostico = ad.IdDiagnostico
         WHERE a.IdCuentaAtencion = @idCuentaDiagnostico
+          AND (
+              @idAtencionDiagnostico IS NULL
+              OR ad.IdAtencionDiagnostico = @idAtencionDiagnostico
+          )
         ORDER BY
             CASE s.Codigo
                 WHEN 'D' THEN 1
@@ -347,39 +483,157 @@ async function obtenerIdDiagnosticoPrincipal(transaction, idCuenta) {
             END,
             ad.IdDiagnostico;
     `);
-    return result.recordset?.[0]?.IdDiagnostico ?? null;
+    return result.recordset?.[0] ?? null;
 }
 
-async function insertarServicioPlanificado(transaction, idNota, idProducto, metadata = {}, idDiagnosticoPrincipal = null) {
+async function actualizarConsumosCpt(transaction, idCuenta, delta) {
+    if (!idCuenta || !delta) return;
+
     const request = transaction.request();
-    request.input('idNotaPlanServicio', sql.Int, idNota);
-    request.input('idProductoPlanServicio', sql.Int, idProducto);
+    request.input('idCuentaConsumo', sql.Int, idCuenta);
+    request.input('idPtoCargaConsumo', sql.Int, 716);
     const result = await request.query(`
-        INSERT INTO dbo.NotaEnfermeriaPlanServicio (
-            IdNotaEnfermeria, IdProducto, CodigoServicio, NombreServicio
-        )
-        SELECT
-            @idNotaPlanServicio,
-            servicio.IdProducto,
-            servicio.Codigo,
-            servicio.Nombre
-        FROM dbo.FactCatalogoServicios AS servicio
-        WHERE servicio.IdProducto = @idProductoPlanServicio
-          AND servicio.idEstado = 1;
-
-        SELECT @@ROWCOUNT AS FilasInsertadas;
+        SELECT TotalConsumos, TotalPagos, TotalPagosReembolso
+        FROM dbo.FacturacionCuentasAtencionPtos WITH (UPDLOCK, HOLDLOCK)
+        WHERE IdCuentaAtencion = @idCuentaConsumo
+          AND idPuntoCarga = @idPtoCargaConsumo;
     `);
+    const registro = result.recordset?.[0];
+    if (!registro && delta < 0) return;
 
-    if (result.recordset[0].FilasInsertadas !== 1) {
+    await cuentasAtencionRepository.actualizarCuentasAtencionPtos({
+        esNueva: !registro,
+        idCuentaAtencion: idCuenta,
+        idPuntoCarga: 716,
+        totalConsumos: Math.max(0, (Number(registro?.TotalConsumos) || 0) + delta),
+        totalPagos: Number(registro?.TotalPagos) || 0,
+        totalPagosReembolso: Number(registro?.TotalPagosReembolso) || 0,
+    }, transaction);
+}
+
+async function actualizarServicioCptExistente(transaction, idOrden, idProducto, cantidad, idAtencionDiagnostico, metadata) {
+    const request = transaction.request();
+    request.input('idOrdenCpt', sql.Int, idOrden);
+    request.input('idProductoCpt', sql.Int, idProducto);
+    const result = await request.query(`
+        SELECT
+            orden.IdEstadoFacturacion,
+            despacho.Cantidad,
+            despacho.Precio,
+            despacho.idDiagnostico
+        FROM dbo.FactOrdenServicio AS orden WITH (UPDLOCK, HOLDLOCK)
+        INNER JOIN dbo.FacturacionServicioDespacho AS despacho WITH (UPDLOCK, HOLDLOCK)
+            ON despacho.idOrden = orden.IdOrden
+        WHERE orden.IdOrden = @idOrdenCpt
+          AND despacho.IdProducto = @idProductoCpt;
+    `);
+    const despacho = result.recordset?.[0];
+    if (!despacho) {
         throw createRepositoryError(
-            'PLAN_SERVICE_INVALID',
-            'Uno de los servicios seleccionados no existe o ya no está activo en el catálogo.',
+            'CPT_ORDER_NOT_FOUND',
+            `No se encontró el despacho del CPT ${idProducto} para la orden ${idOrden}.`,
         );
     }
 
-    // Integración nativa con GalenHos / SIGH:
-    // Si la atención tiene IdCuenta, registramos la orden oficial en FactOrdenServicio y el CPT en FacturacionServicioDespacho
-    if (metadata.idCuenta) {
+    const estado = despacho.IdEstadoFacturacion == null
+        ? null
+        : Number(despacho.IdEstadoFacturacion);
+    const cantidadAnterior = Number(despacho.Cantidad);
+    const cantidadCambio = cantidad !== cantidadAnterior;
+    const diagnosticoCambio = Number(despacho.idDiagnostico) !== idAtencionDiagnostico;
+    if (!cantidadCambio && !diagnosticoCambio) return;
+
+    if (estado === 4 && cantidadCambio) {
+        throw createRepositoryError(
+            'CPT_QUANTITY_LOCKED',
+            `No se puede cambiar la cantidad del CPT ${idProducto} porque su orden ya está pagada.`,
+        );
+    }
+    if (!Number.isInteger(estado) || estado === 9) {
+        throw createRepositoryError(
+            'CPT_ORDER_NOT_EDITABLE',
+            `No se puede modificar el CPT ${idProducto} porque la orden está en estado ${estado}.`,
+        );
+    }
+
+    const precio = Number(despacho.Precio) || 0;
+    const updateRequest = transaction.request();
+    updateRequest.input('idOrdenCptUpdate', sql.Int, idOrden);
+    updateRequest.input('idProductoCptUpdate', sql.Int, idProducto);
+    updateRequest.input('cantidadCptUpdate', sql.Int, cantidad);
+    updateRequest.input('totalCptUpdate', sql.Money, precio * cantidad);
+    updateRequest.input('diagnosticoCptUpdate', sql.Int, idAtencionDiagnostico);
+    const updateResult = await updateRequest.query(`
+        UPDATE dbo.FacturacionServicioDespacho
+        SET Cantidad = @cantidadCptUpdate,
+            Total = @totalCptUpdate,
+            idDiagnostico = @diagnosticoCptUpdate
+        WHERE idOrden = @idOrdenCptUpdate
+          AND IdProducto = @idProductoCptUpdate;
+        SELECT @@ROWCOUNT AS FilasActualizadas;
+    `);
+    if (updateResult.recordset?.[0]?.FilasActualizadas !== 1) {
+        throw createRepositoryError(
+            'CPT_ORDER_UPDATE_FAILED',
+            `No se pudo actualizar el despacho del CPT ${idProducto}.`,
+        );
+    }
+
+    if (cantidadCambio && estado !== 4) {
+        await actualizarConsumosCpt(
+            transaction,
+            metadata.idCuenta,
+            precio * (cantidad - cantidadAnterior),
+        );
+    }
+    await registrarAuditoria({
+        idEmpleado: metadata.idEmpleado,
+        accion: 'M',
+        idRegistro: idOrden,
+        tabla: 'FacturacionServicioDespacho',
+        idListItem: 103,
+        observaciones: `CPT ${idProducto} modificado desde nota SOAPIE`,
+        throwOnError: true,
+    }, transaction);
+}
+
+async function insertarServicioPlanificado(transaction, idNota, servicio, metadata = {}, servicioPrevio = null) {
+    const idProducto = servicio.id;
+    if (!metadata.idCuenta) {
+        throw createRepositoryError(
+            'CPT_ACCOUNT_REQUIRED',
+            `No se puede registrar el CPT ${idProducto} en SISGalen porque la nota no tiene una cuenta de atención.`,
+        );
+    }
+
+    const idDiagnosticoSolicitado = servicio.idAtencionDiagnostico
+        ?? servicioPrevio?.idAtencionDiagnostico
+        ?? null;
+    const diagnostico = await obtenerDiagnosticoAtencion(
+        transaction,
+        metadata.idCuenta,
+        idDiagnosticoSolicitado,
+    );
+    if (!diagnostico) {
+        throw createRepositoryError(
+            idDiagnosticoSolicitado ? 'CPT_DIAGNOSIS_INVALID' : 'CPT_DIAGNOSIS_REQUIRED',
+            idDiagnosticoSolicitado
+                ? `El diagnóstico seleccionado para el CPT ${idProducto} no pertenece a la cuenta de atención.`
+                : `La cuenta de atención no tiene diagnósticos para asociar al CPT ${idProducto}.`,
+        );
+    }
+
+    let idOrdenAsignado = servicioPrevio?.idOrden || null;
+    if (idOrdenAsignado) {
+        await actualizarServicioCptExistente(
+            transaction,
+            idOrdenAsignado,
+            idProducto,
+            servicio.cantidad,
+            Number(diagnostico.IdAtencionDiagnostico),
+            metadata,
+        );
+    } else {
         try {
             const galenRequest = transaction.request();
             galenRequest.output('IdOrden', sql.Int);
@@ -400,46 +654,109 @@ async function insertarServicioPlanificado(transaction, idNota, idProducto, meta
             const spResult = await galenRequest.execute('dbo.FactOrdenServicioAgregar1');
             const idOrden = spResult.output?.IdOrden;
 
-            if (idOrden) {
-                const precioRequest = transaction.request();
-                precioRequest.input('idProductoDespacho', sql.Int, idProducto);
-                const precioResult = await precioRequest.query(`
-                    SELECT PrecioUnitario
-                    FROM dbo.FactCatalogoServiciosHosp
-                    WHERE IdProducto = @idProductoDespacho AND IdTipoFinanciamiento = 2;
-                `);
-                const precio = Number(precioResult.recordset?.[0]?.PrecioUnitario) || 0;
-
-                // Despacho oficial del CPT mediante el procedimiento de SIGH.
-                await facturacionRepository.agregarServicioDespacho({
-                    idOrden,
-                    idProducto,
-                    cantidad: 1,
-                    precio,
-                    total: precio,
-                    labConfHIS: '',
-                    grupoHIS: 0,
-                    subGrupoHIS: 0,
-                    idUsuarioAuditoria: metadata.idEmpleado || 1,
-                    idReceta: metadata.idReceta ?? null,
-                    idDiagnostico: metadata.idDiagnostico ?? idDiagnosticoPrincipal ?? null,
-                }, transaction);
-
-                // Registro oficial de auditoría en GalenHos para la orden creada
-                await registrarAuditoria({
-                    idEmpleado: metadata.idEmpleado,
-                    accion: 'A',
-                    idRegistro: idOrden,
-                    tabla: 'FactOrdenServicio',
-                    idListItem: 103,
-                    observaciones: `CPT ${idProducto} generado desde nota enfermeria`,
-                }, transaction);
+            if (!Number.isInteger(Number(idOrden)) || Number(idOrden) < 1) {
+                throw createRepositoryError(
+                    'CPT_ORDER_CREATION_FAILED',
+                    `GalenHos no devolvió un IdOrden al registrar el CPT ${idProducto}.`,
+                );
             }
-        } catch {
-            // Si la base de datos es de prueba o no tiene el SP instalado, no rompe el guardado de la nota
+
+            idOrdenAsignado = Number(idOrden);
+            const precioRequest = transaction.request();
+            precioRequest.input('idProductoDespacho', sql.Int, idProducto);
+            const precioResult = await precioRequest.query(`
+                SELECT PrecioUnitario
+                FROM dbo.FactCatalogoServiciosHosp
+                WHERE IdProducto = @idProductoDespacho AND IdTipoFinanciamiento = 2;
+            `);
+            const precio = Number(precioResult.recordset?.[0]?.PrecioUnitario) || 0;
+
+            // Despacho oficial del CPT mediante el procedimiento de SIGH.
+            await facturacionRepository.agregarServicioDespacho({
+                idOrden: idOrdenAsignado,
+                idProducto,
+                cantidad: servicio.cantidad,
+                precio,
+                total: precio * servicio.cantidad,
+                labConfHIS: '',
+                grupoHIS: 0,
+                subGrupoHIS: 0,
+                idUsuarioAuditoria: metadata.idEmpleado || 1,
+                idReceta: metadata.idReceta ?? null,
+                idDiagnostico: Number(diagnostico.IdAtencionDiagnostico),
+            }, transaction);
+
+            // Registro oficial de auditoría en GalenHos para la orden creada
+            await registrarAuditoria({
+                idEmpleado: metadata.idEmpleado,
+                accion: 'A',
+                idRegistro: idOrdenAsignado,
+                tabla: 'FactOrdenServicio',
+                idListItem: 103,
+                observaciones: `CPT ${idProducto} generado desde nota enfermeria`,
+                throwOnError: true,
+            }, transaction);
+
+            // Actualizar los consumos acumulados por punto de carga en FacturacionCuentasAtencionPtos (716 = CPT)
+            if (precio > 0) {
+                await actualizarConsumosCpt(
+                    transaction,
+                    metadata.idCuenta,
+                    precio * servicio.cantidad,
+                );
+            }
+        } catch (error) {
+            if (error.code === 'CPT_ORDER_CREATION_FAILED') {
+                throw error;
+            }
+            throw createRepositoryError(
+                'CPT_ORDER_CREATION_FAILED',
+                `No se pudo registrar el CPT ${idProducto} en SISGalen: ${error.message}`,
+            );
         }
     }
+
+    const request = transaction.request();
+    request.input('idNotaPlanServicio', sql.Int, idNota);
+    request.input('idProductoPlanServicio', sql.Int, idProducto);
+    request.input('idOrdenPlanServicio', sql.Int, idOrdenAsignado || null);
+    request.input('cantidadPlanServicio', sql.Int, servicio.cantidad);
+    request.input('idAtencionDiagnosticoPlanServicio', sql.Int, diagnostico.IdAtencionDiagnostico);
+    request.input('codigoCIE10PlanServicio', sql.VarChar(10), diagnostico.CodigoCIE10);
+    const result = await request.query(`
+        INSERT INTO dbo.NotaEnfermeriaPlanServicio (
+            IdNotaEnfermeria, IdProducto, CodigoServicio, NombreServicio, IdOrden,
+            Cantidad, IdAtencionDiagnostico, CodigoCIE10
+        )
+        SELECT
+            @idNotaPlanServicio,
+            servicio.IdProducto,
+            servicio.Codigo,
+            servicio.Nombre,
+            @idOrdenPlanServicio,
+            @cantidadPlanServicio,
+            @idAtencionDiagnosticoPlanServicio,
+            @codigoCIE10PlanServicio
+        FROM dbo.FactCatalogoServicios AS servicio
+        WHERE servicio.IdProducto = @idProductoPlanServicio
+          AND servicio.idEstado = 1;
+
+        SELECT @@ROWCOUNT AS FilasInsertadas;
+    `);
+
+    if (result.recordset[0].FilasInsertadas !== 1) {
+        throw createRepositoryError(
+            'PLAN_SERVICE_INVALID',
+            'Uno de los servicios seleccionados no existe o ya no está activo en el catálogo.',
+        );
+    }
 }
+
+/**
+ * Implementa la operación "insertCarePlanNoc".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function insertCarePlanNoc(transaction, idNota, idNANDA, idNOC, meta, resultadoObservado) {
     const request = transaction.request();
@@ -484,6 +801,12 @@ async function insertCarePlanNoc(transaction, idNota, idNANDA, idNOC, meta, resu
         );
     }
 }
+
+/**
+ * Implementa la operación "insertCarePlanNic".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function insertCarePlanNic(transaction, idNota, idNANDA, idNIC, realizada, motivo) {
     const request = transaction.request();
@@ -603,7 +926,12 @@ const NOTAS_QUERY = `
         cuidado.NICMotivo AS PlanNICMotivo,
         servicioPlan.IdProducto AS PlanServicioId,
         servicioPlan.CodigoServicio AS PlanServicioCodigo,
-        servicioPlan.NombreServicio AS PlanServicioNombre
+        servicioPlan.NombreServicio AS PlanServicioNombre,
+        servicioPlan.IdOrden AS PlanServicioIdOrden,
+        COALESCE(despachoPlan.Cantidad, servicioPlan.Cantidad) AS PlanServicioCantidad,
+        COALESCE(despachoPlan.idDiagnostico, servicioPlan.IdAtencionDiagnostico) AS PlanServicioIdAtencionDiagnostico,
+        COALESCE(diagnosticoPlan.CodigoCIE10, servicioPlan.CodigoCIE10) AS PlanServicioCodigoCIE10,
+        ordenServicio.IdEstadoFacturacion AS PlanServicioEstadoFacturacion
     FROM dbo.NotaEnfermeria AS n
     LEFT JOIN dbo.Empleados AS e
         ON e.IdEmpleado = n.IdEmpleado
@@ -628,11 +956,31 @@ const NOTAS_QUERY = `
         ON nic.IdNIC = cuidado.IdNIC
     LEFT JOIN dbo.NotaEnfermeriaPlanServicio AS servicioPlan
         ON servicioPlan.IdNotaEnfermeria = n.IdNotaEnfermeria
+    LEFT JOIN dbo.FactOrdenServicio AS ordenServicio
+        ON ordenServicio.IdOrden = servicioPlan.IdOrden
+    LEFT JOIN dbo.FacturacionServicioDespacho AS despachoPlan
+        ON despachoPlan.idOrden = servicioPlan.IdOrden
+       AND despachoPlan.IdProducto = servicioPlan.IdProducto
+    LEFT JOIN dbo.AtencionesDiagnosticos AS diagnosticoAtencionPlan
+        ON diagnosticoAtencionPlan.IdAtencionDiagnostico = despachoPlan.idDiagnostico
+    LEFT JOIN dbo.Diagnosticos AS diagnosticoPlan
+        ON diagnosticoPlan.IdDiagnostico = diagnosticoAtencionPlan.IdDiagnostico
 `;
+
+/**
+ * Implementa la operación "getAllNotas".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function getAllNotas() {
     return dbHelper.query(`${NOTAS_QUERY} ORDER BY n.Fecha_Hora_Inicio DESC, n.IdNotaEnfermeria DESC;`);
 }
+
+/**
+ * Implementa la operación "getNotasPorPaciente".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
 
 async function getNotasPorPaciente(idPaciente) {
     return dbHelper.query(
@@ -640,6 +988,11 @@ async function getNotasPorPaciente(idPaciente) {
         [{ name: 'idPaciente', type: sql.Int, value: idPaciente }]
     );
 }
+
+/**
+ * Implementa la operación "getHistorialVitals".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
 
 async function getHistorialVitals(idNota, limit = 10, offset = 0) {
     return dbHelper.query(`
@@ -676,6 +1029,12 @@ async function getHistorialVitals(idNota, limit = 10, offset = 0) {
     ]);
 }
 
+/**
+ * Implementa la operación "getHistorialVitalsPorAtencion".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function getHistorialVitalsPorAtencion(idCuenta, limit = 10, offset = 0) {
     return dbHelper.query(`
         SELECT
@@ -711,12 +1070,36 @@ async function getHistorialVitalsPorAtencion(idCuenta, limit = 10, offset = 0) {
     ]);
 }
 
+/**
+ * Implementa la operación "deleteNotaById".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function deleteNotaById(idNota) {
     const pool = await dbHelper.getPool();
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
 
     try {
+        // Anular en GalenHos todos los CPTs asociados a esta nota antes de eliminarlos
+        const ordenesRequest = transaction.request();
+        ordenesRequest.input('idNotaOrdenes', sql.Int, idNota);
+        const ordenesResult = await ordenesRequest.query(`
+            SELECT IdOrden
+            FROM dbo.NotaEnfermeriaPlanServicio
+            WHERE IdNotaEnfermeria = @idNotaOrdenes AND IdOrden IS NOT NULL;
+        `);
+        for (const row of (ordenesResult.recordset || [])) {
+            if (row.IdOrden) {
+                await facturacionAnulacionRepository.anularOrdenServicio({
+                    idOrden: Number(row.IdOrden),
+                    idEmpleado: 1,
+                    observaciones: `Eliminación total de nota SOAPIE ${idNota}`,
+                }, transaction);
+            }
+        }
+
         const request = transaction.request();
         request.input('idNota', sql.Int, idNota);
         await request.query(`

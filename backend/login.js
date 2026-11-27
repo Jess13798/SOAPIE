@@ -1,6 +1,14 @@
+// Propósito: Proceso de inicio de sesión.
+// Responsable de mantener separadas las reglas de este archivo.
+
 ﻿const sql = require('mssql');
 const { query } = require('./dbHelper');
 const bcrypt = require('bcryptjs');
+
+/**
+ * Implementa la operación "validarEmpleado" mediante una función auxiliar exportable.
+ */
+
 
 const validarEmpleado = async (usuario, PasswordEnviado) => {
     try {

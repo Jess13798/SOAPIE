@@ -4,6 +4,12 @@
 
 const facturacionRepository = require('../repositories/facturacionServicioDespachoRepository');
 const cuentasAtencionRepository = require('../repositories/facturacionCuentasAtencionRepository');
+const facturacionAnulacionRepository = require('../repositories/facturacionAnulacionRepository');
+
+/**
+ * Implementa la operación "agregarServicioDespacho".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
 
 async function agregarServicioDespacho(datos) {
     try {
@@ -14,6 +20,12 @@ async function agregarServicioDespacho(datos) {
     }
 }
 
+/**
+ * Implementa la operación "agregarServicioDespachoRc".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function agregarServicioDespachoRc(datos) {
     try {
         return await facturacionRepository.agregarServicioDespachoRc(datos);
@@ -22,6 +34,12 @@ async function agregarServicioDespachoRc(datos) {
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "consultarCuentasAtencionPtos".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function consultarCuentasAtencionPtos(idCuenta) {
     try {
@@ -32,6 +50,12 @@ async function consultarCuentasAtencionPtos(idCuenta) {
     }
 }
 
+/**
+ * Implementa la operación "actualizarCuentasAtencionPtos".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function actualizarCuentasAtencionPtos(datos) {
     try {
         return await cuentasAtencionRepository.actualizarCuentasAtencionPtos(datos);
@@ -40,6 +64,12 @@ async function actualizarCuentasAtencionPtos(datos) {
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "actualizarImportesCuenta".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function actualizarImportesCuenta(datos) {
     try {
@@ -50,11 +80,44 @@ async function actualizarImportesCuenta(datos) {
     }
 }
 
+/**
+ * Implementa la operación "consultarComprobantesPagoPorCuenta".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function consultarComprobantesPagoPorCuenta(idCuenta) {
     try {
         return await cuentasAtencionRepository.consultarComprobantesPagoPorCuenta(idCuenta);
     } catch (error) {
         console.error('Error en facturacionService.consultarComprobantesPagoPorCuenta:', error.message);
+        throw error;
+    }
+}
+
+async function anularOrdenServicio(datos) {
+    try {
+        return await facturacionAnulacionRepository.anularOrdenServicio(datos);
+    } catch (error) {
+        console.error('Error en facturacionService.anularOrdenServicio:', error.message);
+        throw error;
+    }
+}
+
+async function obtenerOrdenServicioPorId(idOrden) {
+    try {
+        return await facturacionAnulacionRepository.obtenerOrdenServicioPorId(idOrden);
+    } catch (error) {
+        console.error('Error en facturacionService.obtenerOrdenServicioPorId:', error.message);
+        throw error;
+    }
+}
+
+async function obtenerDespachoPorIdOrden(idOrden) {
+    try {
+        return await facturacionAnulacionRepository.obtenerDespachoPorIdOrden(idOrden);
+    } catch (error) {
+        console.error('Error en facturacionService.obtenerDespachoPorIdOrden:', error.message);
         throw error;
     }
 }
@@ -66,4 +129,7 @@ module.exports = {
     actualizarCuentasAtencionPtos,
     actualizarImportesCuenta,
     consultarComprobantesPagoPorCuenta,
+    anularOrdenServicio,
+    obtenerOrdenServicioPorId,
+    obtenerDespachoPorIdOrden,
 };

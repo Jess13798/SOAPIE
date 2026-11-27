@@ -4,15 +4,28 @@
 const sql = require('mssql');
 const { query, executeProcedure } = require('../../../../dbHelper');
 
+/**
+
+
+ * Implementa la operación "getDiagnosticosByCuenta".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 async function getDiagnosticosByCuenta(idCuentaAtencion) {
     if (!idCuentaAtencion) return [];
 
     const result = await query(`
-        SELECT CodigoCIE10, IdDiagnostico, Descripcion, Codigo
+        SELECT CodigoCIE10, IdDiagnostico, IdAtencionDiagnostico, Descripcion, Codigo
         FROM (
             SELECT 
                 d.CodigoCIE10,
                 atd.IdDiagnostico,
+                atd.IdAtencionDiagnostico,
                 d.Descripcion,
                 s.Codigo,
                 ROW_NUMBER() OVER (
@@ -25,12 +38,14 @@ async function getDiagnosticosByCuenta(idCuentaAtencion) {
                             ELSE 4
                         END
                 ) AS rn
-            FROM AtencionesDiagnosticos atd
+            FROM Atenciones a
+            INNER JOIN AtencionesDiagnosticos atd
+                ON atd.IdAtencion = a.IdAtencion
             INNER JOIN Diagnosticos d 
                 ON d.IdDiagnostico = atd.IdDiagnostico
             INNER JOIN SubclasificacionDiagnosticos s 
                 ON s.IdSubclasificacionDx = atd.IdSubclasificacionDx
-            WHERE atd.IdAtencion = @idcuentaatencion
+            WHERE a.IdCuentaAtencion = @idcuentaatencion
         ) x
         WHERE rn = 1
     `, [
@@ -45,6 +60,14 @@ async function getDiagnosticosByCuenta(idCuentaAtencion) {
  * utilizando el procedimiento almacenado oficial de SIGH/GalenHos.
  * Utiliza: dbo.DevuelveIdDIagnostico
  */
+/**
+
+ * Implementa la operación "devuelveIdDiagnostico".
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+ */
+
 async function devuelveIdDiagnostico(codigoCIE) {
     if (!codigoCIE) return 0;
     const codigoFormateado = String(codigoCIE).trim().padEnd(7, ' ');

@@ -20,6 +20,12 @@ const validarEmpleado = require('../login');
 // Hash bcrypt real de la contrasena "clave-correcta" (coste bajo: rapido).
 const HASH = bcrypt.hashSync('clave-correcta', 4);
 
+/**
+ * Implementa la operación "empleadoFalso".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function empleadoFalso(extra = {}) {
     return {
         IdEmpleado: 1,

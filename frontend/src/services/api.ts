@@ -3,13 +3,12 @@
  * Centraliza todas las llamadas HTTP al backend para evitar URLs quemadas y código duplicado.
  */
 
-import type { Patient, NotaEnfermeria, PacienteBD, SignoVitalHistorial } from '@/types'
+import type { Patient, NotaEnfermeria, PacienteBD, ServicioPlanificado, SignoVitalHistorial } from '@/types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
-// ==========================================
+
 // 0. SESIÓN / TOKEN
-// ==========================================
 const TOKEN_KEY = 'token'
 
 export class ApiError extends Error {
@@ -19,13 +18,31 @@ export class ApiError extends Error {
     }
 }
 
+/**
+ * Implementa la operación "getToken".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 export function getToken(): string | null {
     return sessionStorage.getItem(TOKEN_KEY)
 }
 
+/**
+ * Implementa la operación "setToken".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 export function setToken(token: string): void {
     sessionStorage.setItem(TOKEN_KEY, token)
 }
+
+/**
+ * Implementa la operación "limpiarSesion".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 export function limpiarSesion(): void {
     sessionStorage.removeItem(TOKEN_KEY)
@@ -94,9 +111,7 @@ export interface RegistroKardex {
     FechaHora: string
 }
 
-// ==========================================
 // 1. AUTENTICACIÓN / LOGIN
-// ==========================================
 export interface LoginPayload {
     usuario: string
     Password: string
@@ -121,9 +136,7 @@ export const authService = {
     },
 }
 
-// ==========================================
 // 2. PACIENTES Y SERVICIOS
-// ==========================================
 export interface Servicio {
     IdServicio: number
     Nombre: string
@@ -171,9 +184,7 @@ export const pacientesService = {
     },
 }
 
-// ==========================================
 // 3. GESTIÓN DE CAMAS Y TRASLADOS
-// ==========================================
 export interface AsignarCamaPayload {
     IdPaciente: number
     IdCuentaAtencion: number
@@ -223,9 +234,7 @@ export const camasService = {
     },
 }
 
-// ==========================================
 // 4. NOTAS DE ENFERMERÍA Y SIGNOS VITALES
-// ==========================================
 export const notasService = {
     getNotas(): Promise<NotaEnfermeria[]> {
         return request<NotaEnfermeria[]>('/notas')
@@ -237,6 +246,7 @@ export const notasService = {
         turno?: 'dia' | 'noche'
         vitalesRegistrados?: boolean
         servicioId?: number | null
+        serviciosPlanificados?: ServicioPlanificado[]
         fecha: string
         hora: string
         fechaFirmada: string
@@ -249,6 +259,7 @@ export const notasService = {
             turno?: 'dia' | 'noche'
             vitalesRegistrados?: boolean
             servicioId?: number | null
+            serviciosPlanificados?: ServicioPlanificado[]
             fecha: string
             hora: string
             fechaFirmada: string
@@ -324,9 +335,7 @@ export const kardexService = {
     },
 }
 
-// ==========================================
 // 5. DIAGNÓSTICOS Y MÉDICOS
-// ==========================================
 export interface Medico {
     IdMedico: number
     IdEmpleado: number
@@ -338,6 +347,7 @@ export interface Medico {
 export interface Diagnostico {
     CodigoCIE10: string
     IdDiagnostico: number
+    IdAtencionDiagnostico: number
     Descripcion: string
     Codigo: string
 }
@@ -490,5 +500,34 @@ export const facturacionService = {
      */
     getComprobantesPago(idCuenta: number): Promise<{ success: boolean; idCuenta: number; datos: any[] }> {
         return request<{ success: boolean; idCuenta: number; datos: any[] }>(`/facturacion/cuentas/${idCuenta}/comprobantes-pago`)
+    },
+
+    /**
+     * Obtiene los datos de una orden de servicio oficial de GalenHos.
+     * SP: dbo.FactOrdenServicioSeleccionarPorId
+     */
+    getOrdenServicio(idOrden: number): Promise<{ success: boolean; orden: any }> {
+        return request<{ success: boolean; orden: any }>(`/facturacion/ordenes/${idOrden}`)
+    },
+
+    /**
+     * Anula una orden de servicio de CPT en GalenHos (cambio a IdEstadoFacturacion = 9,
+     * financiamientos a 9, auditoría 'E' y descuento de saldos).
+     */
+    anularOrdenServicio(idOrden: number, payload: { idEmpleado?: number; observaciones?: string } = {}): Promise<{
+        success: boolean
+        idOrden: number
+        idEstadoFacturacion: number
+        montoDescontado: number
+    }> {
+        return request<{
+            success: boolean
+            idOrden: number
+            idEstadoFacturacion: number
+            montoDescontado: number
+        }>(`/facturacion/ordenes/${idOrden}/anular`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        })
     },
 }

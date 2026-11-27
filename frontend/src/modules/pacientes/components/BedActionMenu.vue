@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "pacientes". -->
+
 <template>
   <div class="relative">
     <button

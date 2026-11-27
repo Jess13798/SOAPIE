@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "pacientes". -->
+
 <template>
   <Teleport to="body">
     <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center">

@@ -1,3 +1,5 @@
+<!-- Propósito: Implementación del archivo SuccessModal.vue. -->
+
 <template>
   <Transition name="scale">
     <div v-if="show" class="fixed inset-0 z-[200] flex items-center justify-center p-4">

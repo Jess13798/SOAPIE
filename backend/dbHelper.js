@@ -1,3 +1,6 @@
+// Propósito: Implementación del archivo dbHelper.js.
+// Responsable de mantener separadas las reglas de este archivo.
+
 const sql = require('mssql');
 const { dbConfig } = require('./database');
 
@@ -6,12 +9,24 @@ const { dbConfig } = require('./database');
 // la configuración de tiempo de espera y errores de SQL Server.
 let poolInstance = null;
 
+/**
+ * Implementa la operación "getPool".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function getPool() {
     if (!poolInstance) {
         poolInstance = await sql.connect(dbConfig);
     }
     return poolInstance;
 }
+
+/**
+ * Implementa la operación "closePool".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function closePool() {
     if (poolInstance) {
@@ -25,6 +40,11 @@ async function closePool() {
 //   await query('SELECT * FROM Tabla WHERE Id = @id', [
 //     { name: 'id', type: sql.Int, value: 123 }
 //   ]);
+/**
+ * Implementa la operación "query".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function query(sqlText, params = []) {
     try {
         const pool = await getPool();
@@ -44,6 +64,11 @@ async function query(sqlText, params = []) {
 }
 
 // Ejecuta un procedimiento almacenado con parámetros nombrados.
+/**
+ * Implementa la operación "executeProcedure".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function executeProcedure(procName, params = []) {
     try {
         const pool = await getPool();

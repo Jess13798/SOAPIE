@@ -1,3 +1,6 @@
+// Propósito: Definición de rutas HTTP del módulo "kardex".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const express = require('express');
 const kardexModule = require('./index');
 

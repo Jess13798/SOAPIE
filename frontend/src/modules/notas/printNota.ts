@@ -1,4 +1,19 @@
+// Propósito: Implementación del archivo printNota.ts.
+// Responsable de mantener separadas las reglas de este archivo.
+
 import type { NotaEnfermeria, Patient, SignosVitales } from '@/types'
+
+/**
+
+
+ * Implementa la operación "escapeHtml".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
@@ -9,16 +24,52 @@ function escapeHtml(value: unknown): string {
     .replace(/'/g, '&#39;')
 }
 
+/**
+
+
+ * Implementa la operación "valueOrDash".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function valueOrDash(value: unknown): string {
   const valueText = String(value ?? '').trim()
   return valueText ? escapeHtml(valueText) : '—'
 }
+
+/**
+
+
+ * Implementa la operación "formatDate".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function formatDate(value?: string | null): string {
   if (!value) return '—'
   const dateMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/)
   return dateMatch ? `${dateMatch[3]}/${dateMatch[2]}/${dateMatch[1]}` : escapeHtml(value)
 }
+
+/**
+
+
+ * Implementa la operación "renderVitals".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function renderVitals(vitals?: SignosVitales): string {
   if (!vitals) return '<p class="empty">Sin signos vitales registrados en esta nota.</p>'
@@ -43,6 +94,18 @@ function renderVitals(vitals?: SignosVitales): string {
     `<div class="vital"><span class="vital-label">${escapeHtml(label)}</span><strong>${valueOrDash(value)}</strong><span class="vital-unit">${escapeHtml(unit)}</span></div>`
   ).join('')}</div>`
 }
+
+/**
+
+
+ * Implementa la operación "renderCarePlan".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function renderCarePlan(nota: NotaEnfermeria): string {
   if (!nota.planCuidados?.length) return '<p class="empty">Sin plan de cuidados NANDA/NOC/NIC registrado.</p>'
@@ -87,9 +150,33 @@ function renderCarePlan(nota: NotaEnfermeria): string {
   }).join('')
 }
 
+/**
+
+
+ * Implementa la operación "section".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function section(title: string, content: string): string {
   return `<section class="note-section"><h2>${title}</h2><div class="section-content">${valueOrDash(content)}</div></section>`
 }
+
+/**
+
+
+ * Implementa la operación "printNota".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 export function printNota(nota: NotaEnfermeria, patient: Patient, noteNumber: number): boolean {
   if (!nota.isFirmada) {

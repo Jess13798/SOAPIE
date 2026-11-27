@@ -1,3 +1,6 @@
+// Propósito: Reglas de negocio del módulo "catalogos".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { agruparInterrelaciones } = require('./nandaNocNicService');

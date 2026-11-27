@@ -1,3 +1,6 @@
+// Propósito: Punto de entrada del servidor y configuración de rutas.
+// Responsable de mantener separadas las reglas de este archivo.
+
 const nandaNocNicService = require('./services/nandaNocNicService');
 const serviciosRepository = require('./repositories/factCatalogoServiciosRepository');
 

@@ -12,6 +12,11 @@ const { firmarToken, verificarToken, requiereAuth } = require('../auth');
 
 // Construye un token valido/vencido con el mismo algoritmo de auth.js,
 // usando el secreto de test. Sirve para probar la expiracion sin esperar 8h.
+/**
+ * Implementa la operación "construirToken".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function construirToken(payload, exp) {
     const cuerpo = Buffer.from(JSON.stringify({ ...payload, exp })).toString('base64url');
     const firma = crypto
@@ -20,6 +25,12 @@ function construirToken(payload, exp) {
         .digest('base64url');
     return `${cuerpo}.${firma}`;
 }
+
+/**
+ * Implementa la operación "respuestaFalsa".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function respuestaFalsa() {
     return {

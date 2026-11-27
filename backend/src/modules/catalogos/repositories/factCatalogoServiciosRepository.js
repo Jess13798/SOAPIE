@@ -1,3 +1,6 @@
+// Propósito: Acceso a datos del módulo "catalogos".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const sql = require('mssql');
 const { executeProcedure } = require('../../../../dbHelper');
 
@@ -5,6 +8,11 @@ const { executeProcedure } = require('../../../../dbHelper');
  * 1. Búsqueda de CPTs por Punto de Carga y Financiamiento oficial de SIGH.
  * Utiliza: dbo.FactCatalogoServiciosHospFiltraPorPuntoCargaTipoFinanciamiento
  */
+/**
+ * Implementa la operación "buscarServicios".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function buscarServicios(buscar, idPuntoCarga = 716, idTipoFinanciamiento = 2) {
     const texto = (buscar || '').trim();
     const esCodigo = /^\d+$/.test(texto);
@@ -35,6 +43,11 @@ async function buscarServicios(buscar, idPuntoCarga = 716, idTipoFinanciamiento 
  * 2. Obtener la configuración hospitalaria de un producto por tipo de financiamiento.
  * Utiliza: dbo.FactCatalogoServiciosXidTipoFinanciamiento
  */
+/**
+ * Implementa la operación "obtenerServicioPorFinanciamiento".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function obtenerServicioPorFinanciamiento(idProducto, idTipoFinanciamiento = 2) {
     const result = await executeProcedure('dbo.FactCatalogoServiciosXidTipoFinanciamiento', [
         { name: 'idProducto', type: sql.Int, value: Number(idProducto) },
@@ -48,6 +61,11 @@ async function obtenerServicioPorFinanciamiento(idProducto, idTipoFinanciamiento
  * 3. Consultar los datos del Tipo de Financiamiento en GalenHos/SIGH.
  * Utiliza: dbo.TiposFinanciamientoSeleccionarPorId
  */
+/**
+ * Implementa la operación "obtenerTipoFinanciamientoPorId".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function obtenerTipoFinanciamientoPorId(idTipoFinanciamiento = 2) {
     const result = await executeProcedure('dbo.TiposFinanciamientoSeleccionarPorId', [
         { name: 'IdTipoFinanciamiento', type: sql.Int, value: Number(idTipoFinanciamiento) },

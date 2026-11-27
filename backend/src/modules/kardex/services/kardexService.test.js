@@ -1,3 +1,6 @@
+// Propósito: Reglas de negocio del módulo "kardex".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { validarRegistro, validarConsulta } = require('./kardexService');

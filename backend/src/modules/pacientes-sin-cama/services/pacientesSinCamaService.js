@@ -3,6 +3,12 @@
 
 const pacientesSinCamaRepository = require('../repositories/pacientesSinCamaRepository');
 
+/**
+ * Implementa la operación "obtenerPacientesSinCama".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function obtenerPacientesSinCama(nombreServicio = null) {
     try {
         return await pacientesSinCamaRepository.getPacientesSinCama(nombreServicio);
@@ -11,6 +17,12 @@ async function obtenerPacientesSinCama(nombreServicio = null) {
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "asignarCama".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function asignarCama({ IdPaciente, IdCuentaAtencion, IdCama, IdMedicoOrdena, idUsuario, usuario }) {
     try {
@@ -28,6 +40,12 @@ async function asignarCama({ IdPaciente, IdCuentaAtencion, IdCama, IdMedicoOrden
     }
 }
 
+/**
+ * Implementa la operación "moverPacienteDeCama".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function moverPacienteDeCama({ IdPaciente, IdCama, IdCuentaAtencion, idUsuario, usuario }) {
     try {
         return await pacientesSinCamaRepository.moverPacienteDeCama({
@@ -42,6 +60,12 @@ async function moverPacienteDeCama({ IdPaciente, IdCama, IdCuentaAtencion, idUsu
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "registrarTransferenciaEstancia".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function registrarTransferenciaEstancia(payload) {
     try {

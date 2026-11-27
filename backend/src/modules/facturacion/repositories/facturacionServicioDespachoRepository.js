@@ -1,3 +1,6 @@
+// Propósito: Acceso a datos del módulo "facturacion".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const sql = require('mssql');
 const { executeProcedure } = require('../../../../dbHelper');
 
@@ -5,11 +8,22 @@ const PROCEDURE = 'dbo.FacturacionServicioDespachoAgregar';
 const PROCEDURE_RC = 'dbo.FacturacionServicioDespachoAgregar_Rc';
 const INVALID_INPUT = 'FACTURACION_INVALID_INPUT';
 
+/**
+ * Implementa la operación "createRepositoryError".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function createRepositoryError(code, message) {
     const error = new Error(message);
     error.code = code;
     return error;
 }
+
+/**
+ * Implementa la operación "enteroRequerido".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function enteroRequerido(value, fieldName) {
     const parsed = Number(value);
@@ -21,6 +35,12 @@ function enteroRequerido(value, fieldName) {
     }
     return parsed;
 }
+
+/**
+ * Implementa la operación "enteroOpcional".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function enteroOpcional(value, fieldName) {
     if (value === undefined || value === null || value === '') return null;
@@ -34,6 +54,12 @@ function enteroOpcional(value, fieldName) {
     return parsed;
 }
 
+/**
+ * Implementa la operación "cantidadRequerida".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function cantidadRequerida(value) {
     const parsed = Number(value ?? 1);
     if (!Number.isInteger(parsed) || parsed < 1 || parsed > 2147483647) {
@@ -42,6 +68,11 @@ function cantidadRequerida(value) {
     return parsed;
 }
 
+/**
+ * Implementa la operación "monto".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function monto(value, fieldName) {
     const parsed = Number(value ?? 0);
     if (!Number.isFinite(parsed) || parsed < 0) {
@@ -49,6 +80,18 @@ function monto(value, fieldName) {
     }
     return parsed;
 }
+
+/**
+
+
+ * Implementa la operación "grupoHIS".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function grupoHIS(value, fieldName) {
     const parsed = Number(value ?? 0);
@@ -63,6 +106,14 @@ function grupoHIS(value, fieldName) {
  * La variante _Rc no guarda receta ni diagnóstico, por eso solo se validan
  * cuando se usarán.
  */
+/**
+
+ * Implementa la operación "normalizarDespacho".
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+ */
+
 function normalizarDespacho(datos = {}, incluirReceta = true) {
     const cantidad = cantidadRequerida(datos.cantidad);
     const precio = monto(datos.precio, 'Precio');
@@ -95,6 +146,11 @@ function normalizarDespacho(datos = {}, incluirReceta = true) {
     return normalizado;
 }
 
+/**
+ * Implementa la operación "bindDespacho".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function bindDespacho(request, datos, incluirReceta) {
     request.input('idOrden', sql.Int, datos.idOrden);
     request.input('IdProducto', sql.Int, datos.idProducto);
@@ -111,6 +167,11 @@ function bindDespacho(request, datos, incluirReceta) {
         request.input('idDiagnostico', sql.Int, datos.idDiagnostico);
     }
 }
+
+/**
+ * Implementa la operación "ejecutarDespacho".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
 
 async function ejecutarDespacho(procName, datos, incluirReceta, transaction) {
     const normalizado = normalizarDespacho(datos, incluirReceta);
@@ -148,6 +209,11 @@ async function ejecutarDespacho(procName, datos, incluirReceta, transaction) {
  * Utiliza: dbo.FacturacionServicioDespachoAgregar
  * Incluye los campos idReceta e idDiagnostico del flujo oficial de GalenHos.
  */
+/**
+ * Implementa la operación "agregarServicioDespacho".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function agregarServicioDespacho(datos, transaction = null) {
     return ejecutarDespacho(PROCEDURE, datos, true, transaction);
 }
@@ -156,6 +222,12 @@ async function agregarServicioDespacho(datos, transaction = null) {
  * 2. Variante sin receta ni diagnóstico (módulo de recetas / consumos).
  * Utiliza: dbo.FacturacionServicioDespachoAgregar_Rc
  */
+/**
+
+ * Implementa la operación "agregarServicioDespachoRc".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function agregarServicioDespachoRc(datos, transaction = null) {
     return ejecutarDespacho(PROCEDURE_RC, datos, false, transaction);
 }

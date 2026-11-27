@@ -1,7 +1,10 @@
+<!-- Propósito: Componente visual del módulo "pacientes". -->
+
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-3 h-full min-h-0">
     <!-- Tabla de Pacientes Sin Cama (Subcomponente extraído) -->
     <PacientesSinCamaTable
+      class="shrink-0"
       :pacientes-sin-cama="pacientesSinCama"
       :loading="loadingPacientesSinCama"
       :servicios="props.servicios"
@@ -12,9 +15,10 @@
     />
 
     <!-- Contenedor Lista de Pacientes con Cama -->
-    <div class="rounded-lg border border-slate-200 bg-white shadow-sm overflow-visible">
+    <div class="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
       <!-- Header con Estadísticas (Subcomponente extraído) -->
       <BedCountersHeader
+        class="shrink-0"
         title="Lista de Pacientes"
         :servicio="servicioNombreSeleccionado"
         :total="totalCamas"
@@ -25,16 +29,16 @@
 
       <div
         :class="[
-          'grid grid-cols-1',
+          'grid grid-cols-1 flex-1 min-h-0',
           $slots['inside-list'] ? 'xl:grid-cols-[280px_minmax(0,1fr)]' : ''
         ]"
       >
-        <div v-if="$slots['inside-list']" class="border-b border-slate-100 bg-white xl:border-b-0 xl:border-r xl:border-slate-100">
+        <div v-if="$slots['inside-list']" class="border-b border-slate-100 bg-white xl:border-b-0 xl:border-r xl:border-slate-100 h-full min-h-0 overflow-hidden">
           <slot name="inside-list" />
         </div>
-        <div class="min-w-0 self-start w-full">
+        <div class="min-w-0 self-stretch w-full flex flex-col h-full min-h-0">
             <!-- Vista móvil: tarjetas -->
-            <div class="md:hidden space-y-2">
+            <div class="md:hidden space-y-2 overflow-y-auto p-2">
               <div
                 v-for="(patient, index) in filteredPatients"
                 :key="'m-' + (patient.id || index)"
@@ -87,8 +91,8 @@
             </div>
 
             <!-- Table (desktop) -->
-            <div class="hidden md:block overflow-x-auto">
-              <div :class="filteredPatients.length > 8 ? 'max-h-[560px] overflow-y-auto' : ''">
+            <div class="hidden md:flex flex-col flex-1 min-h-0 overflow-x-auto">
+              <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
               <table class="w-full min-w-[900px] table-fixed text-left border-collapse">
                 <colgroup>
                   <col class="w-[20%]" />
@@ -97,7 +101,7 @@
                   <col class="w-[16%]" />
                   <col class="w-[27%]" />
                 </colgroup>
-                <thead :class="filteredPatients.length > 8 ? 'sticky top-0 z-10' : ''">
+                <thead class="sticky top-0 z-10">
                   <tr class="bg-sky-700 border-b border-sky-700">
                     <th class="bg-sky-700 px-3 py-2 text-left text-[10px] font-bold text-white uppercase tracking-wider">
                       <div class="flex items-center gap-1 cursor-pointer hover:text-white/90">

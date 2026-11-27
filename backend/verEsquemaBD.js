@@ -108,6 +108,11 @@ const Q_FOREIGN_KEYS = `
 `;
 
 // Formatea el tipo de dato tal como se ve en SQL Server.
+/**
+ * Implementa la operación "formatearTipo".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function formatearTipo(col) {
     const tipo = col.tipo;
     if (['varchar', 'char', 'varbinary', 'binary'].includes(tipo)) {
@@ -124,10 +129,22 @@ function formatearTipo(col) {
     return tipo;
 }
 
+/**
+ * Implementa la operación "limpiarDefecto".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function limpiarDefecto(def) {
     if (def === null || def === undefined) return '';
     return String(def).replace(/^\(|\)$/g, '').replace(/\s+/g, ' ').trim();
 }
+
+/**
+ * Implementa la operación "main".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function main() {
     const pool = await sql.connect(dbConfig);

@@ -1,3 +1,5 @@
+<!-- Propósito: Implementación del archivo Login.vue. -->
+
 <template>
   <div class="min-h-screen w-full bg-slate-50 flex items-center justify-center p-4">
     <div class="w-full max-w-6xl bg-white rounded-3xl flex flex-col lg:flex-row shadow-2xl overflow-hidden min-h-[600px]">

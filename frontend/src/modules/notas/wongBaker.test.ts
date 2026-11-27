@@ -1,3 +1,6 @@
+// Propósito: Implementación del archivo wongBaker.test.ts.
+// Responsable de mantener separadas las reglas de este archivo.
+
 import test from 'node:test'
 import assert from 'node:assert/strict'
 

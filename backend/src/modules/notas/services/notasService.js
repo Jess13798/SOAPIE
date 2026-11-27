@@ -1,12 +1,27 @@
+// Propósito: Reglas de negocio del módulo "notas".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const notasRepository = require('../repositories/notasRepository');
 const { turnoDesdeHora } = require('../../../core/utils/turno');
 const { camposObligatorios, rangoDe } = require('../signosVitalesConfig');
+
+/**
+ * Implementa la operación "inputError".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function inputError(message) {
     const error = new Error(message);
     error.code = 'NOTAS_INVALID_INPUT';
     return error;
 }
+
+/**
+ * Implementa la operación "nullableInteger".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function nullableInteger(value, fieldName, required = false) {
     if (value === undefined || value === null || value === '') {
@@ -20,6 +35,12 @@ function nullableInteger(value, fieldName, required = false) {
     }
     return parsed;
 }
+
+/**
+ * Implementa la operación "nullableDecimal".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function nullableDecimal(value, fieldName, maximum = 999.99) {
     if (value === undefined || value === null || value === '') return null;
@@ -45,6 +66,12 @@ function nullableDecimal(value, fieldName, maximum = 999.99) {
     return parsed;
 }
 
+/**
+ * Implementa la operación "nullablePositiveNumber".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function nullablePositiveNumber(value, fieldName) {
     if (value === undefined || value === null || value === '') return null;
     if (typeof value === 'string') {
@@ -64,6 +91,12 @@ function nullablePositiveNumber(value, fieldName) {
     return parsed;
 }
 
+/**
+ * Implementa la operación "normalizeBloodPressure".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function normalizeBloodPressure(value) {
     if (value === undefined || value === null || value === '') return null;
     if (typeof value !== 'string' || value.length > 10 || !/^\d{1,3}\/\d{1,3}$/.test(value)) {
@@ -76,6 +109,12 @@ function normalizeBloodPressure(value) {
     return value;
 }
 
+/**
+ * Implementa la operación "normalizeComentarioDiagnostico".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function normalizeComentarioDiagnostico(value) {
     if (value === undefined || value === null) return null;
     if (typeof value !== 'string' || value.length > 1000) {
@@ -83,6 +122,12 @@ function normalizeComentarioDiagnostico(value) {
     }
     return value.trim() || null;
 }
+
+/**
+ * Implementa la operación "normalizeTextMap".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function normalizeTextMap(value, fieldName, maximumLength) {
     if (value === undefined || value === null) return {};
@@ -101,12 +146,24 @@ function normalizeTextMap(value, fieldName, maximumLength) {
     return normalized;
 }
 
+/**
+ * Implementa la operación "requiredClinicalText".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function requiredClinicalText(value, fieldName) {
     if (typeof value !== 'string' || !value.trim()) {
         throw inputError(`La sección ${fieldName} es obligatoria.`);
     }
     return value;
 }
+
+/**
+ * Implementa la operación "normalizeWongBakerScore".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function normalizeWongBakerScore(value, plan) {
     const marker = /\r?\n\r?\n\[ESCALA_WONG_BAKER\]\r?\n(0|2|4|6|8|10)$/;
@@ -132,18 +189,42 @@ function normalizeWongBakerScore(value, plan) {
     };
 }
 
+/**
+ * Implementa la operación "normalizeServiciosPlanificados".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function normalizeServiciosPlanificados(servicios = []) {
     if (!Array.isArray(servicios)) {
         throw inputError('serviciosPlanificados debe ser una lista.');
     }
 
-    return Array.from(new Set(servicios.map((servicio) => {
+    const serviciosPorProducto = new Map();
+    for (const servicio of servicios) {
         if (!servicio || typeof servicio !== 'object') {
             throw inputError('Cada servicio planificado debe ser válido.');
         }
-        return nullableInteger(servicio.id, 'IdProducto', true);
-    })));
+        const id = nullableInteger(servicio.id, 'IdProducto', true);
+        if (serviciosPorProducto.has(id)) continue;
+        serviciosPorProducto.set(id, {
+            id,
+            cantidad: nullableInteger(servicio.cantidad ?? 1, 'Cantidad', true),
+            idAtencionDiagnostico: nullableInteger(
+                servicio.idAtencionDiagnostico,
+                'IdAtencionDiagnostico',
+            ),
+        });
+    }
+
+    return Array.from(serviciosPorProducto.values());
 }
+
+/**
+ * Implementa la operación "sqlDateTime".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function sqlDateTime(fecha, hora, fieldName) {
     if (
@@ -167,6 +248,12 @@ function sqlDateTime(fecha, hora, fieldName) {
     }
     return parsed;
 }
+
+/**
+ * Implementa la operación "normalizePlanCuidados".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function normalizePlanCuidados(planCuidados = []) {
     if (!Array.isArray(planCuidados)) {
@@ -260,12 +347,23 @@ function normalizePlanCuidados(planCuidados = []) {
 
 // La fecha y hora de firma las pone el SERVIDOR (no el reloj del equipo del
 // usuario). Así el registro no depende de que la PC tenga la hora correcta.
+/**
+ * Implementa la operación "getSignedDateTime".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function getSignedDateTime(nota) {
     if (!nota.isFirmada) return null;
     return new Date();
 }
 
-async function guardarNota(nota) {
+/**
+ * Implementa la operación "guardarNota".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
+async function guardarNota(nota, idEmpleadoAutenticado) {
     if (!nota || typeof nota !== 'object') {
         throw inputError('Los datos de la nota son obligatorios.');
     }
@@ -273,7 +371,7 @@ async function guardarNota(nota) {
     const signos = nota.signosVitales || {};
     const idCuenta = nullableInteger(nota.idCuenta, 'IdCuenta');
     const idPaciente = nullableInteger(nota.pacienteId, 'IdPaciente', true);
-    const idEmpleado = nullableInteger(nota.idEmpleado || nota.IDEMPLEADO, 'IdEmpleado');
+    const idEmpleado = nullableInteger(idEmpleadoAutenticado, 'IdEmpleado autenticado', true);
     // Servicio en el que se escribe la nota. El repositorio prioriza la
     // estancia abierta del paciente; esto queda como respaldo (sin cama).
     const idServicio = nullableInteger(nota.servicioId, 'IdServicio');
@@ -395,6 +493,9 @@ async function guardarNota(nota) {
         const id = typeof result === 'object' && result !== null ? result.id : result;
         const vitalesRegistrados = typeof result === 'object' && result !== null ? result.vitalesRegistrados : undefined;
         const servicioId = typeof result === 'object' && result !== null ? result.servicioId : undefined;
+        const serviciosGuardados = typeof result === 'object' && result !== null
+            ? result.serviciosPlanificados
+            : undefined;
         const fechaHoraInicio = typeof result === 'object' && result !== null
             ? result.fechaHoraInicio || valores.fechaInicio
             : valores.fechaInicio;
@@ -416,12 +517,19 @@ async function guardarNota(nota) {
         };
         // Solo se informa el servicio cuando el repositorio lo pudo resolver.
         if (servicioId !== undefined) respuesta.servicioId = servicioId;
+        if (serviciosGuardados !== undefined) respuesta.serviciosPlanificados = serviciosGuardados;
         return respuesta;
     } catch (error) {
         console.error('Error al guardar nota:', error.message);
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "datePart".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function datePart(value) {
     if (!value) return '';
@@ -435,6 +543,12 @@ function datePart(value) {
     return `${values.year}-${values.month}-${values.day}`;
 }
 
+/**
+ * Implementa la operación "timePart".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function timePart(value) {
     if (!value) return '';
     const parts = new Intl.DateTimeFormat('en-GB', {
@@ -447,11 +561,23 @@ function timePart(value) {
     return `${values.hour}:${values.minute}`;
 }
 
+/**
+ * Implementa la operación "addUnique".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function addUnique(items, value, key) {
     if (value && !items.some(item => item[key] === value[key])) {
         items.push(value);
     }
 }
+
+/**
+ * Implementa la operación "obtenerNotas".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function obtenerNotas() {
     try {
@@ -505,11 +631,23 @@ async function obtenerNotas() {
             }
 
             if (row.PlanServicioId != null) {
-                addUnique(nota.serviciosPlanificados, {
+                const servicioItem = {
                     id: row.PlanServicioId,
                     codigo: row.PlanServicioCodigo,
                     nombre: row.PlanServicioNombre,
-                }, 'id');
+                    cantidad: Number(row.PlanServicioCantidad) || 1,
+                    idAtencionDiagnostico: row.PlanServicioIdAtencionDiagnostico == null
+                        ? null
+                        : Number(row.PlanServicioIdAtencionDiagnostico),
+                    codigoCIE10: row.PlanServicioCodigoCIE10 || null,
+                    estadoFacturacion: row.PlanServicioEstadoFacturacion == null
+                        ? null
+                        : Number(row.PlanServicioEstadoFacturacion),
+                };
+                if (row.PlanServicioIdOrden != null) {
+                    servicioItem.idOrden = Number(row.PlanServicioIdOrden);
+                }
+                addUnique(nota.serviciosPlanificados, servicioItem, 'id');
             }
 
             if (row.PlanIdNANDA == null) continue;
@@ -567,6 +705,12 @@ async function obtenerNotas() {
     }
 }
 
+/**
+ * Implementa la operación "obtenerHistorialVitals".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function obtenerHistorialVitals(idNota, limit = 10, offset = 0) {
     const notaId = nullableInteger(idNota, 'IdNota', true);
     const pageSize = nullablePositiveNumber(limit, 'límite');
@@ -584,6 +728,12 @@ async function obtenerHistorialVitals(idNota, limit = 10, offset = 0) {
     }
 }
 
+/**
+ * Implementa la operación "obtenerHistorialVitalsPorAtencion".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function obtenerHistorialVitalsPorAtencion(idCuenta, limit = 10, offset = 0) {
     const cuentaId = nullableInteger(idCuenta, 'IdCuentaAtencion', true);
     const pageSize = nullablePositiveNumber(limit, 'límite');
@@ -600,6 +750,12 @@ async function obtenerHistorialVitalsPorAtencion(idCuenta, limit = 10, offset = 
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "eliminarNota".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function eliminarNota(id) {
     const notaId = nullableInteger(id, 'IdNota', true);
