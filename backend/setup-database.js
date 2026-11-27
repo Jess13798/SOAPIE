@@ -1,12 +1,17 @@
+// Propósito: Inicialización de la estructura de base de datos.
+// Responsable de mantener separadas las reglas de este archivo.
+
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const readline = require('node:readline/promises');
 const { stdin, stdout } = require('node:process');
 const { sql, dbConfig } = require('./database');
+const { separarLotes } = require('./src/core/db/migraciones');
 
 const scripts = [
     'catalogo-nanda-noc-nic.sql',
     '001-crear-tablas-notas.sql',
+    '002-ajustes-notas-enfermeria.sql',
     'nota-enfermeria-diagnostico-comentario.sql',
     'nota-enfermeria-plan-cuidado.sql',
     'nota-enfermeria-plan-servicio.sql',
@@ -24,6 +29,12 @@ const expectedTables = [
     'NotaEnfermeriaPlanNIC',
     'NotaEnfermeriaPlanServicio',
 ];
+
+/**
+ * Implementa la operación "main".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function main() {
     if (!dbConfig.server || !dbConfig.database || !dbConfig.user || !dbConfig.password) {
@@ -60,7 +71,9 @@ async function main() {
             const script = await fs.readFile(filePath, 'utf8');
 
             console.log(`[${index + 1}/${scripts.length}] Ejecutando ${filename}...`);
-            await pool.request().batch(script);
+            for (const lote of separarLotes(script)) {
+                await pool.request().batch(lote);
+            }
             console.log(`      Listo: ${filename}`);
         }
 

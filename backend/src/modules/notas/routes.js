@@ -28,10 +28,26 @@ router.get('/notas/configuracion-signos-vitales', (req, res) => {
 router.post('/notas', async (req, res) => {
     try {
         const nota = req.body;
-        const resultado = await notasModule.guardarNota(nota);
+        const resultado = await notasModule.guardarNota(nota, req.usuario?.idEmpleado);
         res.json(resultado);
     } catch (err) {
-        const status = err.code === 'NOTAS_INVALID_INPUT' ? 400 : 500;
+        const status = err.code === 'NOTAS_INVALID_INPUT'
+            ? 400
+            : err.code === 'NOTA_NO_AUTORIZADA'
+                ? 403
+                : [
+                    'CPT_ACCOUNT_REQUIRED',
+                    'CPT_DIAGNOSIS_INVALID',
+                    'CPT_DIAGNOSIS_REQUIRED',
+                    'CPT_ORDER_CREATION_FAILED',
+                    'CPT_ORDER_NOT_FOUND',
+                    'CPT_ORDER_NOT_EDITABLE',
+                    'CPT_ORDER_UPDATE_FAILED',
+                    'CPT_QUANTITY_LOCKED',
+                    'PLAN_SERVICE_INVALID',
+                ].includes(err.code)
+                    ? 422
+                    : 500;
         res.status(status).json({ success: false, mensaje: err.message });
     }
 });

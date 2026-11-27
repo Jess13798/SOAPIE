@@ -1,3 +1,6 @@
+-- Propósito: Implementación del archivo nota-enfermeria-plan-cuidado.sql.
+-- Convención: las instrucciones principales se agrupan por etapas.
+
 SET XACT_ABORT ON;
 
 BEGIN TRY

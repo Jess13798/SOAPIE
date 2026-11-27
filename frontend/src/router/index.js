@@ -1,3 +1,6 @@
+// Propósito: Punto de entrada del servidor y configuración de rutas.
+// Responsable de mantener separadas las reglas de este archivo.
+
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../views/Login.vue'
 import Dashboard from '../views/Dashboard.vue'

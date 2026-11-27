@@ -1,9 +1,17 @@
+// Propósito: Acceso a datos del módulo "facturacion".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const facturacionRepository = require('./facturacionServicioDespachoRepository');
 
 // Transacción falsa: registra los parámetros enlazados y el SP ejecutado,
 // sin abrir conexión a SQL Server.
+/**
+ * Implementa la operación "fakeTransaction".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function fakeTransaction() {
     const calls = { inputs: [], procedures: [] };
     return {
@@ -21,6 +29,12 @@ function fakeTransaction() {
         },
     };
 }
+
+/**
+ * Implementa la operación "despachoValido"
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function despachoValido(overrides = {}) {
     return {

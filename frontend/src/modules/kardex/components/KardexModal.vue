@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "kardex". -->
+
 <template>
   <div v-if="isOpen" class="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-5">
     <button class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" aria-label="Cerrar Kardex" @click="$emit('close')"></button>

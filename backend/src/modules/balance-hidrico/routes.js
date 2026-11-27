@@ -1,3 +1,6 @@
+// Propósito: Definición de rutas HTTP del módulo "balance-hidrico".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const express = require('express');
 const balanceHidricoModule = require('./index');
 

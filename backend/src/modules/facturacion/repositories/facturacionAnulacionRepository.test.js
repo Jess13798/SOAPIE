@@ -4,7 +4,7 @@ const sql = require('mssql');
 
 const repo = require('./facturacionAnulacionRepository');
 
-function createMockTransaction(mockOrden, mockDespacho) {
+function createMockTransaction(mockOrden, mockDespacho, failProcedure = null) {
     const recorded = [];
     const queries = [];
     return {
@@ -20,6 +20,9 @@ function createMockTransaction(mockOrden, mockDespacho) {
                 },
                 async execute(procedureName) {
                     recorded.push({ procedureName, inputs: { ...inputs } });
+                    if (procedureName === failProcedure) {
+                        throw new Error(`Falla simulada en ${procedureName}`);
+                    }
                     if (procedureName === 'dbo.FactOrdenServicioSeleccionarPorId') {
                         return { recordset: mockOrden ? [mockOrden] : [] };
                     }
@@ -128,4 +131,32 @@ test('anularOrdenServicio rechaza órdenes inexistentes o parámetros inválidos
         () => repo.anularOrdenServicio({ idOrden: 'invalido' }),
         err => err.code === repo.INVALID_INPUT,
     );
+});
+
+test('anularOrdenServicio propaga fallos de auditoría y actualización de consumos', async () => {
+    const mockOrden = {
+        IdOrden: 1339568,
+        IdPuntoCarga: 716,
+        IdPaciente: 300903,
+        IdCuentaAtencion: 622640,
+        IdServicioPaciente: 216,
+        idTipoFinanciamiento: 2,
+        idFuenteFinanciamiento: 1,
+        FechaCreacion: new Date('2026-11-23T10:00:00Z'),
+        IdUsuario: 5208,
+        FechaDespacho: new Date('2026-11-23T10:05:00Z'),
+        FechaHoraRealizaCpt: new Date('2026-11-23T10:05:00Z'),
+    };
+    const mockDespacho = [{ IdProducto: 51650, Total: 5.85 }];
+
+    for (const procedureName of [
+        'dbo.AuditoriaAgregarV',
+        'dbo.FacturacionCuentasAtencionPtosActualizar',
+    ]) {
+        const tx = createMockTransaction(mockOrden, mockDespacho, procedureName);
+        await assert.rejects(
+            () => repo.anularOrdenServicio({ idOrden: 1339568 }, tx),
+            error => error.message.includes(`Falla simulada en ${procedureName}`),
+        );
+    }
 });

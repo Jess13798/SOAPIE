@@ -1,3 +1,5 @@
+<!-- Propósito: Implementación del archivo Dashboard.vue. -->
+
 <template>
   <div class="flex h-screen overflow-hidden bg-background">
     <div
@@ -146,6 +148,7 @@
 
     <BedModal
       :is-open="isBedModalOpen"
+      :is-submitting="isBedSubmitting"
       :servicio-seleccionado="servicioSeleccionado"
       :id-especialidad="pacienteSinCamaSeleccionado?.IdEspecialidad ?? null"
       :mostrar-medico="!!pacienteSinCamaSeleccionado"
@@ -155,6 +158,7 @@
 
     <TransferModal
       :is-open="isTransferModalOpen"
+      :is-submitting="isTransferSubmitting"
       :patient="patientForTransfer"
       :servicios="servicios"
       @close="handleCloseTransferModal"
@@ -236,6 +240,8 @@ const {
   isBedModalOpen,
   isTotalBedsModalOpen,
   isTransferModalOpen,
+  isBedSubmitting,
+  isTransferSubmitting,
   pacienteSinCamaSeleccionado,
   patientForTransfer,
   refreshPacientesSinCamaToken,

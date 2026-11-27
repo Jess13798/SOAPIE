@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "notas". -->
+
 <template>
   <!-- Turno (automático) y Autoría -->
   <div class="flex items-center justify-between bg-slate-100 px-4 py-2 border-b border-slate-200">

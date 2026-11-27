@@ -18,6 +18,18 @@ const { getPool } = require('../../../dbHelper');
 
 const CARPETA_SQL = path.join(__dirname, '../../../sql');
 
+/**
+
+
+ * Implementa la operación "listarMigraciones".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function listarMigraciones() {
     return fs
         .readdirSync(CARPETA_SQL)
@@ -26,12 +38,32 @@ function listarMigraciones() {
 }
 
 // Separa un archivo en lotes por las líneas `GO` (que el driver no entiende).
+/**
+
+ * Implementa la operación "separarLotes".
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+ */
+
 function separarLotes(contenido) {
     return contenido
         .split(/^[ \t]*GO[ \t]*;?[ \t]*$/gim)
         .map((lote) => lote.trim())
         .filter(Boolean);
 }
+
+/**
+
+
+ * Implementa la operación "asegurarTablaControl".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 async function asegurarTablaControl(pool) {
     await pool.request().batch(`
@@ -47,10 +79,27 @@ async function asegurarTablaControl(pool) {
     `);
 }
 
+/**
+
+
+ * Implementa la operación "obtenerAplicadas".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 async function obtenerAplicadas(pool) {
     const resultado = await pool.request().query('SELECT Nombre FROM dbo.__migraciones');
     return new Set((resultado.recordset || []).map((fila) => fila.Nombre));
 }
+
+/**
+ * Implementa la operación "registrarAplicada".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
 
 async function registrarAplicada(pool, nombre) {
     const request = pool.request();
@@ -59,6 +108,11 @@ async function registrarAplicada(pool, nombre) {
 }
 
 // Aplica las migraciones pendientes. Devuelve cuántas aplicó.
+/**
+ * Implementa la operación "aplicarMigraciones".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function aplicarMigraciones({ log = console } = {}) {
     const pool = await getPool();
     await asegurarTablaControl(pool);
@@ -88,6 +142,11 @@ async function aplicarMigraciones({ log = console } = {}) {
 }
 
 // Punto de entrada para `index.js`: nunca lanza, para no tumbar el servidor.
+/**
+ * Implementa la operación "ejecutarMigracionesAlArrancar".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function ejecutarMigracionesAlArrancar() {
     try {
         return await aplicarMigraciones();

@@ -10,6 +10,12 @@
 const HORA_INICIO_DIA = 7;
 const HORA_FIN_DIA = 19; // exclusivo
 
+/**
+ * Implementa la operación "turnoDesdeHora".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function turnoDesdeHora(fecha = new Date()) {
     const date = fecha instanceof Date ? fecha : new Date(fecha);
     if (Number.isNaN(date.getTime())) return 'dia';

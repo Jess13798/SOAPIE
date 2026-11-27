@@ -6,6 +6,11 @@ const facturacionRepository = require('../repositories/facturacionServicioDespac
 const cuentasAtencionRepository = require('../repositories/facturacionCuentasAtencionRepository');
 const facturacionAnulacionRepository = require('../repositories/facturacionAnulacionRepository');
 
+/**
+ * Implementa la operación "agregarServicioDespacho".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function agregarServicioDespacho(datos) {
     try {
         return await facturacionRepository.agregarServicioDespacho(datos);
@@ -14,6 +19,12 @@ async function agregarServicioDespacho(datos) {
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "agregarServicioDespachoRc".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function agregarServicioDespachoRc(datos) {
     try {
@@ -24,6 +35,12 @@ async function agregarServicioDespachoRc(datos) {
     }
 }
 
+/**
+ * Implementa la operación "consultarCuentasAtencionPtos".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function consultarCuentasAtencionPtos(idCuenta) {
     try {
         return await cuentasAtencionRepository.consultarCuentasAtencionPtos(idCuenta);
@@ -32,6 +49,12 @@ async function consultarCuentasAtencionPtos(idCuenta) {
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "actualizarCuentasAtencionPtos".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function actualizarCuentasAtencionPtos(datos) {
     try {
@@ -42,6 +65,12 @@ async function actualizarCuentasAtencionPtos(datos) {
     }
 }
 
+/**
+ * Implementa la operación "actualizarImportesCuenta".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function actualizarImportesCuenta(datos) {
     try {
         return await cuentasAtencionRepository.actualizarImportesCuenta(datos);
@@ -50,6 +79,12 @@ async function actualizarImportesCuenta(datos) {
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "consultarComprobantesPagoPorCuenta".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function consultarComprobantesPagoPorCuenta(idCuenta) {
     try {

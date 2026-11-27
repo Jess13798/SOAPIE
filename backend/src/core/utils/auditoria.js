@@ -1,3 +1,6 @@
+// Propósito: Implementación del archivo auditoria.js.
+// Responsable de mantener separadas las reglas de este archivo.
+
 const sql = require('mssql');
 const os = require('os');
 const { executeProcedure } = require('../../../dbHelper');
@@ -16,6 +19,10 @@ const { executeProcedure } = require('../../../dbHelper');
  * @param {string} [params.observaciones=''] - Detalle de la auditoría
  * @param {object} [transaction] - Objeto Transaction opcional para correr dentro de una transacción activa
  */
+/**
+ * Implementa la operación "registrarAuditoria".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
 async function registrarAuditoria(
     {
         idEmpleado,
@@ -25,6 +32,7 @@ async function registrarAuditoria(
         idListItem = 103,
         nombrePC = os.hostname() || 'WEB-ENFERMERIA',
         observaciones = '',
+        throwOnError = false,
     },
     transaction = null
 ) {
@@ -57,8 +65,10 @@ async function registrarAuditoria(
                 { name: 'observaciones', type: sql.VarChar(100), value: obs },
             ]);
         }
-    } catch {
-        // En caso de que la tabla o el SP de auditoría no estén en la base de datos de prueba, no bloquea el flujo principal
+    } catch (error) {
+        if (throwOnError) {
+            throw error;
+        }
     }
 }
 

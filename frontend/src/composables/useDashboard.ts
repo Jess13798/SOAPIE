@@ -18,6 +18,18 @@ interface UseDashboardParams {
   handleCloseModal: () => void
 }
 
+/**
+
+
+ * Implementa la operación "useDashboard".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 export function useDashboard({
   activeView,
   selectedPatient,
@@ -95,15 +107,51 @@ export function useDashboard({
     return successModalType.value === 'asignacion-cama'
   })
 
+  /**
+
+
+   * Implementa la operación "handleSelectPatient".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   function handleSelectPatient(patient: Patient) {
     selectedPatient.value = patient
     sidebarOpen.value = false
   }
 
+  /**
+
+
+   * Implementa la operación "handleChangeView".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   function handleChangeView(view: string) {
     activeView.value = view
     sidebarOpen.value = false
   }
+
+  /**
+
+
+   * Implementa la operación "handleConfirmSuccess".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
 
   function handleConfirmSuccess() {
     showSuccessModal.value = false

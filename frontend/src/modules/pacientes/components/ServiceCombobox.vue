@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "pacientes". -->
+
 <template>
   <div ref="contenedor" class="relative w-full">
     <div class="relative">

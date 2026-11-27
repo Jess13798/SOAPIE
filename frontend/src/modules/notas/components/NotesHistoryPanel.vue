@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "notas". -->
+
 <template>
   <div class="flex h-full min-h-0 flex-col rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
     <div class="flex items-center justify-between bg-sky-700 px-5 py-1.5 text-white">

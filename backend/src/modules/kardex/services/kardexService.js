@@ -1,7 +1,22 @@
+// Propósito: Reglas de negocio del módulo "kardex".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const repo = require('../repositories/kardexRepository');
 
 const TURNOS_VALIDOS = new Set(['M', 'T', 'N']);
 const ESTADOS_MEDICAMENTO = new Set(['PENDIENTE', 'ADMINISTRADO', 'NO_ADMINISTRADO']);
+
+/**
+
+
+ * Implementa la operación "errorEntrada".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function errorEntrada(mensaje) {
     const error = new Error(mensaje);
@@ -9,12 +24,36 @@ function errorEntrada(mensaje) {
     return error;
 }
 
+/**
+
+
+ * Implementa la operación "textoObligatorio".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function textoObligatorio(valor, campo, maximo) {
     const texto = String(valor || '').trim();
     if (!texto) throw errorEntrada(`El campo ${campo} es obligatorio.`);
     if (texto.length > maximo) throw errorEntrada(`El campo ${campo} no puede superar ${maximo} caracteres.`);
     return texto;
 }
+
+/**
+
+
+ * Implementa la operación "idPositivo".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function idPositivo(valor, campo, obligatorio = false) {
     if (valor === undefined || valor === null || valor === '') {
@@ -26,15 +65,51 @@ function idPositivo(valor, campo, obligatorio = false) {
     return id;
 }
 
+/**
+
+
+ * Implementa la operación "fechaValida".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function fechaValida(fecha) {
     if (typeof fecha !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return false;
     const parsed = new Date(`${fecha}T00:00:00.000Z`);
     return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === fecha;
 }
 
+/**
+
+
+ * Implementa la operación "horaValida".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function horaValida(hora) {
     return typeof hora === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(hora);
 }
+
+/**
+
+
+ * Implementa la operación "validarRegistro".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function validarRegistro(input = {}) {
     const categoria = String(input.categoria || '').trim().toUpperCase();
@@ -88,15 +163,51 @@ function validarRegistro(input = {}) {
     return registro;
 }
 
+/**
+
+
+ * Implementa la operación "validarConsulta".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function validarConsulta(idCuenta, fecha) {
     const cuenta = idPositivo(idCuenta, 'atención', true);
     if (fecha && !fechaValida(fecha)) throw errorEntrada('La fecha debe tener el formato AAAA-MM-DD.');
     return { idCuenta: cuenta, fecha: fecha || null };
 }
 
+/**
+
+
+ * Implementa la operación "guardarRegistro".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 async function guardarRegistro(input) {
     return repo.guardarRegistro(validarRegistro(input));
 }
+
+/**
+
+
+ * Implementa la operación "obtenerRegistros".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 async function obtenerRegistros(idCuenta, fecha) {
     const consulta = validarConsulta(idCuenta, fecha);

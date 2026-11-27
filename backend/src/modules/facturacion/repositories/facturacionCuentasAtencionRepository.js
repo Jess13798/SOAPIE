@@ -1,3 +1,6 @@
+// Propósito: Acceso a datos del módulo "facturacion".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const sql = require('mssql');
 const { query, executeProcedure } = require('../../../../dbHelper');
 
@@ -8,11 +11,23 @@ const SP_COMPROBANTES_PAGO = 'dbo.FacturacionCajaComprobantesPagoConsultarXIdCue
 
 const INVALID_INPUT = 'FACTURACION_INVALID_INPUT';
 
+/**
+ * Implementa la operación "createRepositoryError".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function createRepositoryError(code, message) {
     const error = new Error(message);
     error.code = code;
     return error;
 }
+
+/**
+ * Implementa la operación "enteroRequerido".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function enteroRequerido(value, fieldName) {
     const parsed = Number(value);
@@ -24,6 +39,12 @@ function enteroRequerido(value, fieldName) {
     }
     return parsed;
 }
+
+/**
+ * Implementa la operación "monto".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function monto(value, fieldName = 'Monto') {
     const parsed = Number(value ?? 0);
@@ -71,6 +92,11 @@ async function obtenerFinanciamientoCuenta(idCuenta, transaction = null) {
  * Consulta los consumos y pagos por punto de carga de una cuenta de atención.
  * SP: dbo.FacturacionCuentasAtencionPtosXIdCuenta
  */
+/**
+ * Implementa la operación "consultarCuentasAtencionPtos".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function consultarCuentasAtencionPtos(idCuenta) {
     const validId = enteroRequerido(idCuenta, 'idCuenta');
     const params = [
@@ -84,6 +110,12 @@ async function consultarCuentasAtencionPtos(idCuenta) {
  * Inserta o actualiza el acumulado de consumos/pagos por punto de carga en la cuenta.
  * SP: dbo.FacturacionCuentasAtencionPtosActualizar
  */
+/**
+
+ * Implementa la operación "actualizarCuentasAtencionPtos".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function actualizarCuentasAtencionPtos(datos = {}, transaction = null) {
     const lbNueva = Boolean(datos.esNueva ?? datos.lbNueva);
     const idCuentaAtencion = enteroRequerido(datos.idCuentaAtencion, 'IdCuentaAtencion');
@@ -118,6 +150,11 @@ async function actualizarCuentasAtencionPtos(datos = {}, transaction = null) {
  * Actualiza los importes globales de la cabecera de la cuenta de atención.
  * SP: dbo.FacturacionCuentasAtencionActualizaImportes
  */
+/**
+ * Implementa la operación "actualizarImportesCuenta".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function actualizarImportesCuenta(datos = {}, transaction = null) {
     const idCuentaAtencion = enteroRequerido(datos.idCuentaAtencion, 'IdCuentaAtencion');
     const totalExonerado = monto(datos.totalExonerado, 'TotalExonerado');
@@ -149,6 +186,11 @@ async function actualizarImportesCuenta(datos = {}, transaction = null) {
  * Consulta comprobantes de pago emitidos para la cuenta.
  * SP: dbo.FacturacionCajaComprobantesPagoConsultarXIdCuentaAtencion
  */
+/**
+ * Implementa la operación "consultarComprobantesPagoPorCuenta".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function consultarComprobantesPagoPorCuenta(idCuenta) {
     const validId = enteroRequerido(idCuenta, 'idCuenta');
     const params = [

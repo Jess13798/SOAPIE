@@ -3,6 +3,12 @@
 
 const pacientesRepository = require('../repositories/pacientesRepository');
 
+/**
+ * Implementa la operación "obtenerPacientes".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function obtenerPacientes(servicioId = null) {
     try {
         return await pacientesRepository.getPacientesByServicio(servicioId);
@@ -12,6 +18,12 @@ async function obtenerPacientes(servicioId = null) {
     }
 }
 
+/**
+ * Implementa la operación "obtenerServicios".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function obtenerServicios() {
     try {
         return await pacientesRepository.getServicios();
@@ -20,6 +32,12 @@ async function obtenerServicios() {
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "buscarPacientes".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function buscarPacientes(texto) {
     try {

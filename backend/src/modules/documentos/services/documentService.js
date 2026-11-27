@@ -3,6 +3,11 @@
 
 const { ClinicalDocument } = require('../../../core/domain/clinicalDocument');
 
+/**
+ * Implementa la operación "buildDocument".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function buildDocument(payload) {
     return new ClinicalDocument(payload);
 }

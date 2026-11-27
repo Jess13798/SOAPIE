@@ -1,7 +1,22 @@
+// Propósito: Composable reutilizable del módulo "notas".
+// Responsable de mantener separadas las reglas de este archivo.
+
 import { computed, ref, type Ref } from 'vue'
 import type { Patient, NotaEnfermeria, SignoVitalHistorial } from '@/types'
 import { ApiError, notasService } from '@/services/api'
 import { camposObligatoriosDeServicio, rangosDeServicio } from '../vitalesConfig'
+
+/**
+
+
+ * Implementa la operación "mergeNotes".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function mergeNotes(databaseNotes: NotaEnfermeria[], currentNotes: NotaEnfermeria[]) {
   const merged = new Map(databaseNotes.map(note => [note.id, note]))
@@ -12,6 +27,18 @@ function mergeNotes(databaseNotes: NotaEnfermeria[], currentNotes: NotaEnfermeri
   }
   return Array.from(merged.values())
 }
+
+/**
+
+
+ * Implementa la operación "snapshotVitals".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function snapshotVitals(nota: NotaEnfermeria, idEmpleado: string): SignoVitalHistorial {
   const vitals = nota.signosVitales || { temperatura: '', saturacionOxigeno: '' }
@@ -32,12 +59,36 @@ function snapshotVitals(nota: NotaEnfermeria, idEmpleado: string): SignoVitalHis
   }
 }
 
+/**
+
+
+ * Implementa la operación "normalizedVital".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function normalizedVital(value: unknown) {
   const text = String(value ?? '').trim()
   if (!text) return ''
   const numeric = Number(text)
   return Number.isFinite(numeric) ? String(numeric) : text
 }
+
+/**
+
+
+ * Implementa la operación "hasVitalChanges".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function hasVitalChanges(next: NotaEnfermeria, previous?: NotaEnfermeria) {
   if (!previous) return true
@@ -55,6 +106,18 @@ function hasVitalChanges(next: NotaEnfermeria, previous?: NotaEnfermeria) {
   ))
 }
 
+/**
+
+
+ * Implementa la operación "useNotes".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<string>) {
   const notas = ref<NotaEnfermeria[]>([])
   const isNewNoteModalOpen = ref(false)
@@ -71,6 +134,18 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
     () => rangosDeServicio(servicioSeleccionado?.value),
   )
 
+  /**
+
+
+   * Implementa la operación "cargarNotasDesdeBackend".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   async function cargarNotasDesdeBackend() {
     try {
       const notasBD = await notasService.getNotas()
@@ -81,6 +156,18 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
       return false
     }
   }
+
+  /**
+
+
+   * Implementa la operación "handleViewNote".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
 
   function handleViewNote(nota: NotaEnfermeria, fallbackPatient?: Patient | null) {
     const patient = pacientes.value.find(p =>
@@ -97,11 +184,35 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
     isNewNoteModalOpen.value = true
   }
 
+  /**
+
+
+   * Implementa la operación "handleNewNoteFromList".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   function handleNewNoteFromList(patient: Patient) {
     selectedNoteForModal.value = null
     patientForNewNote.value = patient
     isNewNoteModalOpen.value = true
   }
+
+  /**
+
+
+   * Implementa la operación "handleEditDraft".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
 
   function handleEditDraft(nota: NotaEnfermeria, fallbackPatient?: Patient | null) {
     handleViewNote(nota, fallbackPatient)
@@ -109,6 +220,14 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
 
   // Nota más reciente de un paciente (mismo id o número de cuenta). Se usa para
   // heredar el plan de cuidados NANDA/NOC/NIC al crear una nota nueva.
+  /**
+
+   * Implementa la operación "ultimaNotaDePaciente".
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+   */
+
   function ultimaNotaDePaciente(patient: Patient | null): NotaEnfermeria | null {
     if (!patient) return null
     const servicioId = servicioSeleccionado?.value || ''
@@ -127,10 +246,34 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
     return [...propias].sort((a, b) => `${b.fecha}T${b.hora}`.localeCompare(`${a.fecha}T${a.hora}`))[0]
   }
 
+  /**
+
+
+   * Implementa la operación "handleCloseModal".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   function handleCloseModal() {
     isNewNoteModalOpen.value = false
     selectedNoteForModal.value = null
   }
+
+  /**
+
+
+   * Implementa la operación "guardarNota".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
 
   async function guardarNota(nota: NotaEnfermeria) {
     const pid = nota.pacienteId
@@ -168,6 +311,7 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
         isFirmada: data.isFirmada,
         id: String(data.id),
         servicioId: data.servicioId ?? (Number(servicioId) || null),
+        serviciosPlanificados: data.serviciosPlanificados ?? nota.serviciosPlanificados ?? [],
         estadoGuardado: 'guardada' as const,
         historialTemporalSignosVitales: [],
       }
@@ -220,6 +364,18 @@ export function useNotes(pacientes: Ref<Patient[]>, servicioSeleccionado?: Ref<s
       return { success: true, persisted: false, id: notaTemporal.id, error: err }
     }
   }
+
+  /**
+
+
+   * Implementa la operación "firmarNota".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
 
   function firmarNota(nota: NotaEnfermeria) {
     return guardarNota({ ...nota, isFirmada: true })

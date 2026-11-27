@@ -1,5 +1,13 @@
+// Propósito: Acceso a datos del módulo "balance-hidrico".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const sql = require('mssql');
 const { query, executeProcedure } = require('../../../../dbHelper');
+
+/**
+ * Implementa la operación "asegurarTabla".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
 
 async function asegurarTabla() {
     await query(`
@@ -24,6 +32,12 @@ async function asegurarTabla() {
         END
     `);
 }
+
+/**
+ * Implementa la operación "guardarRegistro".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function guardarRegistro(nota) {
     await asegurarTabla();
@@ -53,6 +67,18 @@ async function guardarRegistro(nota) {
     return { success: true, id: result.recordset?.[0]?.IdBalance ?? null };
 }
 
+/**
+
+
+ * Implementa la operación "obtenerRegistros".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 async function obtenerRegistros(idCuenta, fecha) {
     await asegurarTabla();
     const cuentaId = idCuenta ? Number(idCuenta) : null;
@@ -68,6 +94,18 @@ async function obtenerRegistros(idCuenta, fecha) {
     const result = await query(sqlText, params);
     return result.recordset || [];
 }
+
+/**
+
+
+ * Implementa la operación "eliminarRegistro".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 async function eliminarRegistro(id) {
     await asegurarTabla();

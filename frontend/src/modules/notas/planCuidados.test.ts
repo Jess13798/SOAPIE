@@ -10,6 +10,18 @@ import {
     lineasIntervenciones,
 } from './planCuidados.ts'
 
+/**
+
+
+ * Implementa la operación "plan".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function plan(overrides = {}) {
     return {
         idNANDA: 1,

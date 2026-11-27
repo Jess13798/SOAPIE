@@ -2,6 +2,12 @@
 // La idea es centralizar la lógica de mapeo para que no se duplique entre alta
 // y edición de notas, y mantener una estructura consistente para el frontend.
 
+/**
+ * Implementa la operación "buildSoapiePayload".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function buildSoapiePayload(nota = {}) {
     return {
         subjetivo: nota.subjetivo ?? nota.soapie?.subjetivo ?? nota.soapie?.s ?? '',

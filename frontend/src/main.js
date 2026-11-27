@@ -1,3 +1,6 @@
+// Propósito: Inicialización de la aplicación Vue.
+// Responsable de mantener separadas las reglas de este archivo.
+
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router' // <-- Importa el router que creamos

@@ -1,3 +1,6 @@
+// Propósito: Punto de entrada del servidor y configuración de rutas.
+// Responsable de mantener separadas las reglas de este archivo.
+
 const express = require('express');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -23,6 +26,10 @@ const app = express();
 
 // --- MIDDLEWARES ---
 // CORS restringido a los orígenes permitidos (configurable con CORS_ORIGIN en .env).
+/**
+ * Implementa la operación "ORIGENES_PERMITIDOS" mediante una función auxiliar exportable.
+ */
+
 const ORIGENES_PERMITIDOS = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,http://localhost:3000')
     .split(',')
     .map((o) => o.trim())
@@ -30,6 +37,14 @@ const ORIGENES_PERMITIDOS = (process.env.CORS_ORIGIN || 'http://localhost:5173,h
 
 // Permite ademas los tuneles publicos (ngrok, cloudflare) para compartir
 // la app sin desplegarla. El acceso sigue protegido por el token de login.
+/**
+
+ * Implementa la operación "esOrigenPermitido".
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+ */
+
 function esOrigenPermitido(origin) {
     if (!origin) return true;
     if (ORIGENES_PERMITIDOS.includes(origin)) return true;

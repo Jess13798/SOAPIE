@@ -1,3 +1,6 @@
+// Propósito: Acceso a datos del módulo "catalogos".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const sql = require('mssql');
 const { executeProcedure } = require('../../../../dbHelper');
 
@@ -7,10 +10,12 @@ const { executeProcedure } = require('../../../../dbHelper');
  * Utiliza dbo.FactCatalogoServiciosHospFiltraPorPuntoCargaTipoFinanciamiento y,
  * si no arroja resultados o no se especifica área, realiza la búsqueda general por catálogo de respaldo.
  */
-async function buscarServicios(buscar, opciones = {}) {
+async function buscarServicios(buscar, arg2 = 716, arg3 = 2) {
     const texto = (buscar || '').trim();
     const esCodigo = /^\d+$/.test(texto);
     const idFiltroTipo = esCodigo ? 1 : 2; // 1 = Por código, 2 = Por nombre
+
+    const opciones = typeof arg2 === 'object' && arg2 !== null ? arg2 : { idPuntoCarga: arg2, idTipoFinanciamiento: arg3 };
 
     let idPuntoCarga = opciones.idPuntoCarga;
     if (!idPuntoCarga && opciones.idServicio) {
@@ -89,6 +94,11 @@ async function buscarServicios(buscar, opciones = {}) {
  * 2. Obtener la configuración hospitalaria de un producto por tipo de financiamiento.
  * Utiliza: dbo.FactCatalogoServiciosXidTipoFinanciamiento
  */
+/**
+ * Implementa la operación "obtenerServicioPorFinanciamiento".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function obtenerServicioPorFinanciamiento(idProducto, idTipoFinanciamiento = 2) {
     const result = await executeProcedure('dbo.FactCatalogoServiciosXidTipoFinanciamiento', [
         { name: 'idProducto', type: sql.Int, value: Number(idProducto) },
@@ -102,6 +112,11 @@ async function obtenerServicioPorFinanciamiento(idProducto, idTipoFinanciamiento
  * 3. Consultar los datos del Tipo de Financiamiento en GalenHos/SIGH.
  * Utiliza: dbo.TiposFinanciamientoSeleccionarPorId
  */
+/**
+ * Implementa la operación "obtenerTipoFinanciamientoPorId".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function obtenerTipoFinanciamientoPorId(idTipoFinanciamiento = 2) {
     const result = await executeProcedure('dbo.TiposFinanciamientoSeleccionarPorId', [
         { name: 'IdTipoFinanciamiento', type: sql.Int, value: Number(idTipoFinanciamiento) },

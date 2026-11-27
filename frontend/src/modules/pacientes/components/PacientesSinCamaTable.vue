@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "pacientes". -->
+
 <template>
   <div class="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden w-full">
     <!-- Header bar -->

@@ -1,7 +1,15 @@
+// Propósito: Implementación del archivo date.js.
+// Responsable de mantener separadas las reglas de este archivo.
+
 const { executeProcedure } = require('../../../dbHelper');
 
 // Utilidades reutilizables para formateo y normalización de fechas.
 // Esto evita duplicar la lógica en cada módulo clínico.
+
+/**
+ * Implementa la operación "formatDate".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
 
 function formatDate(value) {
     if (!value) return '';
@@ -9,6 +17,12 @@ function formatDate(value) {
     if (Number.isNaN(date.getTime())) return '';
     return date.toISOString().split('T')[0];
 }
+
+/**
+ * Implementa la operación "formatTime".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function formatTime(value) {
     if (!value) return '';
@@ -22,6 +36,11 @@ function formatTime(value) {
  * mediante el procedimiento almacenado dbo.RetornaFechaServidorSQL.
  * Si la base de datos no está disponible, cae de forma segura a new Date().
  */
+/**
+ * Implementa la operación "obtenerFechaServidorSQL".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function obtenerFechaServidorSQL() {
     try {
         const result = await executeProcedure('dbo.RetornaFechaServidorSQL');

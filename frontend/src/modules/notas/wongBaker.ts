@@ -1,3 +1,6 @@
+// Propósito: Implementación del archivo wongBaker.ts.
+// Responsable de mantener separadas las reglas de este archivo.
+
 export const WONG_BAKER_MARKER = '[ESCALA_WONG_BAKER]'
 
 // Escala de dolor Wong-Baker: se representa con un punto de color (verde -> rojo)
@@ -15,6 +18,18 @@ export type WongBakerScore = typeof WONG_BAKER_FACES[number]['score']
 
 const escapedMarker = WONG_BAKER_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+/**
+
+
+ * Implementa la operación "extractWongBakerScore".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 export function extractWongBakerScore(text: string): WongBakerScore | null {
   const markerPattern = new RegExp(`\\n\\n${escapedMarker}\\n(0|2|4|6|8|10)$`)
   const match = text.match(markerPattern)
@@ -26,14 +41,50 @@ export function extractWongBakerScore(text: string): WongBakerScore | null {
     : null
 }
 
+/**
+
+
+ * Implementa la operación "removeWongBakerMarker".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 export function removeWongBakerMarker(text: string): string {
   return text.replace(new RegExp(`\\n\\n${escapedMarker}\\n(?:0|2|4|6|8|10)$`), '').trimEnd()
 }
+
+/**
+
+
+ * Implementa la operación "appendWongBakerMarker".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 export function appendWongBakerMarker(text: string, score: WongBakerScore | null): string {
   const cleanText = removeWongBakerMarker(text)
   return score === null ? cleanText : `${cleanText}\n\n${WONG_BAKER_MARKER}\n${score}`
 }
+
+/**
+
+
+ * Implementa la operación "wongBakerFace".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 export function wongBakerFace(score: number | null | undefined) {
   return WONG_BAKER_FACES.find(face => face.score === score)

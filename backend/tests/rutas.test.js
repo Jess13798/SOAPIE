@@ -41,6 +41,11 @@ test('el router de medicos expone GET /medicos', () => {
 
 // Ejecuta una ruta GET del router sin levantar el servidor: toma la capa que
 // coincide con la ruta y le pasa req/res falsos. Devuelve el status y el body.
+/**
+ * Implementa la operación "invocarGet".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function invocarGet(router, ruta, query) {
     const capa = router.stack.find((c) => c.route && c.route.path === ruta);
     assert.ok(capa, `debe existir la ruta GET ${ruta}`);
@@ -58,12 +63,18 @@ async function invocarGet(router, ruta, query) {
     return { status, body };
 }
 
-async function invocarPost(router, ruta, body) {
+/**
+ * Implementa la operación "invocarPost".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
+async function invocarPost(router, ruta, body, usuario) {
     const capa = router.stack.find((c) => c.route && c.route.path === ruta && c.route.methods.post);
     assert.ok(capa, `debe existir la ruta POST ${ruta}`);
     const handler = capa.route.stack[0].handle;
 
-    const req = { body };
+    const req = { body, usuario };
     let status = 200;
     let responseBody = null;
     const res = {
@@ -132,6 +143,82 @@ test('POST /notas responde 400 para errores de validación', async () => {
     assert.equal(respuesta.status, 400);
     assert.equal(respuesta.body.success, false);
     assert.match(respuesta.body.mensaje, /IdPaciente es obligatorio/i);
+});
+
+test('POST /notas informa fallo de registro CPT sin tratarlo como guardado exitoso', async (t) => {
+    const notasModule = require('../src/modules/notas');
+    t.mock.method(notasModule, 'guardarNota', async () => {
+        const error = new Error('No se pudo registrar el CPT en SISGalen.');
+        error.code = 'CPT_ORDER_CREATION_FAILED';
+        throw error;
+    });
+
+    const respuesta = await invocarPost(
+        require('../src/modules/notas/routes'),
+        '/notas',
+        { serviciosPlanificados: [123] },
+        { idEmpleado: 300 },
+    );
+
+    assert.equal(respuesta.status, 422);
+    assert.equal(respuesta.body.success, false);
+    assert.match(respuesta.body.mensaje, /SISGalen/i);
+});
+
+test('POST /notas informa que no se puede cambiar cantidad de un CPT pagado', async (t) => {
+    const notasModule = require('../src/modules/notas');
+    t.mock.method(notasModule, 'guardarNota', async () => {
+        const error = new Error('No se puede cambiar la cantidad porque la orden ya está pagada.');
+        error.code = 'CPT_QUANTITY_LOCKED';
+        throw error;
+    });
+
+    const respuesta = await invocarPost(
+        require('../src/modules/notas/routes'),
+        '/notas',
+        { serviciosPlanificados: [{ id: 123, cantidad: 2 }] },
+        { idEmpleado: 300 },
+    );
+
+    assert.equal(respuesta.status, 422);
+    assert.equal(respuesta.body.success, false);
+    assert.match(respuesta.body.mensaje, /pagada/i);
+});
+
+test('POST /notas toma la identidad del token y no la del cuerpo', async (t) => {
+    const notasModule = require('../src/modules/notas');
+    const guardarNota = t.mock.method(notasModule, 'guardarNota', async () => ({
+        success: true,
+        id: 81,
+    }));
+
+    await invocarPost(
+        require('../src/modules/notas/routes'),
+        '/notas',
+        { idEmpleado: '999' },
+        { idEmpleado: 300 },
+    );
+
+    assert.deepEqual(guardarNota.mock.calls[0].arguments, [{ idEmpleado: '999' }, 300]);
+});
+
+test('POST /notas responde 403 si la nota pertenece a otra enfermera', async (t) => {
+    const notasModule = require('../src/modules/notas');
+    t.mock.method(notasModule, 'guardarNota', async () => {
+        const error = new Error('Solo la enfermera que creó la nota puede editarla o firmarla.');
+        error.code = 'NOTA_NO_AUTORIZADA';
+        throw error;
+    });
+
+    const respuesta = await invocarPost(
+        require('../src/modules/notas/routes'),
+        '/notas',
+        { id: '81', isFirmada: true },
+        { idEmpleado: 301 },
+    );
+
+    assert.equal(respuesta.status, 403);
+    assert.match(respuesta.body.mensaje, /enfermera que creó la nota/i);
 });
 
 test('el router de notas expone las rutas de notas y vitales', () => {

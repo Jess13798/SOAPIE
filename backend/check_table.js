@@ -3,6 +3,12 @@
 const { query, closePool } = require('./dbHelper');
 const fs = require('fs');
 
+/**
+ * Implementa la operación "run".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function run() {
   try {
       const result = await query(`

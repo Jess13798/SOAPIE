@@ -5,6 +5,12 @@
 const sql = require('mssql');
 const { getPool } = require('../../../../dbHelper');
 
+/**
+ * Implementa la operación "getPacientesSinCama".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function getPacientesSinCama(nombreServicio = null) {
     try {
         const pool = await getPool();
@@ -83,6 +89,12 @@ async function getPacientesSinCama(nombreServicio = null) {
     }
 }
 
+/**
+ * Implementa la operación "asignarCama".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function asignarCama({ IdPaciente, IdCuentaAtencion, IdCama, IdMedicoOrdena, idUsuario, usuario }) {
     const pool = await getPool();
     const transaction = new sql.Transaction(pool);
@@ -130,6 +142,12 @@ async function asignarCama({ IdPaciente, IdCuentaAtencion, IdCama, IdMedicoOrden
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "moverPacienteDeCama".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function moverPacienteDeCama({ IdPaciente, IdCama, IdCuentaAtencion, idUsuario, usuario }) {
     const pool = await getPool();
@@ -183,6 +201,12 @@ async function moverPacienteDeCama({ IdPaciente, IdCama, IdCuentaAtencion, idUsu
         throw error;
     }
 }
+
+/**
+ * Implementa la operación "registrarTransferenciaEstancia".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function registrarTransferenciaEstancia({
     idAtencion,
@@ -239,6 +263,49 @@ async function registrarTransferenciaEstancia({
         const fechaBase = fechaModificacion || fechaParaGuardar;
         const fechaHoraStr = `${fechaBase.slice(0, 4)}-${fechaBase.slice(4, 6)}-${fechaBase.slice(6, 8)} ${horaParaGuardar}:00.000`;
         request.input('fechaHora', sql.VarChar(23), fechaHoraStr);
+
+        // Serializa las transferencias por cuenta y vuelve idempotentes los reenvíos idénticos.
+        request.input('transferenciaLock', sql.NVarChar(255), `transferencia-estancia:${Number(idAtencion)}`);
+        const lockResult = await request.query(`
+            DECLARE @resultadoBloqueo INT;
+            EXEC @resultadoBloqueo = sys.sp_getapplock
+                @Resource = @transferenciaLock,
+                @LockMode = 'Exclusive',
+                @LockOwner = 'Transaction',
+                @LockTimeout = 15000;
+            SELECT @resultadoBloqueo AS ResultadoBloqueo;
+        `);
+        const resultadoBloqueo = Number(lockResult.recordset?.[0]?.ResultadoBloqueo);
+        if (!Number.isFinite(resultadoBloqueo) || resultadoBloqueo < 0) {
+            throw new Error('No se pudo reservar la atención para registrar la transferencia.');
+        }
+
+        const transferenciaExistente = await request.query(`
+            SELECT TOP (1) Secuencia
+            FROM AtencionesEstanciaHospitalaria WITH (UPDLOCK, HOLDLOCK)
+            WHERE IdAtencion = @idAtencion
+              AND IdServicio = @idServicio
+              AND IdProducto = @idProducto
+              AND (
+                    IdMedicoOrdenaOrigen = @idMedicoOrdena
+                    OR (IdMedicoOrdenaOrigen IS NULL AND @idMedicoOrdena IS NULL)
+                  )
+              AND (
+                    IdDiagnostico = @idDiagnostico
+                    OR (IdDiagnostico IS NULL AND @idDiagnostico IS NULL)
+                  )
+              AND (
+                    IdUsuarioAuditoria = @idUsuarioAuditoria
+                    OR (IdUsuarioAuditoria IS NULL AND @idUsuarioAuditoria IS NULL)
+                  )
+              AND FechaOcupacion >= CONVERT(DATE, @fechaOcupacion)
+              AND FechaOcupacion < DATEADD(DAY, 1, CONVERT(DATE, @fechaOcupacion))
+              AND LTRIM(RTRIM(HoraOcupacion)) = LTRIM(RTRIM(@horaOcupacion));
+        `);
+        if (transferenciaExistente.recordset?.length) {
+            await transaction.commit();
+            return { success: true, duplicada: true };
+        }
 
         const secuenciaResult = await request.query(`
             SELECT ISNULL(MAX(Secuencia), 0) + 1 AS siguiente

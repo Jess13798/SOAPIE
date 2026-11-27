@@ -17,6 +17,11 @@ const { turnoDesdeHora } = require('../src/core/utils/turno');
 // 1. Función pura: turnoDesdeHora(fecha)
 // ---------------------------------------------------------------------------
 // Se construyen fechas en hora LOCAL (mismo reloj que usa getHours()).
+/**
+ * Implementa la operaión "aLas".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function aLas(hora, minuto = 0) {
     return new Date(2026, 9, 19, hora, minuto); // 19-oct-2026
 }
@@ -43,9 +48,8 @@ test('turnoDesdeHora: ante una fecha inválida cae a "dia" sin romper', () => {
     assert.equal(turnoDesdeHora(new Date('no-es-fecha')), 'dia');
 });
 
-// ---------------------------------------------------------------------------
+
 // 2. Integración: POST /api/login devuelve el turno (y lo firma en el token)
-// ---------------------------------------------------------------------------
 // `authRoutes` captura la función de login al requerirse, así que se inyecta
 // un doble en la caché de require ANTES de cargar el router.
 const loginPath = require.resolve('../login');
@@ -64,6 +68,12 @@ const capaLogin = authRoutes.stack.find(
     (capa) => capa.route && capa.route.path === '/login'
 );
 const loginHandler = capaLogin.route.stack[0].handle;
+
+/**
+ * Implementa la operación "respuestaFalsa".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function respuestaFalsa() {
     return {

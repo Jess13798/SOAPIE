@@ -1,3 +1,5 @@
+<!-- Propósito: Implementación del archivo AppSidebar.vue. -->
+
 <template>
   <div class="flex h-screen bg-slate-50">
     <aside 

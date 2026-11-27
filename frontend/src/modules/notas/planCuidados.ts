@@ -57,6 +57,14 @@ export function faltaMotivoNoRealizada(planCuidados: PlanCuidadoNota[]): boolean
  * sección de Intervención. Solo se escriben los NIC con estado registrado; el
  * formato anterior (sin marcador) se mantiene para las realizadas.
  */
+/**
+
+ * Implementa la operación "lineasIntervenciones".
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+ */
+
 export function lineasIntervenciones(planCuidados: PlanCuidadoNota[]): string[] {
     const lineas: string[] = []
     for (const plan of planCuidados) {
@@ -76,6 +84,18 @@ export function lineasIntervenciones(planCuidados: PlanCuidadoNota[]): string[] 
     return lineas
 }
 
+/**
+
+
+ * Implementa la operación "buscarLinea".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function buscarLinea(texto: string, prefijo: string, marcador: string): string | null {
     for (const linea of (texto || '').split('\n')) {
         const inicio = linea.indexOf(prefijo)
@@ -93,6 +113,14 @@ function buscarLinea(texto: string, prefijo: string, marcador: string): string |
  *   - Línea con marcador "| NO REALIZADA:"  → no realizada + motivo.
  *   - Línea sin marcador                    → realizada (formato anterior).
  */
+/**
+
+ * Implementa la operación "hidratarNicEstados".
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+ */
+
 export function hidratarNicEstados(
     plan: PlanCuidadoNota,
     lineasIntervencion: string[],
@@ -144,6 +172,14 @@ export function hidratarPlanCuidados(nota: NotaEnfermeria): PlanCuidadoNota[] {
  * metas), pero se limpia el estado de ejecución para que el turno actual lo
  * registre desde cero.
  */
+/**
+
+ * Implementa la operación "heredarPlanCuidados".
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+ */
+
 export function heredarPlanCuidados(notaAnterior?: NotaEnfermeria | null): PlanCuidadoNota[] {
     if (!notaAnterior) return []
 
