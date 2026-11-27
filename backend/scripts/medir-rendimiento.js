@@ -11,6 +11,11 @@ const token = firmarToken({ usuario: 'medicion', idEmpleado: 1 })
 const H = { Authorization: 'Bearer ' + token }
 const BASE = 'http://localhost:3000/api'
 
+/**
+ * Implementa la operación "timeIt".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function timeIt(label, url, n = 6) {
   const times = []
   let lastStatus = 0
@@ -33,6 +38,18 @@ async function timeIt(label, url, n = 6) {
     ' | ' + lastStatus + ' | ' + last.length + ' filas' + ejemplo
   )
 }
+
+/**
+
+
+ * Implementa la operación "main".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 async function main() {
   console.log('== Tiempos de respuesta (API local) ==\n')

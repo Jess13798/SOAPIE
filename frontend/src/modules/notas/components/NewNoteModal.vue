@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "notas". -->
+
 <template>
   <div v-if="isOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
     <!-- Backdrop -->
@@ -163,6 +165,14 @@
         </div>
       </div>
 
+      <p
+        v-if="nota && !puedeEditarNota"
+        role="status"
+        class="border-t border-amber-200 bg-amber-50 px-6 py-2 text-xs font-semibold text-amber-900"
+      >
+        Solo la enfermera/o que creó esta nota puede editarla o firmarla.
+      </p>
+
       <!-- Form Container (scrollable) -->
       <div class="min-h-0 flex-1 overflow-y-auto px-6 pt-1 pb-2 custom-scrollbar bg-white">
         <NewNoteForm
@@ -174,7 +184,7 @@
           :nota-anterior="notaAnterior"
           :campos-obligatorios="camposObligatorios"
           :rangos-vitales="rangosVitales"
-          :is-read-only="!!nota?.isFirmada"
+          :is-read-only="!!nota?.isFirmada || !puedeEditarNota"
           :is-submitting="isSubmitting"
           @save="handleSave"
           @sign="handleSign"
@@ -258,6 +268,16 @@ let timer: any
 const edadPacienteTexto = computed(() => {
   const desc = (props.patient.edadDescripcion || '').trim()
   return desc ? `${props.patient.edad} ${desc}` : `${props.patient.edad} años`
+})
+
+const puedeEditarNota = computed(() => {
+  if (!props.nota) return true
+  const idEmpleadoActual = sessionStorage.getItem('idEmpleado')
+  return Boolean(
+    idEmpleadoActual
+    && props.nota.idEmpleado != null
+    && String(props.nota.idEmpleado) === idEmpleadoActual,
+  )
 })
 
 // Arreglo estable: evita que el reloj (que re-renderiza cada segundo) entregue

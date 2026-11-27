@@ -9,6 +9,12 @@ const crypto = require('crypto');
 const SECRET = process.env.AUTH_SECRET || 'cambiar-este-secreto-en-produccion';
 const EXPIRACION_MS = 1000 * 60 * 60 * 8; // 8 horas
 
+/**
+ * Implementa la operación "firmarToken".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function firmarToken(payload) {
     const cuerpo = Buffer.from(
         JSON.stringify({ ...payload, exp: Date.now() + EXPIRACION_MS })
@@ -21,6 +27,12 @@ function firmarToken(payload) {
 
     return `${cuerpo}.${firma}`;
 }
+
+/**
+ * Implementa la operación "verificarToken".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function verificarToken(token) {
     if (!token || typeof token !== 'string') return null;
@@ -48,6 +60,11 @@ function verificarToken(token) {
 }
 
 // Middleware de Express: exige un token válido en el header Authorization.
+/**
+ * Implementa la operación "requiereAuth".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function requiereAuth(req, res, next) {
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : null;

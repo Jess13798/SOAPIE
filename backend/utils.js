@@ -1,11 +1,23 @@
 // Utilidades compartidas por módulos del backend.
 // Sirven para evitar duplicar funciones simples como validación y formateo.
 
+/**
+ * Implementa la operación "nullIfEmpty".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function nullIfEmpty(value) {
     if (value === undefined || value === null) return null;
     if (typeof value === 'string' && value.trim() === '') return null;
     return value;
 }
+
+/**
+ * Implementa la operación "parseJsonSafe".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function parseJsonSafe(value, fallback = {}) {
     if (!value) return fallback;
@@ -17,6 +29,12 @@ function parseJsonSafe(value, fallback = {}) {
     }
 }
 
+/**
+ * Implementa la operación "formatDate".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function formatDate(dateValue) {
     if (!dateValue) return '';
 
@@ -25,6 +43,12 @@ function formatDate(dateValue) {
 
     return date.toISOString().split('T')[0];
 }
+
+/**
+ * Implementa la operación "formatTime".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function formatTime(dateValue) {
     if (!dateValue) return '';

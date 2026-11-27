@@ -16,18 +16,47 @@ const config = require('../../../../frontend/src/modules/notas/signosVitales.jso
 
 const CAMPOS = config.campos;
 
+/**
+
+
+ * Implementa la operación "configDeServicio".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function configDeServicio(idServicio) {
     const id = String(idServicio ?? '').trim();
     return (id && config.porServicio && config.porServicio[id]) || config.porDefecto;
 }
 
+/**
+ * Implementa la operación "camposObligatorios".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function camposObligatorios(idServicio) {
     return [...(configDeServicio(idServicio).obligatorios || config.porDefecto.obligatorios || CAMPOS)];
 }
 
+/**
+ * Implementa la operación "rangosDe".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function rangosDe(idServicio) {
     return configDeServicio(idServicio).rangos || config.porDefecto.rangos || {};
 }
+
+/**
+ * Implementa la operación "rangoDe".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function rangoDe(idServicio, campo) {
     const r = rangosDe(idServicio);
@@ -35,6 +64,11 @@ function rangoDe(idServicio, campo) {
 }
 
 // Configuración que expone /api/notas/configuracion-signos-vitales.
+/**
+ * Implementa la operación "configuracion".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 function configuracion() {
     return {
         campos: [...config.campos],

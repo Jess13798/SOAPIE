@@ -116,33 +116,30 @@ async function anularOrdenServicio({
             tabla: 'FactOrdenServicio',
             idListItem: 0,
             observaciones: observaciones.substring(0, 100),
+            throwOnError: true,
         }, transaction);
 
         // 4. Descontar consumo del punto de carga si tenía monto
         if (montoADescontar > 0 && orden.IdCuentaAtencion) {
-            try {
-                const ptosRequest = transaction.request();
-                ptosRequest.input('idCuenta', sql.Int, orden.IdCuentaAtencion);
-                ptosRequest.input('idPunto', sql.Int, orden.IdPuntoCarga || 716);
-                const ptosResult = await ptosRequest.query(`
-                    SELECT TotalConsumos
-                    FROM dbo.FacturacionCuentasAtencionPtos WITH (UPDLOCK, HOLDLOCK)
-                    WHERE IdCuentaAtencion = @idCuenta AND idPuntoCarga = @idPunto;
-                `);
-                if (ptosResult.recordset?.length) {
-                    const actual = Number(ptosResult.recordset[0].TotalConsumos) || 0;
-                    const nuevoConsumo = Math.max(0, actual - montoADescontar);
-                    const updatePtosRequest = transaction.request();
-                    updatePtosRequest.input('lbNueva', sql.Bit, false);
-                    updatePtosRequest.input('IdCuentaAtencion', sql.Int, orden.IdCuentaAtencion);
-                    updatePtosRequest.input('idPuntoCarga', sql.Int, orden.IdPuntoCarga || 716);
-                    updatePtosRequest.input('TotalConsumos', sql.Money, nuevoConsumo);
-                    updatePtosRequest.input('TotalPagos', sql.Money, 0);
-                    updatePtosRequest.input('TotalPagosReembolso', sql.Money, 0);
-                    await updatePtosRequest.execute('dbo.FacturacionCuentasAtencionPtosActualizar');
-                }
-            } catch {
-                // Si la BD de pruebas no tiene la tabla, no interrumpe
+            const ptosRequest = transaction.request();
+            ptosRequest.input('idCuenta', sql.Int, orden.IdCuentaAtencion);
+            ptosRequest.input('idPunto', sql.Int, orden.IdPuntoCarga || 716);
+            const ptosResult = await ptosRequest.query(`
+                SELECT TotalConsumos
+                FROM dbo.FacturacionCuentasAtencionPtos WITH (UPDLOCK, HOLDLOCK)
+                WHERE IdCuentaAtencion = @idCuenta AND idPuntoCarga = @idPunto;
+            `);
+            if (ptosResult.recordset?.length) {
+                const actual = Number(ptosResult.recordset[0].TotalConsumos) || 0;
+                const nuevoConsumo = Math.max(0, actual - montoADescontar);
+                const updatePtosRequest = transaction.request();
+                updatePtosRequest.input('lbNueva', sql.Bit, false);
+                updatePtosRequest.input('IdCuentaAtencion', sql.Int, orden.IdCuentaAtencion);
+                updatePtosRequest.input('idPuntoCarga', sql.Int, orden.IdPuntoCarga || 716);
+                updatePtosRequest.input('TotalConsumos', sql.Money, nuevoConsumo);
+                updatePtosRequest.input('TotalPagos', sql.Money, 0);
+                updatePtosRequest.input('TotalPagosReembolso', sql.Money, 0);
+                await updatePtosRequest.execute('dbo.FacturacionCuentasAtencionPtosActualizar');
             }
         }
     } else {

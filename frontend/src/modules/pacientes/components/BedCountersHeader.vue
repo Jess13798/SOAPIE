@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "pacientes". -->
+
 <template>
   <div class="flex items-center justify-between border-b border-sky-700 bg-sky-800 px-6 py-2.5">
     <div class="flex min-w-0 items-center gap-3">

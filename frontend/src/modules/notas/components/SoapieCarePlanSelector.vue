@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "notas". -->
+
 <template>
   <section v-if="section !== 's' && section !== 'o'" class="space-y-4 border-b border-slate-200 bg-white p-4">
     <div>

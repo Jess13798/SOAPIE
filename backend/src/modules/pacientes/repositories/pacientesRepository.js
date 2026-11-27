@@ -5,6 +5,12 @@
 const sql = require('mssql');
 const { query } = require('../../../../dbHelper');
 
+/**
+ * Implementa la operación "getPacientesByServicio".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function getPacientesByServicio(servicioId = null) {
     try {
         console.log('--- Ejecutando Query de Pacientes ---', { servicioId });
@@ -96,6 +102,12 @@ async function getPacientesByServicio(servicioId = null) {
     }
 }
 
+/**
+ * Implementa la operación "getServicios".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function getServicios() {
     try {
         console.log('--- Ejecutando Query de Servicios ---');
@@ -139,6 +151,14 @@ async function getServicios() {
 // Devuelve los IdPaciente candidatos cuando el texto parece un número, con
 // retorno temprano para ser rápido: primero DNI (columna indexada), luego
 // historia clínica y por último número de cuenta.
+/**
+
+ * Implementa la operación "candidatosPorNumero".
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+ */
+
 async function candidatosPorNumero(texto) {
     const params = [{ name: 'prefijo', type: sql.VarChar, value: `${texto}%` }];
 
@@ -165,6 +185,14 @@ async function candidatosPorNumero(texto) {
 // inicial sobre ~350k pacientes) es costoso, por eso solo se usa cuando el
 // texto no es numérico. La primera rama prioriza a los hospitalizados para que
 // no queden fuera del TOP por orden alfabético.
+/**
+
+ * Implementa la operación "candidatosPorNombre".
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+ */
+
 async function candidatosPorNombre(texto) {
     const nombreCompleto = `
         ISNULL(p.ApellidoPaterno, '') + ' ' +
@@ -202,6 +230,11 @@ async function candidatosPorNombre(texto) {
 
 // Completa los datos de los candidatos: servicio actual (estancia pendiente de
 // cama o cama ocupada) y cuenta/cama, dejando a los hospitalizados primero.
+/**
+ * Implementa la operación "enriquecerCandidatos".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function enriquecerCandidatos(ids) {
     if (!ids.length) return [];
 
@@ -264,6 +297,11 @@ async function enriquecerCandidatos(ids) {
 // Búsqueda global y ágil de pacientes para el buscador del frontend.
 // Coincide por nombre completo o por DNI / historia clínica / número de cuenta
 // y devuelve, si la hay, la atención, el servicio actual y la cama/estancia.
+/**
+ * Implementa la operación "buscarPacientes".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 async function buscarPacientes(texto) {
     try {
         const esNumerico = /^[0-9]+$/.test(texto);

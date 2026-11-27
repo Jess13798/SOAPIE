@@ -1,5 +1,14 @@
+// Propósito: Acceso a datos del módulo "catalogos".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const sql = require('mssql');
 const { query } = require('../../../../dbHelper');
+
+/**
+ * Implementa la operación "buscarInterrelaciones".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function buscarInterrelaciones(buscar = '') {
     const result = await query(`

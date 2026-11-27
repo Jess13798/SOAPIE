@@ -1,8 +1,17 @@
+// Propósito: Acceso a datos del módulo "facturacion".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const sql = require('mssql');
 
 const repo = require('./facturacionCuentasAtencionRepository');
+
+/**
+ * Implementa la operación "createMockTransaction".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function createMockTransaction() {
     const recorded = [];

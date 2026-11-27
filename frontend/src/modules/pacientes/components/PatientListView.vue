@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "pacientes". -->
+
 <template>
   <div class="flex flex-col gap-3 h-full min-h-0">
     <!-- Tabla de Pacientes Sin Cama (Subcomponente extraído) -->

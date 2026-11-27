@@ -4,6 +4,12 @@
 const sql = require('mssql');
 const { query } = require('../../../../dbHelper');
 
+/**
+ * Implementa la operación "getMedicosByEspecialidad".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function getMedicosByEspecialidad(idEspecialidad) {
     if (!idEspecialidad) return [];
 

@@ -1,6 +1,21 @@
+// Propósito: Composable reutilizable del módulo "pacientes".
+// Responsable de mantener separadas las reglas de este archivo.
+
 import { ref, type Ref } from 'vue'
 import type { Patient } from '@/types'
 import { camasService, type PacienteSinCama, type TransferenciaEstanciaPayload } from '@/services/api'
+
+/**
+
+
+ * Implementa la operación "useBedModals".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 export function useBedModals(
   recargarPacientes: (servicioId: string) => Promise<void>,
@@ -9,6 +24,8 @@ export function useBedModals(
   const isBedModalOpen = ref(false)
   const isTotalBedsModalOpen = ref(false)
   const isTransferModalOpen = ref(false)
+  const isBedSubmitting = ref(false)
+  const isTransferSubmitting = ref(false)
   const selectedPatientForBed = ref<Patient | null>(null)
   const pacienteSinCamaSeleccionado = ref<PacienteSinCama | null>(null)
   const patientForTransfer = ref<Patient | null>(null)
@@ -18,25 +35,85 @@ export function useBedModals(
   const showSuccessModal = ref(false)
   const successModalType = ref<'nota' | 'asignacion-cama' | 'transferencia'>('nota')
 
+  /**
+
+
+   * Implementa la operación "handleViewBed".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   function handleViewBed(patient: Patient) {
     selectedPatientForBed.value = patient
     pacienteSinCamaSeleccionado.value = null
     isBedModalOpen.value = true
   }
 
+  /**
+
+
+   * Implementa la operación "handleAssignBed".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   function handleAssignBed(pacienteSinCama: PacienteSinCama) {
     pacienteSinCamaSeleccionado.value = pacienteSinCama
     isBedModalOpen.value = true
   }
 
+  /**
+
+
+   * Implementa la operación "handleViewTotalBeds".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   function handleViewTotalBeds() {
     isTotalBedsModalOpen.value = true
   }
+
+  /**
+
+
+   * Implementa la operación "handleViewTransfer".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
 
   function handleViewTransfer(patient: Patient) {
     patientForTransfer.value = patient
     isTransferModalOpen.value = true
   }
+
+  /**
+
+
+   * Implementa la operación "handleCloseBedModal".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
 
   function handleCloseBedModal() {
     pacienteSinCamaSeleccionado.value = null
@@ -44,18 +121,44 @@ export function useBedModals(
     isBedModalOpen.value = false
   }
 
+  /**
+
+
+   * Implementa la operación "handleCloseTransferModal".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   function handleCloseTransferModal() {
     patientForTransfer.value = null
     isTransferModalOpen.value = false
   }
 
+  /**
+
+
+   * Implementa la operación "handleSelectPaciente".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   async function handleSelectPaciente(paciente: Patient) {
+    if (isBedSubmitting.value) return
     const idCama = Number(paciente.id)
     if (!Number.isFinite(idCama)) {
       console.error('IdCama inválido', { idCama })
       return
     }
 
+    isBedSubmitting.value = true
     try {
       let data: { success: boolean; mensaje?: string }
 
@@ -106,10 +209,25 @@ export function useBedModals(
     } catch (err: any) {
       console.error('Error al procesar la cama:', err)
       alert(err.message || 'Error al procesar la cama')
+    } finally {
+      isBedSubmitting.value = false
     }
   }
 
+  /**
+
+
+   * Implementa la operación "handleConfirmTransfer".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   async function handleConfirmTransfer(payload: any) {
+    if (isTransferSubmitting.value) return
     const {
       idCuentaAtencion,
       idMedicoOrdena,
@@ -129,6 +247,7 @@ export function useBedModals(
       return
     }
 
+    isTransferSubmitting.value = true
     try {
       const data = await camasService.registrarTransferencia({
         idAtencion: idCuentaAtencion,
@@ -152,6 +271,8 @@ export function useBedModals(
     } catch (err: any) {
       console.error('Error guardando transferencia', err)
       alert(err?.message || 'No se pudo guardar la transferencia.')
+    } finally {
+      isTransferSubmitting.value = false
     }
   }
 
@@ -159,6 +280,8 @@ export function useBedModals(
     isBedModalOpen,
     isTotalBedsModalOpen,
     isTransferModalOpen,
+    isBedSubmitting,
+    isTransferSubmitting,
     selectedPatientForBed,
     pacienteSinCamaSeleccionado,
     patientForTransfer,

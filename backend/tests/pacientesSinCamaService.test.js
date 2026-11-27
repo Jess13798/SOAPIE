@@ -8,6 +8,12 @@ const assert = require('node:assert/strict');
 const pacientesSinCamaRepository = require('../src/modules/pacientes-sin-cama/repositories/pacientesSinCamaRepository');
 const pacientesSinCamaService = require('../src/modules/pacientes-sin-cama/services/pacientesSinCamaService');
 
+/**
+ * Implementa la operación "silenciarErrores".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 function silenciarErrores(t) {
     t.mock.method(console, 'error', () => {});
 }

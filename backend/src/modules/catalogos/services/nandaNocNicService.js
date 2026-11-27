@@ -1,4 +1,13 @@
+// Propósito: Reglas de negocio del módulo "catalogos".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const nandaNocNicRepository = require('../repositories/nandaNocNicRepository');
+
+/**
+ * Implementa la operación "agruparInterrelaciones".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 function agruparInterrelaciones(rows) {
     const diagnosticos = new Map();
@@ -41,6 +50,12 @@ function agruparInterrelaciones(rows) {
 
     return Array.from(diagnosticos.values());
 }
+
+/**
+ * Implementa la operación "buscarCatalogo".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function buscarCatalogo(buscar = '') {
     const rows = await nandaNocNicRepository.buscarInterrelaciones(buscar);

@@ -1,6 +1,21 @@
+// Propósito: Implementación del archivo printNotaSoapie.ts.
+// Responsable de mantener separadas las reglas de este archivo.
+
 import type { NotaEnfermeria, Patient, PlanCuidadoNota, SignosVitales } from '@/types'
 import { camposObligatoriosDeServicio } from './vitalesConfig'
 import { extractWongBakerScore, removeWongBakerMarker, wongBakerFace } from './wongBaker'
+
+/**
+
+
+ * Implementa la operación "escapeHtml".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
@@ -11,21 +26,69 @@ function escapeHtml(value: unknown): string {
     .replace(/'/g, '&#39;')
 }
 
+/**
+
+
+ * Implementa la operación "valueOrDash".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function valueOrDash(value: unknown): string {
   const text = String(value ?? '').trim()
   return text ? escapeHtml(text) : '—'
 }
+
+/**
+
+
+ * Implementa la operación "textBlock".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function textBlock(text?: string): string {
   const value = String(text ?? '').trim()
   return value ? escapeHtml(value) : '<span class="empty">Sin registro</span>'
 }
 
+/**
+
+
+ * Implementa la operación "freeAnalysisText".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function freeAnalysisText(analysis?: string): string {
   const marker = /\n\s*\[DIAGNOSTICOS NANDA\]\s*/i
   const markerIndex = String(analysis ?? '').search(marker)
   return markerIndex < 0 ? String(analysis ?? '').trim() : String(analysis ?? '').slice(0, markerIndex).trim()
 }
+
+/**
+
+
+ * Implementa la operación "renderRequiredVitals".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function renderRequiredVitals(nota: NotaEnfermeria): string {
   if (!nota.signosVitales) return ''
@@ -56,12 +119,36 @@ function renderRequiredVitals(nota: NotaEnfermeria): string {
   return values.length ? `<div class="vital-line"><strong>Signos vitales:</strong> ${values.join(' · ')}</div>` : ''
 }
 
+/**
+
+
+ * Implementa la operación "renderWongBakerScale".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function renderWongBakerScale(score: number | null | undefined): string {
   const selectedFace = wongBakerFace(score)
   if (!selectedFace) return ''
 
   return `<p class="pain-scale"><strong>Escala Wong-Baker:</strong> ${selectedFace.score}/10 — ${valueOrDash(selectedFace.meaning)}</p>`
 }
+
+/**
+
+
+ * Implementa la operación "renderPlanServices".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function renderPlanServices(nota: NotaEnfermeria): string {
   const servicios = nota.serviciosPlanificados || []
@@ -72,6 +159,18 @@ function renderPlanServices(nota: NotaEnfermeria): string {
   )).join('')
   return `<div class="planned-services"><strong>Servicios planificados:</strong><ul>${rows}</ul></div>`
 }
+
+/**
+
+
+ * Implementa la operación "renderCarePlan".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 function renderCarePlan(plans: PlanCuidadoNota[] | undefined, key: 'analysis' | 'plan' | 'intervention'): string {
   if (!plans?.length) return ''
@@ -101,9 +200,33 @@ function renderCarePlan(plans: PlanCuidadoNota[] | undefined, key: 'analysis' | 
   return blocks.join('')
 }
 
+/**
+
+
+ * Implementa la operación "soapRow".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
+
 function soapRow(letter: string, content: string): string {
   return `<tr class="soap-row"><th class="soap-letter">${letter}</th><td>${content}</td></tr>`
 }
+
+/**
+
+
+ * Implementa la operación "printNotaSoapie".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 export function printNotaSoapie(nota: NotaEnfermeria, patient: Patient): boolean {
   if (!nota.isFirmada) {
@@ -201,6 +324,12 @@ export function printNotaSoapie(nota: NotaEnfermeria, patient: Patient): boolean
   printWindow.document.open()
   printWindow.document.write(html)
   printWindow.document.close()
+  /**
+
+   * Implementa la operación "printWhenReady" mediante una función auxiliar exportable.
+
+   */
+
   const printWhenReady = () => {
     printWindow.focus()
     printWindow.print()

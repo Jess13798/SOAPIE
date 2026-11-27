@@ -1,6 +1,21 @@
+// Propósito: Composable reutilizable del módulo "pacientes".
+// Responsable de mantener separadas las reglas de este archivo.
+
 import { ref } from 'vue'
 import type { Patient, PacienteBD } from '@/types'
 import { pacientesService, type PacienteBusqueda, type Servicio } from '@/services/api'
+
+/**
+
+
+ * Implementa la operación "usePatients".
+
+
+ * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+ */
+
 
 export function usePatients() {
   const pacientes = ref<Patient[]>([])
@@ -10,10 +25,28 @@ export function usePatients() {
   const isLoadingPacientes = ref(false)
   const errorPacientes = ref<string | null>(null)
 
+  /**
+
+
+   * Implementa la operación "convertirPacienteBD".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   function convertirPacienteBD(pacienteBD: PacienteBD): Patient {
     const pacienteId = pacienteBD.IdPaciente ? String(pacienteBD.IdPaciente) : (pacienteBD.IdCuentaAtencion || '')
     const edadNum = Number(pacienteBD.Edad)
     const edad = Number.isFinite(edadNum) ? edadNum : 0
+    /**
+
+     * Implementa la operación "edadDescripcion" mediante una función auxiliar exportable.
+
+     */
+
     const edadDescripcion = (pacienteBD.TipoEdad || '').toString().trim()
     const nombreCompleto = (pacienteBD.Pacientes || '').trim()
 
@@ -41,6 +74,18 @@ export function usePatients() {
       estado: 'estable',
     }
   }
+
+  /**
+
+
+   * Implementa la operación "cargarPacientes".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
 
   async function cargarPacientes(servicioId: string = '') {
     // Sin servicio seleccionado: lista vacía (el usuario elige desde el buscador).
@@ -74,6 +119,18 @@ export function usePatients() {
     }
   }
 
+  /**
+
+
+   * Implementa la operación "cargarServicios".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   async function cargarServicios() {
     try {
       const data = await pacientesService.getServicios()
@@ -83,6 +140,18 @@ export function usePatients() {
     }
   }
 
+  /**
+
+
+   * Implementa la operación "cambiarServicio".
+
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+
+   */
+
+
   function cambiarServicio(servicioId: string) {
     servicioSeleccionado.value = servicioId
     cargarPacientes(servicioId)
@@ -90,6 +159,14 @@ export function usePatients() {
 
   // Selecciona un paciente encontrado con el buscador global:
   // cambia al servicio donde está y lo marca como paciente seleccionado.
+  /**
+
+   * Implementa la operación "seleccionarPacienteGlobal".
+
+   * Mantiene aislada la responsabilidad principal de este archivo.
+
+   */
+
   async function seleccionarPacienteGlobal(paciente: PacienteBusqueda) {
     const servicioId = paciente.IdServicio ? String(paciente.IdServicio) : ''
     if (!servicioId) return

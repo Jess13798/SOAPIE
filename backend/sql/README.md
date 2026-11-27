@@ -13,15 +13,19 @@ Estos scripts están pensados para la base de pruebas de SQL Server configurada 
 El orden de ejecución respeta las claves foráneas:
 
 1. `catalogo-nanda-noc-nic.sql`: crea los catálogos NANDA, NOC y NIC, y sus interrelaciones.
-2. `001-crear-tablas-notas.sql`: crea las notas de enfermería y sus signos vitales.
-3. `nota-enfermeria-diagnostico-comentario.sql`: crea los diagnósticos asociados a una nota.
-4. `nota-enfermeria-plan-cuidado.sql`: crea las tablas normalizadas de NOC y NIC (con el motivo de la NIC no realizada).
+2. `001-crear-tablas-notas.sql`: crea las tablas base de notas, signos vitales y servicios planificados.
+3. `002-ajustes-notas-enfermeria.sql`: agrega Wong-Baker si falta y crea índices para consultar signos vitales por nota o cuenta.
+4. `nota-enfermeria-diagnostico-comentario.sql`: crea los diagnósticos asociados a una nota.
+5. `nota-enfermeria-plan-cuidado.sql`: crea las tablas normalizadas de NOC y NIC (con el motivo de la NIC no realizada).
+6. `nota-enfermeria-plan-servicio.sql`: agrega a los servicios planificados la cantidad y el diagnóstico CIE para bases existentes.
 
 El flujo nuevo usa `NotaEnfermeriaDiagnostico` como relación entre una nota y sus diagnósticos, `NotaEnfermeriaPlanNOC` para resultado, meta y evaluación, y `NotaEnfermeriaPlanNIC` para intervención y si fue realizada. Las metas y evaluaciones históricas permanecen en los campos de texto SOAPIE y se pueden seguir consultando allí.
 
-La puntuación opcional Wong-Baker se guarda como `dbo.NotaEnfermeria.WongBakerScore` (`TINYINT`, admite `NULL` o `0, 2, 4, 6, 8, 10`), separada del texto de planificación. La migración del esquema agrega la columna y su restricción de validación de forma idempotente.
+La puntuación opcional Wong-Baker se guarda como `dbo.NotaEnfermeria.WongBakerScore` (`TINYINT`, admite `NULL` o `0, 2, 4, 6, 8, 10`), separada del texto de planificación. `001-crear-tablas-notas.sql` la incluye en tablas nuevas y `002-ajustes-notas-enfermeria.sql` la agrega a tablas existentes si hace falta, junto con su restricción de validación.
 
-Para una prueba de integración, la pestaña P del SOAPIE permite buscar servicios activos en la tabla existente `dbo.FactCatalogoServicios` (máximo 50 resultados por búsqueda). Los servicios elegidos se guardan en `dbo.NotaEnfermeriaPlanServicio`, relacionados con la nota y con `IdProducto`; también se conserva el código y nombre como estaban al seleccionarlos. `nota-enfermeria-plan-servicio.sql` agrega esa relación como migración incremental para bases existentes. `001-crear-tablas-notas.sql` también incluye la estructura para bases nuevas.
+La pestaña P del SOAPIE permite buscar servicios activos en `dbo.FactCatalogoServicios` (máximo 50 resultados por búsqueda) y muestra el código y la descripción. Cada CPT se asocia a un diagnóstico de la cuenta de atención (se sugiere el principal) y a una cantidad entera positiva, inicialmente 1. `dbo.NotaEnfermeriaPlanServicio` conserva estos datos junto con el `IdProducto` y el `IdOrden` de SISGalen. Al guardar cambios, la cantidad y el diagnóstico se sincronizan con `dbo.FacturacionServicioDespacho`; el precio unitario se conserva y el total se recalcula. La cantidad no se puede cambiar si la orden está pagada (estado 4). Los precios no se muestran en el selector.
+
+`nota-enfermeria-plan-servicio.sql` agrega la relación y sus columnas como migración incremental para bases existentes; `001-crear-tablas-notas.sql` incluye la estructura completa para bases nuevas.
 
 ## Migración de datos de una base antigua (manual)
 

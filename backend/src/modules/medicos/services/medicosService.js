@@ -3,6 +3,12 @@
 
 const medicosRepository = require('../repositories/medicosRepository');
 
+/**
+ * Implementa la operación "obtenerMedicosPorEspecialidad".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
+
 async function obtenerMedicosPorEspecialidad(idEspecialidad) {
     try {
         return await medicosRepository.getMedicosByEspecialidad(idEspecialidad);

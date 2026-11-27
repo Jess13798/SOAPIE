@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "pacientes". -->
+
 <template>
   <Teleport to="body">
     <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center">
@@ -98,10 +100,10 @@
         <div class="flex justify-end gap-2 border-t border-slate-100 px-6 py-2">
           <button
             @click="guardarSeleccion"
-            :disabled="!selectedPaciente || (mostrarMedico && !medicoSeleccionadoNombre && !medicoSearch)"
+            :disabled="!selectedPaciente || isSubmitting || (mostrarMedico && !medicoSeleccionadoNombre && !medicoSearch)"
             class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Guardar
+            {{ isSubmitting ? 'Guardando...' : 'Guardar' }}
           </button>
           <button
             @click="$emit('close')"
@@ -126,6 +128,7 @@ const props = defineProps<{
   servicioSeleccionado?: string
   idEspecialidad?: string | number | null
   mostrarMedico?: boolean
+  isSubmitting?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -291,7 +294,7 @@ function clearMedicoHide() {
 }
 
 function guardarSeleccion() {
-  if (!selectedPaciente.value) return
+  if (!selectedPaciente.value || props.isSubmitting) return
   const nombreMedico = (medicoSeleccionadoNombre.value || medicoSearch.value).trim()
   emit('select-paciente', { ...selectedPaciente.value, medico: nombreMedico, idMedicoOrdena: medicoSeleccionadoId.value || null })
 }

@@ -1,5 +1,14 @@
+// Propósito: Acceso a datos del módulo "kardex".
+// Responsable de mantener separadas las reglas de este archivo.
+
 const sql = require('mssql');
 const { query } = require('../../../../dbHelper');
+
+/**
+ * Implementa la operación "guardarRegistro".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function guardarRegistro(registro) {
     const result = await query(
@@ -37,6 +46,12 @@ async function guardarRegistro(registro) {
 
     return { success: true, id: result.recordset[0].IdKardex };
 }
+
+/**
+ * Implementa la operación "obtenerRegistros".
+ * Mantiene aislada la responsabilidad principal de este archivo.
+ */
+
 
 async function obtenerRegistros(idCuenta, fecha) {
     let sqlText = `SELECT IdKardex, IdPaciente, IdCuenta, IdServicio, Fecha,

@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "notas". -->
+
 <template>
   <div>
     <!-- Pestañas Clínicas SOAPIE -->
@@ -97,7 +99,7 @@ const clinicalTabs = [
 const soapiePlaceholders: Record<string, string> = {
   s: "Paciente refiere...",
   o: "Hallazgos observables...",
-  a: "Diagnósticos o interpretación...",
+  a: "Describa el análisis clínico del paciente. Puede escribirlo directamente o usar el buscador NANDA opcional que aparece debajo.",
   p: "Plan de acción...",
   i: "Intervenciones realizadas...",
   e: "Respuesta del paciente..."

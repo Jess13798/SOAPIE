@@ -1,3 +1,5 @@
+<!-- Propósito: Componente visual del módulo "notas". -->
+
 <template>
   <!-- Signos Vitales: cuadrícula pareja (máximo 5 por fila). El encabezado
        tiene altura fija para que ningún cuadro crezca si el nombre es largo.

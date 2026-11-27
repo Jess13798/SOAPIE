@@ -1,3 +1,6 @@
+// Propósito: Operaciones relacionadas con pacientes.
+// Responsable de mantener separadas las reglas de este archivo.
+
 ﻿// Wrapper de compatibilidad para el módulo legacy de pacientes.
 // La lógica real quedó migrada a src/modules/pacientes para mantener un flujo
 // modular y facilitar la evolución hacia más tipos de documentos clínicos.
