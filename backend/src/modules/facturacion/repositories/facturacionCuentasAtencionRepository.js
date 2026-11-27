@@ -1,5 +1,5 @@
 const sql = require('mssql');
-const { executeProcedure } = require('../../../../dbHelper');
+const { query, executeProcedure } = require('../../../../dbHelper');
 
 const SP_CONSULTAR_PTOS = 'dbo.FacturacionCuentasAtencionPtosXIdCuenta';
 const SP_ACTUALIZAR_PTOS = 'dbo.FacturacionCuentasAtencionPtosActualizar';
@@ -31,6 +31,40 @@ function monto(value, fieldName = 'Monto') {
         throw createRepositoryError(INVALID_INPUT, `${fieldName} debe ser un monto no negativo.`);
     }
     return parsed;
+}
+
+/**
+ * Resuelve el financiamiento real de la cuenta de atención.
+ * GalenHos guarda en Atenciones solo la fuente de financiamiento; el tipo de
+ * financiamiento se obtiene desde FuentesFinanciamiento. Si la fuente no tiene
+ * tipo asociado (por ejemplo Estrategia) se usa 16, igual que GalenHos.
+ */
+async function obtenerFinanciamientoCuenta(idCuenta, transaction = null) {
+    const validId = enteroRequerido(idCuenta, 'idCuenta');
+    const consulta = `
+        SELECT TOP (1)
+            a.idFuenteFinanciamiento AS idFuenteFinanciamiento,
+            COALESCE(f.IdTipoFinanciamiento, 16) AS idTipoFinanciamiento,
+            COALESCE(t.GeneraPago, 0) AS generaPago
+        FROM dbo.Atenciones AS a
+        LEFT JOIN dbo.FuentesFinanciamiento AS f
+            ON f.IdFuenteFinanciamiento = a.idFuenteFinanciamiento
+        LEFT JOIN dbo.TiposFinanciamiento AS t
+            ON t.IdTipoFinanciamiento = COALESCE(f.IdTipoFinanciamiento, 16)
+        WHERE a.IdCuentaAtencion = @idCuentaFinanciamiento;
+    `;
+
+    if (transaction) {
+        const request = transaction.request();
+        request.input('idCuentaFinanciamiento', sql.Int, validId);
+        const result = await request.query(consulta);
+        return result.recordset?.[0] || null;
+    }
+
+    const result = await query(consulta, [
+        { name: 'idCuentaFinanciamiento', type: sql.Int, value: validId },
+    ]);
+    return result.recordset?.[0] || null;
 }
 
 /**
@@ -125,6 +159,7 @@ async function consultarComprobantesPagoPorCuenta(idCuenta) {
 }
 
 module.exports = {
+    obtenerFinanciamientoCuenta,
     consultarCuentasAtencionPtos,
     actualizarCuentasAtencionPtos,
     actualizarImportesCuenta,

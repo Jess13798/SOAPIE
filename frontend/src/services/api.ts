@@ -392,8 +392,11 @@ export const catalogosService = {
         return request<NandaConInterrelaciones[]>(`/catalogos/nanda-noc-nic${query}`)
     },
 
-    buscarServicios(buscar: string): Promise<ServicioCatalogo[]> {
-        return request<ServicioCatalogo[]>(`/catalogos/servicios?buscar=${encodeURIComponent(buscar)}`)
+    buscarServicios(buscar: string, opciones?: { idServicio?: number | string; idTipoFinanciamiento?: number | string }): Promise<ServicioCatalogo[]> {
+        const params = new URLSearchParams({ buscar })
+        if (opciones?.idServicio) params.append('idServicio', String(opciones.idServicio))
+        if (opciones?.idTipoFinanciamiento) params.append('idTipoFinanciamiento', String(opciones.idTipoFinanciamiento))
+        return request<ServicioCatalogo[]>(`/catalogos/servicios?${params.toString()}`)
     },
 
     obtenerServicioPorFinanciamiento(idProducto: number, idTipoFinanciamiento = 2): Promise<any> {

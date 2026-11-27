@@ -605,10 +605,11 @@ async function obtenerHistorialVitalsPorAtencion(idCuenta, limit = 10, offset = 
     }
 }
 
-async function eliminarNota(id) {
+async function eliminarNota(id, idEmpleado = null) {
     const notaId = nullableInteger(id, 'IdNota', true);
+    const empId = idEmpleado ? Number(idEmpleado) : 1;
     try {
-        await notasRepository.deleteNotaById(notaId);
+        await notasRepository.deleteNotaById(notaId, empId);
         return { success: true };
     } catch (error) {
         console.error('Error al eliminar nota:', error.message);

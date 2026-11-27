@@ -40,7 +40,8 @@ router.post('/notas', async (req, res) => {
 router.delete('/notas/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const resultado = await notasModule.eliminarNota(id);
+        const idEmpleado = req.usuario?.idEmpleado;
+        const resultado = await notasModule.eliminarNota(id, idEmpleado);
         res.json(resultado);
     } catch (err) {
         res.status(500).json({ success: false, mensaje: 'Error: ' + err.message });

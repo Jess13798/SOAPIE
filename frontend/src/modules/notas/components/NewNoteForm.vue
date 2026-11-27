@@ -85,6 +85,7 @@
       v-model="serviciosPlanificados"
       :disabled="isReadOnly"
       :id-empleado="props.initialNota?.idEmpleado || undefined"
+      :id-servicio="props.selectedPatient?.servicioId || undefined"
     />
 
     <p

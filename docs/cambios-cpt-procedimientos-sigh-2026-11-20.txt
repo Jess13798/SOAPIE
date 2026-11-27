@@ -220,3 +220,68 @@ B) dbo.FactCatalogoServiciosXidTipoFinanciamiento
     * backend/src/modules/facturacion/repositories/facturacionAnulacionRepository.test.js:
       Pruebas unitarias de la secuencia de anulación oficial de GalenHos.
 ================================================================================
+
+14. CORRECCIÓN DE RELACIONES DEL CPT CON LAS TABLAS DE GALENHOS (27/11/2026):
+--------------------------------------------------------------------------------
+Se verificó el flujo real contra la base `sigh` (definiciones de SP y datos de
+órdenes recientes). Se encontraron y corrigieron estas diferencias:
+
+A) Punto de carga de la orden
+   - `FactOrdenServicio` de GalenHos usa `IdPuntoCarga = 1` ("Consumo en el
+     Servicio"), no 716. El 716 es solo el punto del catálogo
+     (`IdServicio + 500`, en este caso Medicina = 216 + 500).
+   - Antes se creaba la orden y se actualizaba el saldo en 716; ahora ambos usan 1.
+
+B) Tabla de financiamiento
+   - Para SIS, SOAT, Estrategia, convenios y demás financiamientos que no
+     generan pago directo, GalenHos inserta en
+     `FacturacionServicioFinanciamientos` con
+     `dbo.FacturacionServicioFinanciamientosAgregar`.
+   - Antes la web no insertaba en esa tabla.
+
+C) Tablas de pago particular
+   - Para los financiamientos con `TiposFinanciamiento.GeneraPago = 1`
+     (por ejemplo Tarifa A), GalenHos inserta la cabecera en
+     `FactOrdenServicioPagos` y el detalle en `FacturacionServicioPagos`, con
+     `dbo.FactOrdenServicioPagosAgregar` y `dbo.FacturacionServicioPagosAgregar`.
+   - Antes la web tampoco insertaba en esas tablas.
+
+D) Diagnóstico del despacho
+   - `FacturacionServicioDespacho.idDiagnostico` guarda el
+     `AtencionesDiagnosticos.IdAtencionDiagnostico`, no el `IdDiagnostico` del
+     catálogo. La web enviaba el ID del catálogo y rompía la relación.
+   - Ahora se resuelve y envía el `IdAtencionDiagnostico` principal (el de
+     subclasificación 'D').
+
+E) Anulación
+   - Además de la orden (estado 9) y los financiamientos (estado 9), ahora se
+     anula la cabecera de pago `FactOrdenServicioPagos` cuando no está cubierta
+     por boleta (`IdEstadoFacturacion <> 4`).
+   - El descuento de consumos usa el punto de carga real de la orden (1), no 716.
+
+F) Financiamiento real de la cuenta
+   - Se agregó `obtenerFinanciamientoCuenta()` en
+     `facturacionCuentasAtencionRepository.js`: resuelve desde
+     `Atenciones.idFuenteFinanciamiento` → `FuentesFinanciamiento` el
+     `IdTipoFinanciamiento` y el `GeneraPago`. Si la fuente no tiene tipo
+     (Estrategia), usa 16, igual que GalenHos.
+
+Archivos modificados:
+    * backend/src/modules/notas/repositories/notasRepository.js
+    * backend/src/modules/facturacion/repositories/facturacionAnulacionRepository.js
+    * backend/src/modules/facturacion/repositories/facturacionCuentasAtencionRepository.js
+    * backend/src/modules/facturacion/index.js
+Archivos nuevos:
+    * backend/src/modules/facturacion/repositories/facturacionServicioFinanciamientosRepository.js
+    * backend/src/modules/facturacion/repositories/facturacionPagosRepository.js
+    * pruebas unitarias de ambos repositorios
+
+Verificación realizada:
+    - Flujo SIS (cuenta real, producto 50264): orden con punto 1,
+      despacho con IdAtencionDiagnostico y una fila en
+      FacturacionServicioFinanciamientos.
+    - Flujo particular (cuenta real, producto 58645): orden con punto 1,
+      despacho con IdAtencionDiagnostico, una fila en FactOrdenServicioPagos y
+      una en FacturacionServicioPagos.
+    - Ambas pruebas se ejecutaron dentro de una transacción y se revirtieron.
+================================================================================

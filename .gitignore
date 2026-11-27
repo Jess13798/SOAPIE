@@ -2,6 +2,9 @@
 .env
 backend/.env
 
+# Documento de contexto local (no subir a GitHub)
+CONTEXTO-NUEVO-CHAT.md
+
 # Dependencias pesadas
 node_modules/
 backend/node_modules/
