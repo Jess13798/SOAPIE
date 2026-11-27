@@ -43,8 +43,15 @@ router.get('/catalogos/servicios', async (req, res) => {
         });
     }
 
+    const opciones = {};
+    if (req.query.idPuntoCarga) opciones.idPuntoCarga = parseInt(req.query.idPuntoCarga, 10);
+    if (req.query.idServicio) opciones.idServicio = parseInt(req.query.idServicio, 10);
+    if (req.query.idTipoFinanciamiento) opciones.idTipoFinanciamiento = parseInt(req.query.idTipoFinanciamiento, 10);
+
     try {
-        const datos = await catalogosModule.buscarServicios(buscar);
+        const datos = Object.keys(opciones).length > 0
+            ? await catalogosModule.buscarServicios(buscar, opciones)
+            : await catalogosModule.buscarServicios(buscar);
         res.json(datos);
     } catch (err) {
         console.error('Error en /api/catalogos/servicios:', err);

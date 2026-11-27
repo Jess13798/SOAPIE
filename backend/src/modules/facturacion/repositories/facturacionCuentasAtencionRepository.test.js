@@ -7,13 +7,7 @@ const sql = require('mssql');
 
 const repo = require('./facturacionCuentasAtencionRepository');
 
-/**
- * Implementa la operación "createMockTransaction".
- * Mantiene aislada la responsabilidad principal de este archivo.
- */
-
-
-function createMockTransaction() {
+function createMockTransaction(queryResult = null) {
     const recorded = [];
     return {
         recorded,
@@ -28,6 +22,10 @@ function createMockTransaction() {
                 async execute(procedureName) {
                     recorded.push({ procedureName, inputs });
                     return { rowsAffected: [1] };
+                },
+                async query(sqlText) {
+                    recorded.push({ sqlText, inputs });
+                    return { recordset: queryResult ? [queryResult] : [] };
                 },
             };
         },
@@ -70,6 +68,25 @@ test('actualizarImportesCuenta ejecuta el SP oficial dentro de la transacción',
     assert.equal(call.inputs.IdCuentaAtencion.value, 620981);
     assert.equal(call.inputs.TotalAsegurado.value, 116.20);
     assert.equal(call.inputs.totalPorPagar.value, 116.20);
+});
+
+test('obtenerFinanciamientoCuenta resuelve tipo, fuente y si genera pago', async () => {
+    const tx = createMockTransaction({
+        idFuenteFinanciamiento: 3,
+        idTipoFinanciamiento: 2,
+        generaPago: 2,
+    });
+
+    const resultado = await repo.obtenerFinanciamientoCuenta(626258, tx);
+
+    assert.deepEqual(resultado, {
+        idFuenteFinanciamiento: 3,
+        idTipoFinanciamiento: 2,
+        generaPago: 2,
+    });
+    const consulta = tx.recorded.find(r => r.sqlText);
+    assert.match(consulta.sqlText, /FuentesFinanciamiento/);
+    assert.equal(consulta.inputs.idCuentaFinanciamiento.value, 626258);
 });
 
 test('rechaza parámetros inválidos para cuentas y puntos de carga', async () => {

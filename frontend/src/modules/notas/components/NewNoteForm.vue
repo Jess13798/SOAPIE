@@ -87,6 +87,8 @@
       v-model="serviciosPlanificados"
       :disabled="isReadOnly"
       :id-cuenta-atencion="props.initialNota?.idCuenta || props.selectedPatient?.numCuenta"
+      :id-empleado="props.initialNota?.idEmpleado || undefined"
+      :id-servicio="props.selectedPatient?.servicioId || undefined"
     />
 
     <SoapieCarePlanSelector

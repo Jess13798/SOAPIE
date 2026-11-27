@@ -6,6 +6,7 @@ const SP_ORDEN_SELECCIONAR = 'dbo.FactOrdenServicioSeleccionarPorId';
 const SP_ORDEN_MODIFICAR = 'dbo.FactOrdenServicioModificar';
 const SP_FINANCIAMIENTO_ESTADO = 'dbo.FacturacionServicioFinanciamientosActualizaIdEstadoFacturacion';
 const SP_DESPACHO_FILTRAR = 'dbo.FacturacionServicioDespachoFiltraPorIdOrden';
+const ID_PUNTO_CARGA_CPT = 1; // Consumo en el Servicio, igual que GalenHos
 
 const INVALID_INPUT = 'FACTURACION_INVALID_INPUT';
 
@@ -108,7 +109,18 @@ async function anularOrdenServicio({
         finRequest.input('lnIdOrden', sql.Int, orden.IdOrden);
         await finRequest.execute(SP_FINANCIAMIENTO_ESTADO);
 
-        // 3. Auditoría oficial con acción 'E'
+        // 3. Anular la cabecera de pago si el CPT era particular.
+        // GalenHos no toca los pagos ya cubiertos por boleta (estado 4).
+        const pagosRequest = transaction.request();
+        pagosRequest.input('idOrdenPagos', sql.Int, orden.IdOrden);
+        await pagosRequest.query(`
+            UPDATE dbo.FactOrdenServicioPagos
+            SET IdEstadoFacturacion = 9
+            WHERE idOrden = @idOrdenPagos
+              AND IdEstadoFacturacion <> 4;
+        `);
+
+        // 4. Auditoría oficial con acción 'E'
         await registrarAuditoria({
             idEmpleado: empId,
             accion: 'E',
@@ -119,11 +131,11 @@ async function anularOrdenServicio({
             throwOnError: true,
         }, transaction);
 
-        // 4. Descontar consumo del punto de carga si tenía monto
+        // 5. Descontar consumo del punto de carga si tenía monto
         if (montoADescontar > 0 && orden.IdCuentaAtencion) {
             const ptosRequest = transaction.request();
             ptosRequest.input('idCuenta', sql.Int, orden.IdCuentaAtencion);
-            ptosRequest.input('idPunto', sql.Int, orden.IdPuntoCarga || 716);
+            ptosRequest.input('idPunto', sql.Int, orden.IdPuntoCarga || ID_PUNTO_CARGA_CPT);
             const ptosResult = await ptosRequest.query(`
                 SELECT TotalConsumos
                 FROM dbo.FacturacionCuentasAtencionPtos WITH (UPDLOCK, HOLDLOCK)
@@ -132,14 +144,28 @@ async function anularOrdenServicio({
             if (ptosResult.recordset?.length) {
                 const actual = Number(ptosResult.recordset[0].TotalConsumos) || 0;
                 const nuevoConsumo = Math.max(0, actual - montoADescontar);
-                const updatePtosRequest = transaction.request();
-                updatePtosRequest.input('lbNueva', sql.Bit, false);
-                updatePtosRequest.input('IdCuentaAtencion', sql.Int, orden.IdCuentaAtencion);
-                updatePtosRequest.input('idPuntoCarga', sql.Int, orden.IdPuntoCarga || 716);
-                updatePtosRequest.input('TotalConsumos', sql.Money, nuevoConsumo);
-                updatePtosRequest.input('TotalPagos', sql.Money, 0);
-                updatePtosRequest.input('TotalPagosReembolso', sql.Money, 0);
-                await updatePtosRequest.execute('dbo.FacturacionCuentasAtencionPtosActualizar');
+                if (nuevoConsumo === 0) {
+                    // El SP FacturacionCuentasAtencionPtosActualizar solo ejecuta UPDATE si @TotalConsumos > 0.
+                    // Cuando el nuevo total llega a 0, se actualiza directamente a 0.00 para no dejar saldos huérfanos.
+                    const resetRequest = transaction.request();
+                    resetRequest.input('idCuentaReset', sql.Int, orden.IdCuentaAtencion);
+                    resetRequest.input('idPuntoReset', sql.Int, orden.IdPuntoCarga || ID_PUNTO_CARGA_CPT);
+                    await resetRequest.query(`
+                        UPDATE dbo.FacturacionCuentasAtencionPtos
+                        SET TotalConsumos = 0.00
+                        WHERE IdCuentaAtencion = @idCuentaReset
+                          AND idPuntoCarga = @idPuntoReset;
+                    `);
+                } else {
+                    const updatePtosRequest = transaction.request();
+                    updatePtosRequest.input('lbNueva', sql.Bit, false);
+                    updatePtosRequest.input('IdCuentaAtencion', sql.Int, orden.IdCuentaAtencion);
+                    updatePtosRequest.input('idPuntoCarga', sql.Int, orden.IdPuntoCarga || ID_PUNTO_CARGA_CPT);
+                    updatePtosRequest.input('TotalConsumos', sql.Money, nuevoConsumo);
+                    updatePtosRequest.input('TotalPagos', sql.Money, 0);
+                    updatePtosRequest.input('TotalPagosReembolso', sql.Money, 0);
+                    await updatePtosRequest.execute('dbo.FacturacionCuentasAtencionPtosActualizar');
+                }
             }
         }
     } else {

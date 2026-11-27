@@ -141,6 +141,9 @@ import { agregarServicioPlanificado, quitarServicioPlanificado } from '../servic
 
 const props = defineProps<{
   disabled?: boolean
+  idEmpleado?: number | string
+  idServicio?: number | string
+  idTipoFinanciamiento?: number | string
   idCuentaAtencion?: string | number
 }>()
 const seleccionados = defineModel<ServicioPlanificado[]>({ required: true })
@@ -262,7 +265,10 @@ watch(buscar, (value) => {
   loading.value = true
   timer = setTimeout(async () => {
     try {
-      const resultado = await catalogosService.buscarServicios(term)
+      const resultado = await catalogosService.buscarServicios(term, {
+        idServicio: props.idServicio,
+        idTipoFinanciamiento: props.idTipoFinanciamiento,
+      })
       if (solicitud === solicitudActual) servicios.value = resultado
     } catch (err) {
       if (solicitud === solicitudActual) {
